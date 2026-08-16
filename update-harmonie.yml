@@ -1,0 +1,55 @@
+name: Mise à jour HARMONIE
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Les heures planifiées par GitHub sont toujours en UTC.
+    - cron: "27 * * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: harmonie-production
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-24.04
+    # La première archive peut être volumineuse ; les passages suivants
+    # s'arrêtent vite tant que le KNMI n'a pas publié un nouveau run.
+    timeout-minutes: 180
+
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v7
+
+      - name: Installer Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Installer ecCodes et les dépendances
+        run: python -m pip install --disable-pip-version-check -r requirements.txt
+
+      - name: Télécharger et décoder HARMONIE depuis le KNMI
+        env:
+          KNMI_API_KEY: ${{ secrets.KNMI_API_KEY }}
+          LOG_LEVEL: INFO
+        run: >-
+          python scripts/update_harmonie.py
+          --config config/locations.json
+          --output data/harmonie.json
+
+      - name: Publier le nouveau JSON
+        run: |
+          if git diff --quiet -- data/harmonie.json; then
+            echo "Aucune nouvelle échéance à publier."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/harmonie.json
+          git commit -m "Mise à jour automatique HARMONIE"
+          git push
