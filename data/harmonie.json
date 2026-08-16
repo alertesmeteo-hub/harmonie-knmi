@@ -1,12 +1,487 @@
 {
   "schema_version": 1,
-  "status": "waiting_for_first_update",
-  "generated_at": null,
+  "status": "ok",
+  "generated_at": "2026-08-16T10:34:04.846471Z",
   "model": {
     "name": "HARMONIE-AROME Cy43",
     "provider": "KNMI",
     "dataset": "harmonie_arome_cy43_p3",
-    "version": "1.0"
+    "version": "1.0",
+    "domain": "Europe (DINI/N55)",
+    "resolution_km": 5.5,
+    "forecast_hours_requested": 48,
+    "run_time": "2026-08-16T08:00:00Z",
+    "source_file": "HARM43_V1_P3_2026081608.tar",
+    "source_size_bytes": 3405107200,
+    "source_created": "2026-08-16T10:22:35+00:00",
+    "source_url": "https://dataplatform.knmi.nl/dataset/harmonie-arome-cy43-p3-1-0",
+    "license": "CC BY 4.0"
   },
-  "locations": {}
+  "units": {
+    "temperature": "°C",
+    "humidity": "%",
+    "precipitation": "mm/h",
+    "cloud_cover": "%",
+    "wind": "km/h",
+    "pressure": "hPa",
+    "visibility": "km"
+  },
+  "locations": {
+    "dunkerque": {
+      "name": "Dunkerque",
+      "requested_point": {
+        "latitude": 51.0344,
+        "longitude": 2.3768
+      },
+      "model_point": {
+        "latitude": 51.0188,
+        "longitude": 2.34757,
+        "distance_km": 2.68,
+        "index": 136952
+      },
+      "forecast": [
+        {
+          "time": "2026-08-16T08:00:00Z",
+          "lead_hours": 0,
+          "temperature_c": 21.2,
+          "dewpoint_c": 17.0,
+          "humidity_pct": 1.0,
+          "precipitation_mm": 0.0,
+          "cloud_cover_pct": 1.0,
+          "cloud_low_pct": 1.0,
+          "cloud_mid_pct": 0.0,
+          "cloud_high_pct": 1.0,
+          "wind_speed_kmh": 12.0,
+          "wind_direction_deg": 23.0,
+          "wind_direction": "NNE",
+          "wind_gust_kmh": 22.0,
+          "pressure_hpa": 1018.0,
+          "visibility_km": 17.3,
+          "condition": {
+            "code": "clear",
+            "label": "Dégagé",
+            "icon": "☀️"
+          }
+        }
+      ]
+    },
+    "calais": {
+      "name": "Calais",
+      "requested_point": {
+        "latitude": 50.9513,
+        "longitude": 1.8587
+      },
+      "model_point": {
+        "latitude": 50.96294,
+        "longitude": 1.85395,
+        "distance_km": 1.335,
+        "index": 135594
+      },
+      "forecast": [
+        {
+          "time": "2026-08-16T08:00:00Z",
+          "lead_hours": 0,
+          "temperature_c": 20.6,
+          "dewpoint_c": 16.8,
+          "humidity_pct": 1.0,
+          "precipitation_mm": 0.0,
+          "cloud_cover_pct": 1.0,
+          "cloud_low_pct": 0.0,
+          "cloud_mid_pct": 0.0,
+          "cloud_high_pct": 1.0,
+          "wind_speed_kmh": 15.0,
+          "wind_direction_deg": 27.0,
+          "wind_direction": "NNE",
+          "wind_gust_kmh": 22.0,
+          "pressure_hpa": 1018.0,
+          "visibility_km": 15.6,
+          "condition": {
+            "code": "clear",
+            "label": "Dégagé",
+            "icon": "☀️"
+          }
+        }
+      ]
+    },
+    "boulogne-sur-mer": {
+      "name": "Boulogne-sur-Mer",
+      "requested_point": {
+        "latitude": 50.7264,
+        "longitude": 1.6147
+      },
+      "model_point": {
+        "latitude": 50.72923,
+        "longitude": 1.64241,
+        "distance_km": 1.975,
+        "index": 132212
+      },
+      "forecast": [
+        {
+          "time": "2026-08-16T08:00:00Z",
+          "lead_hours": 0,
+          "temperature_c": 20.9,
+          "dewpoint_c": 15.8,
+          "humidity_pct": 1.0,
+          "precipitation_mm": 0.0,
+          "cloud_cover_pct": 1.0,
+          "cloud_low_pct": 0.0,
+          "cloud_mid_pct": 0.0,
+          "cloud_high_pct": 1.0,
+          "wind_speed_kmh": 11.0,
+          "wind_direction_deg": 48.0,
+          "wind_direction": "NE",
+          "wind_gust_kmh": 21.0,
+          "pressure_hpa": 1018.0,
+          "visibility_km": 20.1,
+          "condition": {
+            "code": "clear",
+            "label": "Dégagé",
+            "icon": "☀️"
+          }
+        }
+      ]
+    },
+    "le-touquet": {
+      "name": "Le Touquet",
+      "requested_point": {
+        "latitude": 50.5243,
+        "longitude": 1.5857
+      },
+      "model_point": {
+        "latitude": 50.53112,
+        "longitude": 1.59915,
+        "distance_km": 1.215,
+        "index": 129508
+      },
+      "forecast": [
+        {
+          "time": "2026-08-16T08:00:00Z",
+          "lead_hours": 0,
+          "temperature_c": 21.4,
+          "dewpoint_c": 16.3,
+          "humidity_pct": 1.0,
+          "precipitation_mm": 0.0,
+          "cloud_cover_pct": 1.0,
+          "cloud_low_pct": 0.0,
+          "cloud_mid_pct": 0.0,
+          "cloud_high_pct": 1.0,
+          "wind_speed_kmh": 9.0,
+          "wind_direction_deg": 49.0,
+          "wind_direction": "NE",
+          "wind_gust_kmh": 19.0,
+          "pressure_hpa": 1018.0,
+          "visibility_km": 19.8,
+          "condition": {
+            "code": "clear",
+            "label": "Dégagé",
+            "icon": "☀️"
+          }
+        }
+      ]
+    },
+    "lille": {
+      "name": "Lille",
+      "requested_point": {
+        "latitude": 50.6292,
+        "longitude": 3.0573
+      },
+      "model_point": {
+        "latitude": 50.64624,
+        "longitude": 3.05598,
+        "distance_km": 1.896,
+        "index": 132906
+      },
+      "forecast": [
+        {
+          "time": "2026-08-16T08:00:00Z",
+          "lead_hours": 0,
+          "temperature_c": 21.7,
+          "dewpoint_c": 15.4,
+          "humidity_pct": 1.0,
+          "precipitation_mm": 0.0,
+          "cloud_cover_pct": 1.0,
+          "cloud_low_pct": 0.0,
+          "cloud_mid_pct": 0.0,
+          "cloud_high_pct": 1.0,
+          "wind_speed_kmh": 5.0,
+          "wind_direction_deg": 34.0,
+          "wind_direction": "NE",
+          "wind_gust_kmh": 14.0,
+          "pressure_hpa": 1018.0,
+          "visibility_km": 22.2,
+          "condition": {
+            "code": "clear",
+            "label": "Dégagé",
+            "icon": "☀️"
+          }
+        }
+      ]
+    },
+    "roubaix": {
+      "name": "Roubaix",
+      "requested_point": {
+        "latitude": 50.6927,
+        "longitude": 3.1746
+      },
+      "model_point": {
+        "latitude": 50.68772,
+        "longitude": 3.14618,
+        "distance_km": 2.076,
+        "index": 133583
+      },
+      "forecast": [
+        {
+          "time": "2026-08-16T08:00:00Z",
+          "lead_hours": 0,
+          "temperature_c": 21.7,
+          "dewpoint_c": 15.0,
+          "humidity_pct": 1.0,
+          "precipitation_mm": 0.0,
+          "cloud_cover_pct": 1.0,
+          "cloud_low_pct": 0.0,
+          "cloud_mid_pct": 0.0,
+          "cloud_high_pct": 1.0,
+          "wind_speed_kmh": 6.0,
+          "wind_direction_deg": 66.0,
+          "wind_direction": "ENE",
+          "wind_gust_kmh": 16.0,
+          "pressure_hpa": 1017.0,
+          "visibility_km": 22.9,
+          "condition": {
+            "code": "clear",
+            "label": "Dégagé",
+            "icon": "☀️"
+          }
+        }
+      ]
+    },
+    "douai": {
+      "name": "Douai",
+      "requested_point": {
+        "latitude": 50.3679,
+        "longitude": 3.066
+      },
+      "model_point": {
+        "latitude": 50.3915,
+        "longitude": 3.0715,
+        "distance_km": 2.652,
+        "index": 129527
+      },
+      "forecast": [
+        {
+          "time": "2026-08-16T08:00:00Z",
+          "lead_hours": 0,
+          "temperature_c": 22.2,
+          "dewpoint_c": 15.9,
+          "humidity_pct": 1.0,
+          "precipitation_mm": 0.0,
+          "cloud_cover_pct": 1.0,
+          "cloud_low_pct": 0.0,
+          "cloud_mid_pct": 0.0,
+          "cloud_high_pct": 1.0,
+          "wind_speed_kmh": 7.0,
+          "wind_direction_deg": 0.0,
+          "wind_direction": "N",
+          "wind_gust_kmh": 17.0,
+          "pressure_hpa": 1017.0,
+          "visibility_km": 21.9,
+          "condition": {
+            "code": "clear",
+            "label": "Dégagé",
+            "icon": "☀️"
+          }
+        }
+      ]
+    },
+    "arras": {
+      "name": "Arras",
+      "requested_point": {
+        "latitude": 50.291,
+        "longitude": 2.7775
+      },
+      "model_point": {
+        "latitude": 50.26665,
+        "longitude": 2.80339,
+        "distance_km": 3.272,
+        "index": 127496
+      },
+      "forecast": [
+        {
+          "time": "2026-08-16T08:00:00Z",
+          "lead_hours": 0,
+          "temperature_c": 21.7,
+          "dewpoint_c": 15.9,
+          "humidity_pct": 1.0,
+          "precipitation_mm": 0.0,
+          "cloud_cover_pct": 0.0,
+          "cloud_low_pct": 0.0,
+          "cloud_mid_pct": 0.0,
+          "cloud_high_pct": 0.0,
+          "wind_speed_kmh": 10.0,
+          "wind_direction_deg": 17.0,
+          "wind_direction": "NNE",
+          "wind_gust_kmh": 20.0,
+          "pressure_hpa": 1017.0,
+          "visibility_km": 20.9,
+          "condition": {
+            "code": "clear",
+            "label": "Dégagé",
+            "icon": "☀️"
+          }
+        }
+      ]
+    },
+    "valenciennes": {
+      "name": "Valenciennes",
+      "requested_point": {
+        "latitude": 50.357,
+        "longitude": 3.5235
+      },
+      "model_point": {
+        "latitude": 50.34334,
+        "longitude": 3.53454,
+        "distance_km": 1.708,
+        "index": 129533
+      },
+      "forecast": [
+        {
+          "time": "2026-08-16T08:00:00Z",
+          "lead_hours": 0,
+          "temperature_c": 22.0,
+          "dewpoint_c": 15.6,
+          "humidity_pct": 1.0,
+          "precipitation_mm": 0.0,
+          "cloud_cover_pct": 0.0,
+          "cloud_low_pct": 0.0,
+          "cloud_mid_pct": 0.0,
+          "cloud_high_pct": 0.0,
+          "wind_speed_kmh": 8.0,
+          "wind_direction_deg": 34.0,
+          "wind_direction": "NE",
+          "wind_gust_kmh": 18.0,
+          "pressure_hpa": 1017.0,
+          "visibility_km": 22.0,
+          "condition": {
+            "code": "clear",
+            "label": "Dégagé",
+            "icon": "☀️"
+          }
+        }
+      ]
+    },
+    "maubeuge": {
+      "name": "Maubeuge",
+      "requested_point": {
+        "latitude": 50.278,
+        "longitude": 3.9727
+      },
+      "model_point": {
+        "latitude": 50.29322,
+        "longitude": 3.99658,
+        "distance_km": 2.396,
+        "index": 129539
+      },
+      "forecast": [
+        {
+          "time": "2026-08-16T08:00:00Z",
+          "lead_hours": 0,
+          "temperature_c": 20.8,
+          "dewpoint_c": 15.3,
+          "humidity_pct": 1.0,
+          "precipitation_mm": 0.0,
+          "cloud_cover_pct": 0.0,
+          "cloud_low_pct": 0.0,
+          "cloud_mid_pct": 0.0,
+          "cloud_high_pct": 0.0,
+          "wind_speed_kmh": 9.0,
+          "wind_direction_deg": 24.0,
+          "wind_direction": "NNE",
+          "wind_gust_kmh": 19.0,
+          "pressure_hpa": 1017.0,
+          "visibility_km": 19.8,
+          "condition": {
+            "code": "clear",
+            "label": "Dégagé",
+            "icon": "☀️"
+          }
+        }
+      ]
+    },
+    "cambrai": {
+      "name": "Cambrai",
+      "requested_point": {
+        "latitude": 50.1761,
+        "longitude": 3.2348
+      },
+      "model_point": {
+        "latitude": 50.17026,
+        "longitude": 3.25288,
+        "distance_km": 1.441,
+        "index": 126826
+      },
+      "forecast": [
+        {
+          "time": "2026-08-16T08:00:00Z",
+          "lead_hours": 0,
+          "temperature_c": 22.2,
+          "dewpoint_c": 16.2,
+          "humidity_pct": 1.0,
+          "precipitation_mm": 0.0,
+          "cloud_cover_pct": 0.0,
+          "cloud_low_pct": 0.0,
+          "cloud_mid_pct": 0.0,
+          "cloud_high_pct": 0.0,
+          "wind_speed_kmh": 8.0,
+          "wind_direction_deg": 27.0,
+          "wind_direction": "NNE",
+          "wind_gust_kmh": 18.0,
+          "pressure_hpa": 1017.0,
+          "visibility_km": 21.0,
+          "condition": {
+            "code": "clear",
+            "label": "Dégagé",
+            "icon": "☀️"
+          }
+        }
+      ]
+    },
+    "abbeville": {
+      "name": "Abbeville",
+      "requested_point": {
+        "latitude": 50.1055,
+        "longitude": 1.8355
+      },
+      "model_point": {
+        "latitude": 50.10735,
+        "longitude": 1.82171,
+        "distance_km": 1.004,
+        "index": 124104
+      },
+      "forecast": [
+        {
+          "time": "2026-08-16T08:00:00Z",
+          "lead_hours": 0,
+          "temperature_c": 21.9,
+          "dewpoint_c": 16.7,
+          "humidity_pct": 1.0,
+          "precipitation_mm": 0.0,
+          "cloud_cover_pct": 1.0,
+          "cloud_low_pct": 0.0,
+          "cloud_mid_pct": 0.0,
+          "cloud_high_pct": 1.0,
+          "wind_speed_kmh": 8.0,
+          "wind_direction_deg": 21.0,
+          "wind_direction": "NNE",
+          "wind_gust_kmh": 18.0,
+          "pressure_hpa": 1018.0,
+          "visibility_km": 20.1,
+          "condition": {
+            "code": "clear",
+            "label": "Dégagé",
+            "icon": "☀️"
+          }
+        }
+      ]
+    }
+  }
 }
