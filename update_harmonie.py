@@ -45,6 +45,7 @@ LOGGER = logging.getLogger("harmonie")
 API_BASE = "https://api.dataplatform.knmi.nl/open-data/v1"
 DATASET_NAME = "harmonie_arome_cy43_p3"
 DATASET_VERSION = "1.0"
+PIPELINE_VERSION = "1.1.0"
 
 # Clé anonyme publiée par le KNMI, valable jusqu'au 1er août 2027. Une clé
 # personnelle placée dans le secret GitHub KNMI_API_KEY la remplace aussitôt.
@@ -339,6 +340,8 @@ def already_processed(output: Path, source_filename: str) -> bool:
         return (
             current.get("status") == "ok"
             and current.get("model", {}).get("source_file") == source_filename
+            and current.get("model", {}).get("pipeline_version")
+            == PIPELINE_VERSION
         )
     except (OSError, ValueError, TypeError):
         return False
@@ -654,7 +657,13 @@ def member_information(member: tarfile.TarInfo) -> tuple[int, datetime | None] |
     match = MEMBER_RE.search(Path(member.name).name)
     if not match:
         return None
-    lead = int(match.group("lead"))
+    # Le KNMI code l'échéance sous la forme HHHMM : 00100 = +1 h,
+    # 04800 = +48 h et 06000 = +60 h.
+    lead_code = int(match.group("lead"))
+    lead, minutes = divmod(lead_code, 100)
+    if minutes != 0:
+        LOGGER.debug("Échéance non horaire ignorée : %05d", lead_code)
+        return None
     try:
         run = datetime.strptime(match.group("run"), "%Y%m%d%H%M").replace(
             tzinfo=timezone.utc
@@ -738,6 +747,15 @@ def clamp(value: float | None, low: float, high: float) -> float | None:
     if value is None:
         return None
     return min(high, max(low, value))
+
+
+def fraction_to_percentage(value: Any) -> float | None:
+    """Convertit les proportions 0–1 réellement encodées par HARMONIE P3."""
+
+    fraction = finite_or_none(value)
+    if fraction is None:
+        return None
+    return fraction * 100.0
 
 
 def compass_direction(degrees: float | None) -> str | None:
@@ -885,24 +903,44 @@ def build_output(
                     dewpoint_k - 273.15 if dewpoint_k is not None else None
                 ),
                 "humidity_pct": round_or_none(
-                    clamp(finite_or_none(values.get("humidity_pct")), 0, 100),
+                    clamp(
+                        fraction_to_percentage(values.get("humidity_pct")),
+                        0,
+                        100,
+                    ),
                     0,
                 ),
                 "precipitation_mm": round_or_none(precipitation, 1),
                 "cloud_cover_pct": round_or_none(
-                    clamp(finite_or_none(values.get("cloud_pct")), 0, 100),
+                    clamp(
+                        fraction_to_percentage(values.get("cloud_pct")),
+                        0,
+                        100,
+                    ),
                     0,
                 ),
                 "cloud_low_pct": round_or_none(
-                    clamp(finite_or_none(values.get("cloud_low_pct")), 0, 100),
+                    clamp(
+                        fraction_to_percentage(values.get("cloud_low_pct")),
+                        0,
+                        100,
+                    ),
                     0,
                 ),
                 "cloud_mid_pct": round_or_none(
-                    clamp(finite_or_none(values.get("cloud_mid_pct")), 0, 100),
+                    clamp(
+                        fraction_to_percentage(values.get("cloud_mid_pct")),
+                        0,
+                        100,
+                    ),
                     0,
                 ),
                 "cloud_high_pct": round_or_none(
-                    clamp(finite_or_none(values.get("cloud_high_pct")), 0, 100),
+                    clamp(
+                        fraction_to_percentage(values.get("cloud_high_pct")),
+                        0,
+                        100,
+                    ),
                     0,
                 ),
                 "wind_speed_kmh": round_or_none(wind_speed, 0),
@@ -946,6 +984,7 @@ def build_output(
             "provider": "KNMI",
             "dataset": DATASET_NAME,
             "version": DATASET_VERSION,
+            "pipeline_version": PIPELINE_VERSION,
             "domain": "Europe (DINI/N55)",
             "resolution_km": 5.5,
             "forecast_hours_requested": forecast_hours,
