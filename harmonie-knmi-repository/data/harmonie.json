@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "status": "waiting_for_first_update",
+  "generated_at": null,
+  "model": {
+    "name": "HARMONIE-AROME Cy43",
+    "provider": "KNMI",
+    "dataset": "harmonie_arome_cy43_p3",
+    "version": "1.0"
+  },
+  "locations": {}
+}
