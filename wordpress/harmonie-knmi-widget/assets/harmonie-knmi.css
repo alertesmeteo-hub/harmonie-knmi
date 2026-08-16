@@ -68,6 +68,159 @@
     font-size: 1.18rem;
 }
 
+.hkw-card [hidden] {
+    display: none !important;
+}
+
+.hkw-toolbar {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 22px;
+    padding: 18px 22px;
+    border-bottom: 1px solid #cfe0e9;
+    background: linear-gradient(180deg, #f7fbfd, #edf6fa);
+}
+
+.hkw-search {
+    position: relative;
+    z-index: 5;
+    width: min(100%, 590px);
+}
+
+.hkw-search > label {
+    display: block;
+    margin: 0 0 6px;
+    color: var(--hkw-navy);
+    font-size: .82rem;
+    font-weight: 800;
+}
+
+.hkw-search-control {
+    position: relative;
+}
+
+.hkw-search-icon {
+    position: absolute;
+    top: 50%;
+    left: 13px;
+    z-index: 1;
+    color: #337894;
+    font-size: 1.35rem;
+    line-height: 1;
+    transform: translateY(-52%);
+    pointer-events: none;
+}
+
+.hkw-card .hkw-city-input {
+    box-sizing: border-box;
+    width: 100%;
+    height: 46px;
+    margin: 0;
+    padding: 9px 42px;
+    border: 2px solid #86b6ca;
+    border-radius: 10px;
+    outline: 0;
+    background: #fff;
+    box-shadow: 0 2px 7px rgba(7, 59, 99, .08);
+    color: #173c51;
+    font: 700 .96rem/1.2 Inter, "Segoe UI", Arial, sans-serif;
+    appearance: none;
+}
+
+.hkw-card .hkw-city-input:focus {
+    border-color: var(--hkw-blue);
+    box-shadow: 0 0 0 3px rgba(8, 108, 168, .17);
+}
+
+.hkw-card .hkw-city-input::-webkit-search-cancel-button {
+    cursor: pointer;
+}
+
+.hkw-search-results {
+    position: absolute;
+    top: 72px;
+    right: 0;
+    left: 0;
+    z-index: 20;
+    max-height: 330px;
+    overflow-y: auto;
+    border: 1px solid #9fc4d5;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 14px 32px rgba(7, 59, 99, .24);
+}
+
+.hkw-card .hkw-search-result {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 52px;
+    margin: 0;
+    padding: 9px 13px;
+    border: 0;
+    border-bottom: 1px solid #dce9ef;
+    border-radius: 0;
+    background: #fff;
+    color: #183b4e;
+    text-align: left;
+    font-family: Inter, "Segoe UI", Arial, sans-serif;
+    cursor: pointer;
+}
+
+.hkw-card .hkw-search-result:last-child {
+    border-bottom: 0;
+}
+
+.hkw-card .hkw-search-result:hover,
+.hkw-card .hkw-search-result:focus,
+.hkw-card .hkw-search-result.is-active {
+    outline: 0;
+    background: #e6f5fb;
+    color: #073b63;
+}
+
+.hkw-result-name {
+    font-size: .9rem;
+    font-weight: 800;
+}
+
+.hkw-result-details {
+    color: #587583;
+    font-size: .74rem;
+    white-space: nowrap;
+}
+
+.hkw-search-status {
+    min-height: 18px;
+    margin: 5px 2px 0;
+    color: #55717f;
+    font-size: .72rem;
+}
+
+.hkw-search-status.hkw-search-error {
+    color: #9a2727;
+    font-weight: 700;
+}
+
+.hkw-coverage {
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    align-items: flex-end;
+    padding-top: 22px;
+    color: #496978;
+    font-size: .72rem;
+}
+
+.hkw-coverage strong {
+    color: var(--hkw-navy);
+    font-size: .95rem;
+}
+
 .hkw-table-wrap {
     max-width: 100%;
     overflow-x: auto;
@@ -120,6 +273,18 @@
     background: #fff;
     text-align: center;
     white-space: nowrap;
+}
+
+.hkw-table .hkw-loading {
+    height: 110px;
+    background: #fff !important;
+    color: #426677;
+    text-align: center;
+    font-weight: 700;
+}
+
+.hkw-table .hkw-load-error {
+    color: #942424;
 }
 
 .hkw-table tbody tr:nth-child(even) th,
@@ -230,6 +395,33 @@
     .hkw-header {
         align-items: flex-start;
         padding: 17px;
+    }
+
+    .hkw-toolbar {
+        display: block;
+        padding: 15px;
+    }
+
+    .hkw-search {
+        width: 100%;
+    }
+
+    .hkw-card .hkw-search-result {
+        display: block;
+    }
+
+    .hkw-result-name,
+    .hkw-result-details {
+        display: block;
+    }
+
+    .hkw-result-details {
+        margin-top: 3px;
+        white-space: normal;
+    }
+
+    .hkw-coverage {
+        display: none;
     }
 
     .hkw-badge {

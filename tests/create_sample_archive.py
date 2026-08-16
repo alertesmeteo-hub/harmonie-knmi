@@ -27,11 +27,11 @@ PARAMETERS = (
     (20, 105, 0, 0, 12_000.0, -100.0),
     (33, 105, 10, 0, 4.0, 0.2),
     (34, 105, 10, 0, -2.0, -0.1),
-    (52, 105, 2, 0, 78.0, -1.0),
-    (71, 105, 0, 0, 65.0, 4.0),
-    (73, 105, 0, 0, 35.0, 2.0),
-    (74, 105, 0, 0, 45.0, 1.0),
-    (75, 105, 0, 0, 20.0, 1.0),
+    (52, 105, 2, 0, 0.78, -0.01),
+    (71, 105, 0, 0, 0.65, 0.04),
+    (73, 105, 0, 0, 0.35, 0.02),
+    (74, 105, 0, 0, 0.45, 0.01),
+    (75, 105, 0, 0, 0.20, 0.01),
     (162, 105, 10, 2, 7.0, 0.3),
     (163, 105, 10, 2, -3.0, -0.2),
 )
@@ -88,7 +88,7 @@ def make_archive(output: Path, hours: int) -> None:
         temporary_path = Path(temporary)
         members: list[Path] = []
         for lead in range(hours):
-            member = temporary_path / f"HA43_N55_202608160000_{lead:05d}_GB"
+            member = temporary_path / f"HA43_N55_202608160000_{lead:03d}00_GB"
             with member.open("wb") as handle:
                 for code, level_type, level, tri, base, change in PARAMETERS:
                     add_message(
