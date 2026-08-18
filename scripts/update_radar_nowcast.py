@@ -14,7 +14,7 @@ Le script :
 """
 from __future__ import annotations
 
-AUTHFIX_VERSION = "AM_RADAR_AUTHFIX_4_1"
+AUTHFIX_VERSION = "AM_RADAR_MAP_5_0"
 
 import argparse
 import json
@@ -41,6 +41,9 @@ API_URL = "https://public-api.meteofrance.fr/public/DPPaquetRadar/v1/mosaique/pa
 PRODUCT = "IPRN20_C_LFPW"
 SCHEMA_VERSION = 1
 LEADS = (0, 15, 30, 45, 60)
+MAP_BOUNDS = {"south": 41.0, "west": -6.0, "north": 52.0, "east": 10.5}
+MAP_WIDTH = 1200
+MAP_HEIGHT = 800
 FILE_RE = re.compile(r"T_IPRN20_C_LFPW_(\d{14})\.h5$", re.I)
 
 
@@ -422,6 +425,157 @@ def bilinear(field: np.ndarray, row: float, col: float) -> float | None:
     )
 
 
+def reproject_to_map(field: np.ndarray, grid: Grid, source_factor: int = 1) -> np.ndarray:
+    """Rééchantillonne une matrice radar vers une grille lon/lat régulière pour Leaflet."""
+    south, west = MAP_BOUNDS["south"], MAP_BOUNDS["west"]
+    north, east = MAP_BOUNDS["north"], MAP_BOUNDS["east"]
+    lons = np.linspace(west, east, MAP_WIDTH, dtype=np.float64)
+    lats = np.linspace(north, south, MAP_HEIGHT, dtype=np.float64)
+    lon_grid, lat_grid = np.meshgrid(lons, lats)
+    x, y = grid.transformer.transform(lon_grid, lat_grid)
+    map_x = ((x - grid.x_left) / grid.x_step - 0.5) / float(source_factor)
+    map_y = ((y - grid.y_top) / grid.y_step - 0.5) / float(source_factor)
+    valid = np.isfinite(map_x) & np.isfinite(map_y)
+    map_x = np.where(valid, map_x, -9999).astype(np.float32)
+    map_y = np.where(valid, map_y, -9999).astype(np.float32)
+    return cv2.remap(
+        field.astype(np.float32), map_x, map_y, cv2.INTER_LINEAR,
+        borderMode=cv2.BORDER_CONSTANT, borderValue=0.0,
+    )
+
+
+def colorize_radar(rate: np.ndarray, quality: np.ndarray | None = None, lead_minutes: int = 0) -> np.ndarray:
+    """Produit une image RGBA transparente avec une palette pluie lisible sur carte."""
+    r = np.nan_to_num(rate.astype(np.float32), nan=0.0, posinf=0.0, neginf=0.0)
+    rgba = np.zeros((*r.shape, 4), dtype=np.uint8)
+    # Palette éditoriale (mm/h) : transparente -> bleu -> vert -> jaune -> rouge -> violet.
+    bins = [
+        (0.05, 0.20, (108, 207, 255)),
+        (0.20, 0.50, (41, 143, 255)),
+        (0.50, 1.00, (33, 210, 92)),
+        (1.00, 2.00, (149, 224, 45)),
+        (2.00, 5.00, (255, 220, 39)),
+        (5.00, 10.0, (255, 137, 26)),
+        (10.0, 20.0, (241, 53, 53)),
+        (20.0, 40.0, (213, 24, 174)),
+        (40.0, 1.0e9, (126, 52, 210)),
+    ]
+    base_alpha = max(125, int(round(225 - min(60, max(0, lead_minutes)) * 0.65)))
+    for lo, hi, rgb in bins:
+        mask = (r >= lo) & (r < hi)
+        rgba[mask, 0] = rgb[0]
+        rgba[mask, 1] = rgb[1]
+        rgba[mask, 2] = rgb[2]
+        rgba[mask, 3] = base_alpha
+    if quality is not None:
+        q = np.clip(np.nan_to_num(quality, nan=0.0), 0.0, 100.0) / 100.0
+        # Ne rend jamais une zone pluvieuse totalement invisible à cause d'un QIND ponctuellement faible.
+        alpha_factor = 0.55 + 0.45 * q
+        rgba[..., 3] = np.where(
+            rgba[..., 3] > 0,
+            np.clip(rgba[..., 3].astype(np.float32) * alpha_factor, 70, 235),
+            0,
+        ).astype(np.uint8)
+    return rgba
+
+
+def save_radar_png(path: Path, rate: np.ndarray, quality: np.ndarray | None = None, lead_minutes: int = 0) -> None:
+    rgba = colorize_radar(rate, quality, lead_minutes)
+    bgra = rgba[..., [2, 1, 0, 3]]
+    path.parent.mkdir(parents=True, exist_ok=True)
+    ok = cv2.imwrite(str(path), bgra, [cv2.IMWRITE_PNG_COMPRESSION, 7])
+    if not ok:
+        raise RuntimeError(f"écriture PNG radar impossible: {path}")
+
+
+def write_map_output(output_dir: Path, frames: list[RadarFrame], fields: list[np.ndarray],
+                     motion_conf: float, quality_low: np.ndarray, factor: int) -> None:
+    """Publie les couches cartographiques radar observées et extrapolées."""
+    out = output_dir.resolve()
+    map_dir = out / "map"
+    map_dir.mkdir(parents=True, exist_ok=True)
+    latest = frames[-1]
+    generated = datetime.now(timezone.utc)
+    items: list[dict[str, Any]] = []
+
+    # Observations : trois dernières mosaïques Météo-France 5 min.
+    for i, frame in enumerate(frames[-3:]):
+        rate_map = reproject_to_map(frame.rain_rate, frame.grid, 1)
+        quality_map = reproject_to_map(frame.quality, frame.grid, 1)
+        delta = int(round((frame.timestamp - latest.timestamp).total_seconds() / 60.0))
+        name = f"obs_{delta:+d}.png".replace("+", "p").replace("-", "m")
+        save_radar_png(map_dir / name, rate_map, quality_map, 0)
+        items.append({
+            "kind": "observation",
+            "time": frame.timestamp.isoformat().replace("+00:00", "Z"),
+            "offset_minutes": delta,
+            "lead_minutes": 0,
+            "file": f"map/{name}",
+            "label": "Observation radar",
+        })
+
+    # Extrapolations : +15 à +60. Le lead 0 est déjà représenté par la dernière observation.
+    quality_map_low = reproject_to_map(quality_low, latest.grid, factor)
+    for lead, field in zip(LEADS[1:], fields[1:]):
+        rate_map = reproject_to_map(field, latest.grid, factor)
+        name = f"nowcast_p{lead}.png"
+        save_radar_png(map_dir / name, rate_map, quality_map_low, lead)
+        valid_time = latest.timestamp.timestamp() + lead * 60
+        valid_dt = datetime.fromtimestamp(valid_time, timezone.utc)
+        items.append({
+            "kind": "nowcast",
+            "time": valid_dt.isoformat().replace("+00:00", "Z"),
+            "offset_minutes": lead,
+            "lead_minutes": lead,
+            "file": f"map/{name}",
+            "label": f"Extrapolation radar +{lead} min",
+        })
+
+    default_index = max(0, len([x for x in items if x["kind"] == "observation"]) - 1)
+    index = {
+        "schema_version": 1,
+        "status": "ok",
+        "generated_at": generated.isoformat().replace("+00:00", "Z"),
+        "radar_time": latest.timestamp.isoformat().replace("+00:00", "Z"),
+        "source": {
+            "provider": "Météo-France",
+            "api": "DPPaquetRadar/v1/mosaique/paquet",
+            "product": PRODUCT,
+            "label": "Mosaïque nationale lame d'eau 5 min",
+            "native_resolution_m": 500,
+        },
+        "render": {
+            "projection": "EPSG:4326",
+            "bounds": [[MAP_BOUNDS["south"], MAP_BOUNDS["west"]], [MAP_BOUNDS["north"], MAP_BOUNDS["east"]]],
+            "width": MAP_WIDTH,
+            "height": MAP_HEIGHT,
+            "default_frame": default_index,
+        },
+        "nowcast": {
+            "algorithm": "dense optical flow (Farneback) + advection",
+            "motion_confidence": round(float(motion_conf), 2),
+            "warning": "Les échéances futures sont des extrapolations calculées par Alertes-Météo à partir du radar Météo-France ; elles ne sont pas des prévisions radar officielles Météo-France.",
+        },
+        "legend": [
+            {"min": 0.05, "max": 0.20, "color": "#6ccfff", "label": "Très faible"},
+            {"min": 0.20, "max": 0.50, "color": "#298fff", "label": "Faible"},
+            {"min": 0.50, "max": 1.00, "color": "#21d25c", "label": "Modérée"},
+            {"min": 1.00, "max": 2.00, "color": "#95e02d", "label": "Assez soutenue"},
+            {"min": 2.00, "max": 5.00, "color": "#ffdc27", "label": "Soutenue"},
+            {"min": 5.00, "max": 10.0, "color": "#ff891a", "label": "Forte"},
+            {"min": 10.0, "max": 20.0, "color": "#f13535", "label": "Très forte"},
+            {"min": 20.0, "max": 40.0, "color": "#d518ae", "label": "Intense"},
+            {"min": 40.0, "max": None, "color": "#7e34d2", "label": "Extrême"},
+        ],
+        "frames": items,
+    }
+    (map_dir / "index.json").write_text(
+        json.dumps(index, ensure_ascii=False, separators=(",", ":")) + "\n",
+        encoding="utf-8",
+    )
+    LOG.info("Carte radar publiée : %s images, %sx%s px", len(items), MAP_WIDTH, MAP_HEIGHT)
+
+
 def load_communes(path: Path) -> dict[str, list[list[Any]]]:
     with path.open("r", encoding="utf-8") as f:
         payload = json.load(f)
@@ -555,7 +709,7 @@ def main() -> int:
     args = parse_args()
     logging.basicConfig(level=getattr(logging, os.getenv("LOG_LEVEL", "INFO").upper(), logging.INFO),
                         format="%(asctime)s | %(levelname)s | %(message)s")
-    LOG.info("Radar authfix V4.2 chargé")
+    LOG.info("Radar Map V5.0 chargé")
     if args.self_test:
         self_test(); return 0
     if args.downsample not in (2, 3, 4, 5, 6, 8):
@@ -584,6 +738,7 @@ def main() -> int:
         LOG.info("Mosaïques radar : %s", ", ".join(f.timestamp.isoformat() for f in frames))
         fields, conf, quality = compute(frames, args.downsample)
         write_output(Path(args.output_dir), by_dep, frames[-1], fields, conf, quality, args.downsample)
+        write_map_output(Path(args.output_dir), frames, fields, conf, quality, args.downsample)
     return 0
 
 
