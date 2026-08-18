@@ -34,6 +34,11 @@ jobs:
           python -m pip install --disable-pip-version-check \
             requests==2.33.0 numpy==2.4.6 h5py pyproj opencv-python-headless
 
+      - name: Vérifier la version du moteur radar
+        run: |
+          grep -q "AM_RADAR_AUTHFIX_4_1" scripts/update_radar_nowcast.py
+          echo "Radar authfix V4.1 chargé"
+
       - name: Calculer le nowcast radar national
         env:
           METEOFRANCE_RADAR_TOKEN: ${{ secrets.METEOFRANCE_RADAR_TOKEN }}
