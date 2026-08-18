@@ -1,0 +1,61 @@
+name: Mise à jour Radar Pluie dans l'heure
+
+on:
+  workflow_dispatch:
+  schedule:
+    # L'API Paquet Radar publie un paquet par quart d'heure.
+    # On attend quelques minutes pour laisser le paquet se constituer.
+    - cron: "7,22,37,52 * * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: radar-nowcast-production
+  cancel-in-progress: true
+
+jobs:
+  radar:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v5
+
+      - name: Installer Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Installer les dépendances radar
+        run: |
+          python -m pip install --disable-pip-version-check \
+            requests==2.33.0 numpy==2.4.6 h5py pyproj opencv-python-headless
+
+      - name: Calculer le nowcast radar national
+        env:
+          METEOFRANCE_RADAR_TOKEN: ${{ secrets.METEOFRANCE_RADAR_TOKEN }}
+          LOG_LEVEL: INFO
+        run: >-
+          python scripts/update_radar_nowcast.py
+          --catalog config/communes-france.json
+          --output-dir build/radar
+          --downsample 4
+
+      - name: Publier sur la branche radar-data
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          test -f build/radar/index.json
+          publish_dir="$(mktemp -d)"
+          cp -R build/radar/. "$publish_dir/"
+          git init -b radar-data "$publish_dir"
+          git -C "$publish_dir" config user.name "github-actions[bot]"
+          git -C "$publish_dir" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C "$publish_dir" add .
+          git -C "$publish_dir" commit -m "Mise à jour radar nowcast"
+          git -C "$publish_dir" push --force \
+            "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
+            HEAD:radar-data
