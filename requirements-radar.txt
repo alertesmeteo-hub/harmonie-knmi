@@ -1,0 +1,5 @@
+requests==2.33.0
+numpy==2.4.6
+h5py>=3.11
+pyproj>=3.6
+opencv-python-headless>=4.10
