@@ -279,7 +279,7 @@ def normalize_meteofrance_credential(value: str) -> tuple[str, bool]:
 
 def download_package(token: str, target: Path) -> None:
     credential, had_bearer_prefix = normalize_meteofrance_credential(token)
-    LOGGER.info(
+    LOG.info(
         "Credential Météo-France détecté (%d caractères%s)",
         len(credential),
         " ; préfixe Bearer retiré" if had_bearer_prefix else "",
@@ -305,7 +305,7 @@ def download_package(token: str, target: Path) -> None:
                 stream=True,
                 allow_redirects=True,
             ) as r:
-                LOGGER.info("Test authentification radar %s -> HTTP %s", label, r.status_code)
+                LOG.info("Test authentification radar %s -> HTTP %s", label, r.status_code)
 
                 if r.status_code in (401, 403):
                     failures.append(f"{label}=HTTP {r.status_code}")
@@ -329,7 +329,7 @@ def download_package(token: str, target: Path) -> None:
                         f"paquet radar anormalement petit ({total} octets ; Content-Type={content_type or 'inconnu'})"
                     )
 
-                LOGGER.info(
+                LOG.info(
                     "Paquet radar téléchargé avec %s : %.1f Mo",
                     label,
                     total / 1_000_000,
@@ -555,6 +555,7 @@ def main() -> int:
     args = parse_args()
     logging.basicConfig(level=getattr(logging, os.getenv("LOG_LEVEL", "INFO").upper(), logging.INFO),
                         format="%(asctime)s | %(levelname)s | %(message)s")
+    LOG.info("Radar authfix V4.2 chargé")
     if args.self_test:
         self_test(); return 0
     if args.downsample not in (2, 3, 4, 5, 6, 8):
