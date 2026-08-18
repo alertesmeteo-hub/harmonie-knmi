@@ -14,6 +14,8 @@ Le script :
 """
 from __future__ import annotations
 
+AUTHFIX_VERSION = "AM_RADAR_AUTHFIX_4_1"
+
 import argparse
 import json
 import logging
@@ -261,17 +263,86 @@ def load_frame(path: Path) -> RadarFrame:
     return RadarFrame(timestamp, rain, quality, grid, path.name)
 
 
+def normalize_meteofrance_credential(value: str) -> tuple[str, bool]:
+    """Nettoie le secret sans jamais l'afficher dans les logs.
+
+    Accepte un token copié brut ou sous la forme "Bearer <token>".
+    """
+    credential = (value or "").strip().strip('\"').strip("'")
+    had_bearer_prefix = credential.lower().startswith("bearer ")
+    if had_bearer_prefix:
+        credential = credential[7:].strip()
+    if not credential:
+        raise RuntimeError("secret Météo-France vide après normalisation")
+    return credential, had_bearer_prefix
+
+
 def download_package(token: str, target: Path) -> None:
-    headers = {"Accept": "*/*", "Authorization": f"Bearer {token}", "User-Agent": "alertesmeteo-radar-nowcast/1.0"}
-    with requests.get(API_URL, headers=headers, timeout=(20, 90), stream=True) as r:
-        if r.status_code == 401:
-            raise RuntimeError("token Météo-France refusé (401) : vérifiez l'abonnement API Radar et le secret")
-        if r.status_code == 403:
-            raise RuntimeError("accès API Radar interdit (403) : vérifiez l'abonnement DPPaquetRadar")
-        r.raise_for_status()
-        with target.open("wb") as f:
-            for chunk in r.iter_content(1024 * 1024):
-                if chunk: f.write(chunk)
+    credential, had_bearer_prefix = normalize_meteofrance_credential(token)
+    LOGGER.info(
+        "Credential Météo-France détecté (%d caractères%s)",
+        len(credential),
+        " ; préfixe Bearer retiré" if had_bearer_prefix else "",
+    )
+
+    common = {
+        "Accept": "*/*",
+        "User-Agent": "alertesmeteo-radar-nowcast/1.1",
+    }
+    auth_modes = [
+        ("Authorization: Bearer", {"Authorization": f"Bearer {credential}"}),
+        ("apikey", {"apikey": credential}),
+    ]
+
+    failures: list[str] = []
+    for label, auth_headers in auth_modes:
+        headers = {**common, **auth_headers}
+        try:
+            with requests.get(
+                API_URL,
+                headers=headers,
+                timeout=(20, 90),
+                stream=True,
+                allow_redirects=True,
+            ) as r:
+                LOGGER.info("Test authentification radar %s -> HTTP %s", label, r.status_code)
+
+                if r.status_code in (401, 403):
+                    failures.append(f"{label}=HTTP {r.status_code}")
+                    continue
+
+                r.raise_for_status()
+
+                content_type = (r.headers.get("Content-Type") or "").lower()
+                target.parent.mkdir(parents=True, exist_ok=True)
+                with target.open("wb") as f:
+                    total = 0
+                    for chunk in r.iter_content(1024 * 1024):
+                        if not chunk:
+                            continue
+                        total += len(chunk)
+                        f.write(chunk)
+
+                if total < 1024:
+                    target.unlink(missing_ok=True)
+                    raise RuntimeError(
+                        f"paquet radar anormalement petit ({total} octets ; Content-Type={content_type or 'inconnu'})"
+                    )
+
+                LOGGER.info(
+                    "Paquet radar téléchargé avec %s : %.1f Mo",
+                    label,
+                    total / 1_000_000,
+                )
+                return
+        except requests.RequestException as exc:
+            failures.append(f"{label}={type(exc).__name__}: {exc}")
+
+    details = " ; ".join(failures) if failures else "aucun détail"
+    raise RuntimeError(
+        "Authentification Météo-France refusée après essais Bearer et apikey. "
+        f"Détails : {details}. Le secret GitHub est bien lu mais le credential n'est pas accepté par l'API Radar."
+    )
 
 
 def safe_extract(archive: Path, destination: Path) -> None:
