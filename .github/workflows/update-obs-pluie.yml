@@ -1,21 +1,41 @@
-- name: Installation des dépendances
+name: Update Observations Pluie 24h
+
+on:
+  schedule:
+    - cron: '15 * * * *'
+  workflow_dispatch:
+
+jobs:
+  generate_and_upload:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v3
+
+      - name: Configuration de Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Installation des dépendances
         run: |
           python -m pip install --upgrade pip
-          pip install requests pandas folium
+          pip install -r requirements.txt
 
-      - name: Génération de la carte des observations 24h
+      - name: Génération de la carte HTML
         env:
           METEOFRANCE_API_KEY: ${{ secrets.METEOFRANCE_API_KEY }}
         run: python generer_obs_24h.py
 
-      - name: Envoi FTP vers le site
+      - name: Envoi FTP vers WordPress
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
-          server: ${{ secrets.FTP_SERVER }} # <-- Attention à bien remettre TON nom de variable de serveur ici
+          server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./
-          server-dir: ./wp-content/uploads/ # <-- À adapter
+          server-dir: ./wp-content/uploads/
           exclude: |
             **/*
             !observations_pluie_24h.html
