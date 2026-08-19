@@ -3,7 +3,18 @@
 
 """
 Météo Climat Pro — Carte pluie Météo-France
-Version 2.1.0
+Version 2.2.0
+
+Corrections v2.2.0
+------------------
+- Exclusion des stations dont le nom contient le marqueur SAPC.
+- Le cumul du mois en cours n'est plus complété s'il existe un trou entre
+  les données quotidiennes et les observations horaires.
+- Le script tente de reconstituer les jours manquants avec l'historique
+  disponible du Package Observations V2.
+- Le cache "mois en cours" est rafraîchi plus souvent quand les données
+  quotidiennes sont en retard.
+- Ajout d'indicateurs de fraîcheur dans le JSON.
 
 Produit :
   observations_pluie.json
@@ -14,19 +25,12 @@ Vues :
   - rr_month_mean     : cumul moyen du mois sur 1991-2020
   - rr_year_mean      : cumul annuel moyen sur 1991-2020
 
-Sources :
-  - Météo-France DPPaquetObs V2 pour les observations horaires
-  - Météo-France DPObs V2 /liste-stations pour les noms
-  - Données climatologiques quotidiennes Météo-France pour le mois en cours
-  - Données climatologiques mensuelles Météo-France pour les normales 1991-2020
-
 Secrets GitHub :
   METEOFRANCE_PACKAGE_OBS_KEY
   METEOFRANCE_OBS_TOKEN
 
-IMPORTANT :
-  Ces deux secrets contiennent des API Keys du portail Météo-France.
-  Elles sont envoyées dans l'en-tête HTTP "apikey".
+Les deux secrets sont des API Keys Météo-France et sont envoyés via
+l'en-tête HTTP "apikey".
 """
 
 from __future__ import annotations
@@ -41,21 +45,22 @@ import re
 import sys
 import time
 from collections import defaultdict
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import requests
 
 
-VERSION = "2.1.0"
+VERSION = "2.2.0"
+CACHE_SCHEMA = 4
 
 PACKAGE_BASE = (
     "https://public-api.meteofrance.fr/public/"
     "DPPaquetObs/v2/paquet/stations/horaire"
 )
 
-DPObs_STATIONS_URL = (
+DPOBS_STATIONS_URL = (
     "https://public-api.meteofrance.fr/public/"
     "DPObs/v2/liste-stations"
 )
@@ -77,11 +82,30 @@ NORMAL_START = 1991
 NORMAL_END = 2020
 
 HTTP_TIMEOUT = 90
+
+# L'API autorise 50 appels/minute. Le script temporise les appels historiques.
+PACKAGE_REQUEST_DELAY = float(os.getenv("MF_PACKAGE_DELAY", "1.25"))
+
+# Recherche du dernier paquet disponible.
 PACKAGE_RETRIES_HOURS = 4
 
-# On accepte un RR24 si au moins 22 des 24 heures sont présentes.
-# Le nombre d'heures est conservé dans le JSON pour contrôle.
+# Pour RR24 : on accepte 22 valeurs horaires minimum sur 24.
 RR24_MIN_VALID_HOURS = 22
+
+# Historique demandé au Package Obs pour essayer de combler J-1/J-2.
+# Le script arrête rapidement si les heures les plus anciennes ne sont
+# plus disponibles.
+PACKAGE_HISTORY_HOURS = 48
+PACKAGE_STOP_AFTER_OLD_MISSING = 4
+
+# Un jour reconstitué avec RR1 est considéré exploitable avec au moins 22 h.
+FULL_DAY_MIN_VALID_HOURS = 22
+
+# Rafraîchissement du cumul mensuel contrôlé.
+CURRENT_MONTH_REFRESH_HOURS = 2
+
+# Exclusion demandée.
+EXCLUDE_SAPC = True
 
 session = requests.Session()
 session.headers.update({
@@ -109,14 +133,26 @@ def parse_iso(value: Any) -> Optional[datetime]:
     if not value:
         return None
     try:
-        dt = datetime.fromisoformat(
-            str(value).replace("Z", "+00:00")
-        )
+        dt = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=timezone.utc)
         return dt.astimezone(timezone.utc)
     except Exception:
         return None
+
+
+def parse_yyyymmdd(value: Any) -> Optional[date]:
+    digits = re.sub(r"\D", "", str(value or ""))
+    if len(digits) < 8:
+        return None
+    try:
+        return datetime.strptime(digits[:8], "%Y%m%d").date()
+    except ValueError:
+        return None
+
+
+def yyyymmdd(d: date) -> str:
+    return d.strftime("%Y%m%d")
 
 
 def fnum(value: Any) -> Optional[float]:
@@ -133,7 +169,6 @@ def clean_rain(value: Any) -> Optional[float]:
     x = fnum(value)
     if x is None:
         return None
-    # Valeurs négatives / sentinelles / aberrantes ignorées.
     if x < 0 or x > 10000:
         return None
     return x
@@ -144,12 +179,9 @@ def first(row: dict, names: Iterable[str]) -> Any:
         if name in row and row[name] not in (None, ""):
             return row[name]
 
-    lowered = {
-        str(k).strip().lower(): v
-        for k, v in row.items()
-    }
+    lower = {str(k).strip().lower(): v for k, v in row.items()}
     for name in names:
-        value = lowered.get(str(name).lower())
+        value = lower.get(str(name).lower())
         if value not in (None, ""):
             return value
     return None
@@ -169,10 +201,10 @@ def station_id(row: dict) -> Optional[str]:
     if value is None:
         return None
 
-    s = str(value).strip()
-    if s.endswith(".0") and s[:-2].isdigit():
-        s = s[:-2]
-    return s or None
+    sid = str(value).strip()
+    if sid.endswith(".0") and sid[:-2].isdigit():
+        sid = sid[:-2]
+    return sid or None
 
 
 def parse_delimited(raw: bytes) -> List[dict]:
@@ -185,7 +217,7 @@ def parse_delimited(raw: bytes) -> List[dict]:
             text = raw.decode(encoding)
             break
         except UnicodeDecodeError:
-            pass
+            continue
 
     if text is None:
         text = raw.decode("utf-8", errors="replace")
@@ -193,18 +225,14 @@ def parse_delimited(raw: bytes) -> List[dict]:
     sample = text[:10000]
     delimiter = ";" if sample.count(";") >= sample.count(",") else ","
 
-    reader = csv.DictReader(io.StringIO(text), delimiter=delimiter)
-
     rows = []
-    for row in reader:
+    for row in csv.DictReader(io.StringIO(text), delimiter=delimiter):
         clean = {}
         for key, value in row.items():
             if key is None:
                 continue
             clean[str(key).strip()] = (
-                value.strip()
-                if isinstance(value, str)
-                else value
+                value.strip() if isinstance(value, str) else value
             )
         rows.append(clean)
     return rows
@@ -213,29 +241,27 @@ def parse_delimited(raw: bytes) -> List[dict]:
 def get_secret(name: str) -> str:
     value = os.getenv(name, "").strip()
     if not value:
-        raise RuntimeError(
-            f"Secret GitHub absent : {name}"
-        )
+        raise RuntimeError(f"Secret GitHub absent : {name}")
 
-    # Nettoyage au cas où "apikey:" ou "Bearer" a été copié.
     value = value.replace("\r", "").replace("\n", "").strip()
-
     for prefix in ("apikey:", "apiKey:", "Bearer ", "bearer "):
         if value.startswith(prefix):
             value = value[len(prefix):].strip()
 
     if not value:
-        raise RuntimeError(
-            f"Secret {name} vide après nettoyage."
-        )
+        raise RuntimeError(f"Secret {name} vide après nettoyage.")
     return value
 
 
 def apikey_headers(key: str) -> dict:
-    return {
-        "apikey": key,
-        "accept": "*/*",
-    }
+    return {"apikey": key, "accept": "*/*"}
+
+
+def is_sapc_name(name: str) -> bool:
+    if not EXCLUDE_SAPC:
+        return False
+    normalized = re.sub(r"[^A-Z0-9]+", " ", str(name).upper()).strip()
+    return "SAPC" in normalized.split()
 
 
 # ---------------------------------------------------------------------
@@ -248,19 +274,12 @@ def package_request(
 ) -> Optional[requests.Response]:
 
     date_text = iso(
-        date_hour.replace(
-            minute=0,
-            second=0,
-            microsecond=0,
-        )
+        date_hour.replace(minute=0, second=0, microsecond=0)
     )
 
     response = session.get(
         PACKAGE_BASE,
-        params={
-            "date": date_text,
-            "format": "csv",
-        },
+        params={"date": date_text, "format": "csv"},
         headers=apikey_headers(key),
         timeout=HTTP_TIMEOUT,
     )
@@ -275,13 +294,10 @@ def package_request(
         raise RuntimeError(
             "Package Observations : HTTP 401, clé invalide."
         )
-
     if response.status_code == 403:
         raise RuntimeError(
-            "Package Observations : HTTP 403, "
-            "abonnement ou droits insuffisants."
+            "Package Observations : HTTP 403, abonnement/droits insuffisants."
         )
-
     if response.status_code == 429:
         raise RuntimeError(
             "Package Observations : HTTP 429, quota dépassé."
@@ -295,45 +311,30 @@ def find_latest_package_hour(
     key: str,
 ) -> Tuple[datetime, requests.Response]:
 
-    base = utcnow().replace(
-        minute=0,
-        second=0,
-        microsecond=0,
-    )
+    base = utcnow().replace(minute=0, second=0, microsecond=0)
 
     for back in range(PACKAGE_RETRIES_HOURS):
         candidate = base - timedelta(hours=back)
-        print(
-            "Recherche paquet :",
-            iso(candidate),
-        )
+        print("Recherche paquet :", iso(candidate))
         response = package_request(key, candidate)
         if response is not None:
-            print(
-                "Dernier paquet disponible :",
-                iso(candidate),
-            )
+            print("Dernier paquet disponible :", iso(candidate))
             return candidate, response
+        time.sleep(PACKAGE_REQUEST_DELAY)
 
     raise RuntimeError(
         "Aucun paquet horaire disponible entre H et H-3."
     )
 
 
-def load_24_hour_packages(
+def load_package_history(
     key: str,
-) -> Tuple[
-    datetime,
-    Dict[str, dict],
-    Dict[str, dict],
-]:
+) -> Tuple[datetime, Dict[str, dict], Dict[str, dict]]:
 
     latest_hour, first_response = find_latest_package_hour(key)
 
-    # sid -> métadonnées géographiques
     station_geo: Dict[str, dict] = {}
 
-    # sid -> données agrégées
     agg: Dict[str, dict] = defaultdict(
         lambda: {
             "rr24_sum": 0.0,
@@ -341,31 +342,43 @@ def load_24_hour_packages(
             "today_sum": 0.0,
             "today_hours": 0,
             "latest_date": None,
+            "day_sums": defaultdict(float),
+            "day_hours": defaultdict(int),
         }
     )
 
-    current_utc_day = latest_hour.date()
+    latest_day = latest_hour.date()
+    old_missing = 0
 
-    for offset in range(24):
+    for offset in range(PACKAGE_HISTORY_HOURS):
         target = latest_hour - timedelta(hours=offset)
 
         if offset == 0:
             response = first_response
         else:
             response = package_request(key, target)
+            time.sleep(PACKAGE_REQUEST_DELAY)
 
         if response is None:
-            print(
-                f"[WARN] Paquet absent : {iso(target)}"
-            )
+            print(f"[INFO] Paquet indisponible : {iso(target)}")
+
+            # Dans la fenêtre RR24 on continue même si une heure manque.
+            # Au-delà, quelques absences consécutives indiquent généralement
+            # que l'on a dépassé la profondeur disponible.
+            if offset >= 24:
+                old_missing += 1
+                if old_missing >= PACKAGE_STOP_AFTER_OLD_MISSING:
+                    print(
+                        "Arrêt de la recherche historique après "
+                        f"{old_missing} paquet(s) ancien(s) indisponible(s)."
+                    )
+                    break
             continue
 
+        old_missing = 0
         rows = parse_delimited(response.content)
 
-        print(
-            f"Paquet {iso(target)} : "
-            f"{len(rows)} lignes"
-        )
+        print(f"Paquet {iso(target)} : {len(rows)} lignes")
 
         for row in rows:
             sid = station_id(row)
@@ -393,65 +406,62 @@ def load_24_hour_packages(
             validity = parse_iso(
                 first(
                     row,
-                    (
-                        "validity_time",
-                        "reference_time",
-                        "date",
-                    ),
+                    ("validity_time", "reference_time", "date"),
                 )
-            )
-
-            if validity is None:
-                validity = target
+            ) or target
 
             item = agg[sid]
-            item["rr24_sum"] += rr1
-            item["rr24_hours"] += 1
+            day_key = yyyymmdd(validity.date())
 
-            if validity.date() == current_utc_day:
+            item["day_sums"][day_key] += rr1
+            item["day_hours"][day_key] += 1
+
+            # RR24 = seulement les 24 paquets les plus récents.
+            if offset < 24:
+                item["rr24_sum"] += rr1
+                item["rr24_hours"] += 1
+
+            if validity.date() == latest_day:
                 item["today_sum"] += rr1
                 item["today_hours"] += 1
 
-            old = parse_iso(item["latest_date"])
-            if old is None or validity > old:
+            old_dt = parse_iso(item["latest_date"])
+            if old_dt is None or validity > old_dt:
                 item["latest_date"] = iso(validity)
 
-        # 24 appels seulement, sous la limite du service.
-        time.sleep(0.10)
+    # Conversion des defaultdict pour faciliter la sérialisation/debug.
+    for item in agg.values():
+        item["day_sums"] = {
+            k: round(v, 3) for k, v in item["day_sums"].items()
+        }
+        item["day_hours"] = dict(item["day_hours"])
 
     return latest_hour, station_geo, agg
 
 
 # ---------------------------------------------------------------------
-# DPObs V2 : noms des stations
+# DPObs V2 : noms
 # ---------------------------------------------------------------------
 
-def load_station_names(
-    obs_key: str,
-) -> Dict[str, str]:
-
+def load_station_names(obs_key: str) -> Dict[str, str]:
     print("Chargement /DPObs/v2/liste-stations ...")
 
     response = session.get(
-        DPObs_STATIONS_URL,
+        DPOBS_STATIONS_URL,
         headers=apikey_headers(obs_key),
         timeout=HTTP_TIMEOUT,
     )
 
     if response.status_code != 200:
         print(
-            f"[WARN] liste-stations HTTP "
-            f"{response.status_code}; "
-            "les identifiants seront utilisés comme noms."
+            f"[WARN] liste-stations HTTP {response.status_code}; "
+            "identifiants utilisés comme noms."
         )
         return {}
 
-    content_type = (
-        response.headers.get("content-type") or ""
-    ).lower()
+    content_type = (response.headers.get("content-type") or "").lower()
 
     rows: List[dict]
-
     if "json" in content_type:
         try:
             payload = response.json()
@@ -471,8 +481,7 @@ def load_station_names(
     else:
         rows = parse_delimited(response.content)
 
-    names = {}
-
+    names: Dict[str, str] = {}
     for row in rows:
         if not isinstance(row, dict):
             continue
@@ -483,36 +492,22 @@ def load_station_names(
 
         name = first(
             row,
-            (
-                "nom_usuel",
-                "NOM_USUEL",
-                "nom",
-                "NOM",
-                "name",
-                "libelle",
-            ),
+            ("nom_usuel", "NOM_USUEL", "nom", "NOM", "name", "libelle"),
         )
-
         if name:
             names[sid] = str(name).strip()
 
-    print(
-        f"Noms récupérés : {len(names)} station(s)."
-    )
+    print(f"Noms récupérés : {len(names)} station(s).")
     return names
 
 
 # ---------------------------------------------------------------------
-# Départements et fichiers climatologiques
+# Fichiers climatologiques
 # ---------------------------------------------------------------------
 
-def department_candidates(
-    sid: str,
-) -> List[str]:
-
+def department_candidates(sid: str) -> List[str]:
     digits = re.sub(r"\D", "", sid)
 
-    # DROM / COM
     for code in (
         "971", "972", "973", "974", "975",
         "976", "977", "978", "984",
@@ -522,66 +517,43 @@ def department_candidates(
             return [code]
 
     if digits.startswith("20"):
-        # Les identifiants historiques corses utilisent 20.
         return ["2A", "2B", "20"]
 
     return [digits[:2]] if len(digits) >= 2 else []
 
 
-def current_daily_url(
-    dep: str,
-    now: datetime,
-) -> str:
-
+def current_daily_url(dep: str, now: datetime) -> str:
     return (
         f"{MF_S3_QUOT}/"
-        f"Q_{dep}_latest-"
-        f"{now.year - 1}-{now.year}_RR-T-Vent.csv.gz"
+        f"Q_{dep}_latest-{now.year - 1}-{now.year}_RR-T-Vent.csv.gz"
     )
 
 
-def historic_monthly_url(
-    dep: str,
-    now: datetime,
-) -> str:
-
+def historic_monthly_url(dep: str, now: datetime) -> str:
     return (
         f"{MF_S3_MENS}/"
-        f"MENSQ_{dep}_previous-"
-        f"1950-{now.year - 2}.csv.gz"
+        f"MENSQ_{dep}_previous-1950-{now.year - 2}.csv.gz"
     )
 
 
-def download_climate_rows(
-    url: str,
-) -> Optional[List[dict]]:
-
+def download_climate_rows(url: str) -> Optional[List[dict]]:
     try:
-        response = session.get(
-            url,
-            timeout=HTTP_TIMEOUT,
-        )
+        response = session.get(url, timeout=HTTP_TIMEOUT)
     except Exception as exc:
-        print(
-            f"[WARN] téléchargement impossible {url}: {exc}"
-        )
+        print(f"[WARN] téléchargement impossible {url}: {exc}")
         return None
 
     if response.status_code == 404:
         return None
 
     if response.status_code != 200:
-        print(
-            f"[WARN] HTTP {response.status_code}: {url}"
-        )
+        print(f"[WARN] HTTP {response.status_code}: {url}")
         return None
 
     try:
         return parse_delimited(response.content)
     except Exception as exc:
-        print(
-            f"[WARN] CSV illisible {url}: {exc}"
-        )
+        print(f"[WARN] CSV illisible {url}: {exc}")
         return None
 
 
@@ -592,47 +564,37 @@ def download_climate_rows(
 def load_cache() -> dict:
     if not CACHE.exists():
         return {
-            "schema_version": 3,
+            "schema_version": CACHE_SCHEMA,
             "stations": {},
         }
 
     try:
-        payload = json.loads(
-            CACHE.read_text(encoding="utf-8")
-        )
+        payload = json.loads(CACHE.read_text(encoding="utf-8"))
         if not isinstance(payload, dict):
             raise ValueError("cache non objet")
         payload.setdefault("stations", {})
+        payload["schema_version"] = CACHE_SCHEMA
         return payload
     except Exception as exc:
-        print(
-            f"[WARN] cache ignoré : {exc}"
-        )
+        print(f"[WARN] cache ignoré : {exc}")
         return {
-            "schema_version": 3,
+            "schema_version": CACHE_SCHEMA,
             "stations": {},
         }
 
 
-def cache_datetime(
-    cache: dict,
-    key: str,
-) -> Optional[datetime]:
+def cache_datetime(cache: dict, key: str) -> Optional[datetime]:
     return parse_iso(cache.get(key))
 
 
-def hours_since(
-    dt: Optional[datetime],
-) -> float:
+def hours_since(dt: Optional[datetime]) -> float:
     if dt is None:
         return 999999.0
-    return (
-        utcnow() - dt
-    ).total_seconds() / 3600.0
+    return (utcnow() - dt).total_seconds() / 3600.0
 
 
 # ---------------------------------------------------------------------
-# Mois en cours
+# Mois en cours : base quotidienne
 # ---------------------------------------------------------------------
 
 def update_current_month(
@@ -643,30 +605,31 @@ def update_current_month(
 
     month_id = f"{now.year:04d}-{now.month:02d}"
 
+    previous_day_key = yyyymmdd(now.date() - timedelta(days=1))
+
+    # Si le dernier calcul était en retard, on retente au workflow suivant.
+    last_global_through = str(cache.get("current_month_global_through") or "")
+    lagging = bool(
+        last_global_through
+        and last_global_through < previous_day_key
+    )
+
     stale = (
         cache.get("current_month_id") != month_id
+        or cache.get("current_month_logic_version") != 2
+        or lagging
         or hours_since(
-            cache_datetime(
-                cache,
-                "current_month_generated_at",
-            )
-        ) >= 8
+            cache_datetime(cache, "current_month_generated_at")
+        ) >= CURRENT_MONTH_REFRESH_HOURS
     )
 
     if not stale:
-        print(
-            "Cache du mois en cours encore valide."
-        )
+        print("Cache du mois en cours encore valide.")
         return
 
-    print(
-        "Actualisation des données quotidiennes "
-        "du mois en cours..."
-    )
+    print("Actualisation des données quotidiennes du mois en cours...")
 
-    wanted = set(station_ids)
     by_dep: Dict[str, set] = defaultdict(set)
-
     for sid in station_ids:
         for dep in department_candidates(sid):
             by_dep[dep].add(sid)
@@ -674,7 +637,6 @@ def update_current_month(
     totals: Dict[str, float] = defaultdict(float)
     last_day: Dict[str, str] = {}
     seen_days = set()
-
     prefix = f"{now.year:04d}{now.month:02d}"
 
     for dep, dep_stations in sorted(by_dep.items()):
@@ -684,75 +646,58 @@ def update_current_month(
         if rows is None:
             continue
 
-        print(
-            f"Quotidien {dep}: {len(rows)} lignes"
-        )
+        print(f"Quotidien {dep}: {len(rows)} lignes")
 
         for row in rows:
             sid = station_id(row)
             if sid not in dep_stations:
                 continue
 
-            date_value = first(
-                row,
-                ("AAAAMMJJ", "DATE", "date"),
+            day = parse_yyyymmdd(
+                first(row, ("AAAAMMJJ", "DATE", "date"))
             )
-            date_digits = re.sub(
-                r"\D",
-                "",
-                str(date_value or ""),
-            )[:8]
+            if day is None:
+                continue
 
-            if (
-                len(date_digits) != 8
-                or not date_digits.startswith(prefix)
-            ):
+            day_key = yyyymmdd(day)
+            if not day_key.startswith(prefix):
                 continue
 
             rr = clean_rain(
                 first(
                     row,
-                    (
-                        "RR",
-                        "rr",
-                        "PRECIP",
-                        "PRECIPITATION",
-                    ),
+                    ("RR", "rr", "PRECIP", "PRECIPITATION"),
                 )
             )
             if rr is None:
                 continue
 
-            key = (sid, date_digits)
-            if key in seen_days:
+            dedup = (sid, day_key)
+            if dedup in seen_days:
                 continue
-            seen_days.add(key)
+            seen_days.add(dedup)
 
             totals[sid] += rr
 
-            if date_digits > last_day.get(sid, ""):
-                last_day[sid] = date_digits
+            if day_key > last_day.get(sid, ""):
+                last_day[sid] = day_key
 
-    stations_cache = cache.setdefault(
-        "stations",
-        {},
-    )
+    stations_cache = cache.setdefault("stations", {})
 
     for sid in station_ids:
         entry = stations_cache.setdefault(sid, {})
         entry["month_daily_total"] = (
-            round(totals[sid], 1)
-            if sid in totals
-            else None
+            round(totals[sid], 1) if sid in totals else None
         )
-        entry["month_daily_through"] = (
-            last_day.get(sid)
-        )
+        entry["month_daily_through"] = last_day.get(sid)
 
-    cache["current_month_id"] = month_id
-    cache["current_month_generated_at"] = iso(
-        utcnow()
+    valid_through = [d for d in last_day.values() if d]
+    cache["current_month_global_through"] = (
+        max(valid_through) if valid_through else None
     )
+    cache["current_month_id"] = month_id
+    cache["current_month_logic_version"] = 2
+    cache["current_month_generated_at"] = iso(utcnow())
 
 
 # ---------------------------------------------------------------------
@@ -765,56 +710,35 @@ def update_normals(
     now: datetime,
 ) -> None:
 
-    stations_cache = cache.setdefault(
-        "stations",
-        {},
-    )
+    stations_cache = cache.setdefault("stations", {})
 
     known = sum(
         1
         for sid in station_ids
-        if stations_cache.get(sid, {}).get(
-            "normal_year"
-        ) is not None
+        if stations_cache.get(sid, {}).get("normal_year") is not None
     )
-
     coverage = known / max(1, len(station_ids))
 
     stale = (
-        hours_since(
-            cache_datetime(
-                cache,
-                "normals_generated_at",
-            )
-        ) >= 24 * 45
+        hours_since(cache_datetime(cache, "normals_generated_at"))
+        >= 24 * 45
         or coverage < 0.80
     )
 
     if not stale:
-        print(
-            "Cache des normales 1991-2020 "
-            "encore valide."
-        )
+        print("Cache des normales 1991-2020 encore valide.")
         return
 
-    print(
-        "Calcul des normales 1991-2020..."
-    )
+    print("Calcul des normales 1991-2020...")
 
     by_dep: Dict[str, set] = defaultdict(set)
-
     for sid in station_ids:
         for dep in department_candidates(sid):
             by_dep[dep].add(sid)
 
-    # station -> année -> mois -> RR
-    values: Dict[
-        str,
-        Dict[int, Dict[int, float]],
-    ] = defaultdict(
+    values: Dict[str, Dict[int, Dict[int, float]]] = defaultdict(
         lambda: defaultdict(dict)
     )
-
     seen = set()
 
     for dep, dep_stations in sorted(by_dep.items()):
@@ -824,25 +748,15 @@ def update_normals(
         if rows is None:
             continue
 
-        print(
-            f"Mensuel {dep}: {len(rows)} lignes"
-        )
+        print(f"Mensuel {dep}: {len(rows)} lignes")
 
         for row in rows:
             sid = station_id(row)
             if sid not in dep_stations:
                 continue
 
-            date_value = first(
-                row,
-                ("AAAAMM", "DATE", "date"),
-            )
-            digits = re.sub(
-                r"\D",
-                "",
-                str(date_value or ""),
-            )
-
+            raw_date = first(row, ("AAAAMM", "DATE", "date"))
+            digits = re.sub(r"\D", "", str(raw_date or ""))
             if len(digits) < 6:
                 continue
 
@@ -861,21 +775,16 @@ def update_normals(
             rr = clean_rain(
                 first(
                     row,
-                    (
-                        "RR",
-                        "rr",
-                        "PRECIP",
-                        "PRECIPITATION",
-                    ),
+                    ("RR", "rr", "PRECIP", "PRECIPITATION"),
                 )
             )
             if rr is None:
                 continue
 
-            dedup = (sid, year, month)
-            if dedup in seen:
+            key = (sid, year, month)
+            if key in seen:
                 continue
-            seen.add(dedup)
+            seen.add(key)
 
             values[sid][year][month] = rr
 
@@ -886,132 +795,153 @@ def update_normals(
         month_counts = {}
 
         for month in range(1, 13):
-            month_values = [
+            vals = [
                 months[month]
-                for year, months
-                in values.get(sid, {}).items()
+                for _, months in values.get(sid, {}).items()
                 if month in months
             ]
 
-            month_counts[str(month)] = len(
-                month_values
+            month_counts[str(month)] = len(vals)
+            month_normals[str(month)] = (
+                round(sum(vals) / len(vals), 1)
+                if len(vals) >= 20
+                else None
             )
 
-            # Seuil de disponibilité minimal.
-            if len(month_values) >= 20:
-                month_normals[str(month)] = round(
-                    sum(month_values)
-                    / len(month_values),
-                    1,
-                )
-            else:
-                month_normals[str(month)] = None
-
         annual_values = []
-
-        for year, months in values.get(
-            sid,
-            {},
-        ).items():
-            if all(
-                month in months
-                for month in range(1, 13)
-            ):
+        for _, months in values.get(sid, {}).items():
+            if all(m in months for m in range(1, 13)):
                 annual_values.append(
-                    sum(
-                        months[month]
-                        for month in range(1, 13)
-                    )
+                    sum(months[m] for m in range(1, 13))
                 )
 
         entry["normal_months"] = month_normals
         entry["normal_month_counts"] = month_counts
         entry["normal_year"] = (
-            round(
-                sum(annual_values)
-                / len(annual_values),
-                1,
-            )
+            round(sum(annual_values) / len(annual_values), 1)
             if len(annual_values) >= 20
             else None
         )
-        entry["normal_year_count"] = len(
-            annual_values
-        )
+        entry["normal_year_count"] = len(annual_values)
 
-    cache["normals_generated_at"] = iso(
-        utcnow()
-    )
-    cache["normal_period"] = (
-        f"{NORMAL_START}-{NORMAL_END}"
-    )
+    cache["normals_generated_at"] = iso(utcnow())
+    cache["normal_period"] = f"{NORMAL_START}-{NORMAL_END}"
 
 
 # ---------------------------------------------------------------------
-# Construction du mois en cours en quasi temps réel
+# Mois en cours : assemblage sans trou
 # ---------------------------------------------------------------------
 
-def month_total_with_today(
-    sid: str,
+def month_total_live(
     cache_entry: dict,
     hourly: dict,
     latest_hour: datetime,
-) -> Tuple[Optional[float], Optional[str]]:
+) -> Tuple[Optional[float], Optional[str], bool, str]:
 
-    daily_total = fnum(
-        cache_entry.get("month_daily_total")
-    )
-    daily_through = str(
+    latest_day = latest_hour.date()
+    latest_day_key = yyyymmdd(latest_day)
+
+    daily_total = fnum(cache_entry.get("month_daily_total"))
+    daily_through = parse_yyyymmdd(
         cache_entry.get("month_daily_through")
-        or ""
     )
 
-    latest_day = latest_hour.strftime("%Y%m%d")
-    previous_day = (
-        latest_hour.date() - timedelta(days=1)
-    ).strftime("%Y%m%d")
+    day_sums = hourly.get("day_sums") or {}
+    day_hours = hourly.get("day_hours") or {}
 
-    today_sum = fnum(
-        hourly.get("today_sum")
-    )
-    today_hours = int(
-        hourly.get("today_hours") or 0
-    )
+    today_sum = fnum(hourly.get("today_sum"))
+    today_hours = int(hourly.get("today_hours") or 0)
 
-    # Cas idéal : données quotidiennes disponibles jusqu'à hier.
-    if daily_total is not None:
-        if daily_through == previous_day:
-            if today_sum is not None and today_hours > 0:
-                return (
-                    round(
-                        daily_total + today_sum,
-                        1,
-                    ),
-                    latest_day,
-                )
-            return round(daily_total, 1), daily_through
-
-        # Si le quotidien contient déjà aujourd'hui,
-        # ne surtout pas ajouter RR1 une seconde fois.
-        if daily_through == latest_day:
-            return round(daily_total, 1), daily_through
-
-        # Quotidien en retard de plus d'un jour :
-        # on garde uniquement le cumul contrôlé.
-        return round(daily_total, 1), (
-            daily_through or None
+    # Si le fichier quotidien inclut déjà aujourd'hui, il est prioritaire.
+    if daily_total is not None and daily_through == latest_day:
+        return (
+            round(daily_total, 1),
+            latest_day_key,
+            True,
+            "quotidien_controle",
         )
 
-    # En début de mois ou si le fichier quotidien n'est
-    # pas encore disponible, on peut au minimum fournir aujourd'hui.
-    if (
-        latest_hour.day == 1
-        and today_sum is not None
-        and today_hours > 0
-    ):
-        return round(today_sum, 1), latest_day
+    # Sans base quotidienne, on ne peut reconstituer le mois entier que
+    # pendant les tout premiers jours du mois.
+    if daily_total is None or daily_through is None:
+        month_start = latest_day.replace(day=1)
+        total = 0.0
+        cursor = month_start
 
-    return None, None
+        while cursor < latest_day:
+            key = yyyymmdd(cursor)
+            hours = int(day_hours.get(key) or 0)
+            value = fnum(day_sums.get(key))
+
+            if value is None or hours < FULL_DAY_MIN_VALID_HOURS:
+                return None, None, False, "base_quotidienne_absente"
+
+            total += value
+            cursor += timedelta(days=1)
+
+        if today_sum is not None and today_hours > 0:
+            total += today_sum
+            return (
+                round(total, 1),
+                latest_day_key,
+                True,
+                "paquets_horaires_uniquement",
+            )
+
+        if cursor == latest_day and latest_day.day == 1:
+            return 0.0, latest_day_key, True, "debut_du_mois"
+
+        return None, None, False, "base_quotidienne_absente"
+
+    total = float(daily_total)
+    through = daily_through
+
+    # Si le quotidien est en retard, on ne saute aucun jour.
+    cursor = daily_through + timedelta(days=1)
+
+    while cursor < latest_day:
+        key = yyyymmdd(cursor)
+        hours = int(day_hours.get(key) or 0)
+        value = fnum(day_sums.get(key))
+
+        if value is None or hours < FULL_DAY_MIN_VALID_HOURS:
+            # Pas de bricolage : on conserve uniquement la partie certaine.
+            return (
+                round(total, 1),
+                yyyymmdd(through),
+                False,
+                "quotidien_en_attente",
+            )
+
+        total += value
+        through = cursor
+        cursor += timedelta(days=1)
+
+    # La chaîne est continue jusqu'à hier : on peut ajouter aujourd'hui.
+    if cursor == latest_day:
+        if today_sum is not None and today_hours > 0:
+            total += today_sum
+            return (
+                round(total, 1),
+                latest_day_key,
+                True,
+                "quotidien_plus_paquets_horaires",
+            )
+
+        # Aucun RR1 disponible aujourd'hui : cumul certain jusqu'à hier.
+        return (
+            round(total, 1),
+            yyyymmdd(through),
+            False,
+            "quotidien_sans_observation_du_jour",
+        )
+
+    return (
+        round(total, 1),
+        yyyymmdd(through),
+        False,
+        "quotidien_en_attente",
+    )
 
 
 # ---------------------------------------------------------------------
@@ -1019,63 +949,51 @@ def month_total_with_today(
 # ---------------------------------------------------------------------
 
 MONTHS_FR = (
-    "janvier",
-    "février",
-    "mars",
-    "avril",
-    "mai",
-    "juin",
-    "juillet",
-    "août",
-    "septembre",
-    "octobre",
-    "novembre",
-    "décembre",
+    "janvier", "février", "mars", "avril", "mai", "juin",
+    "juillet", "août", "septembre", "octobre", "novembre", "décembre",
 )
 
 
 def main() -> int:
+    print(f"=== Carte pluie Météo-France v{VERSION} ===")
 
-    print(
-        f"=== Carte pluie Météo-France v{VERSION} ==="
-    )
+    package_key = get_secret("METEOFRANCE_PACKAGE_OBS_KEY")
+    obs_key = get_secret("METEOFRANCE_OBS_TOKEN")
 
-    package_key = get_secret(
-        "METEOFRANCE_PACKAGE_OBS_KEY"
-    )
-    obs_key = get_secret(
-        "METEOFRANCE_OBS_TOKEN"
-    )
-
-    # 1. Observations horaires
-    latest_hour, station_geo, hourly = (
-        load_24_hour_packages(package_key)
-    )
-
-    station_ids = sorted(station_geo.keys())
-
-    print(
-        f"{len(station_ids)} station(s) "
-        "présente(s) dans les paquets."
-    )
+    # 1. Paquets horaires
+    latest_hour, station_geo, hourly = load_package_history(package_key)
 
     # 2. Noms
     names = load_station_names(obs_key)
 
+    raw_station_ids = sorted(station_geo.keys())
+
+    excluded_sapc_ids = [
+        sid
+        for sid in raw_station_ids
+        if is_sapc_name(names.get(sid, sid))
+    ]
+
+    station_ids = [
+        sid
+        for sid in raw_station_ids
+        if sid not in set(excluded_sapc_ids)
+    ]
+
+    print(
+        f"Stations paquets : {len(raw_station_ids)} | "
+        f"SAPC exclues : {len(excluded_sapc_ids)} | "
+        f"retenues : {len(station_ids)}"
+    )
+
     # 3. Cache climatologique
     cache = load_cache()
 
-    update_current_month(
-        cache,
-        station_ids,
-        latest_hour,
-    )
+    update_current_month(cache, station_ids, latest_hour)
+    update_normals(cache, station_ids, latest_hour)
 
-    update_normals(
-        cache,
-        station_ids,
-        latest_hour,
-    )
+    cache["schema_version"] = CACHE_SCHEMA
+    cache["module_version"] = VERSION
 
     CACHE.write_text(
         json.dumps(
@@ -1087,51 +1005,38 @@ def main() -> int:
         encoding="utf-8",
     )
 
-    # 4. JSON final
+    # 4. Stations finales
     month_key = str(latest_hour.month)
+    latest_day_key = yyyymmdd(latest_hour.date())
+
     stations = []
 
     for sid in station_ids:
         geo = station_geo[sid]
         h = hourly.get(sid, {})
-        clim = cache.get(
-            "stations",
-            {},
-        ).get(sid, {})
+        clim = cache.get("stations", {}).get(sid, {})
 
-        valid_hours = int(
-            h.get("rr24_hours") or 0
+        valid_hours = int(h.get("rr24_hours") or 0)
+        rr24 = (
+            round(float(h.get("rr24_sum") or 0.0), 1)
+            if valid_hours >= RR24_MIN_VALID_HOURS
+            else None
         )
 
-        rr24 = None
-
-        if valid_hours >= RR24_MIN_VALID_HOURS:
-            rr24 = round(
-                float(h.get("rr24_sum") or 0.0),
-                1,
-            )
-
-        rr_month_current, month_through = (
-            month_total_with_today(
-                sid,
-                clim,
-                h,
-                latest_hour,
-            )
+        (
+            rr_month_current,
+            month_through,
+            month_complete,
+            month_method,
+        ) = month_total_live(
+            clim,
+            h,
+            latest_hour,
         )
 
-        month_norms = (
-            clim.get("normal_months")
-            or {}
-        )
-
-        rr_month_mean = fnum(
-            month_norms.get(month_key)
-        )
-
-        rr_year_mean = fnum(
-            clim.get("normal_year")
-        )
+        month_norms = clim.get("normal_months") or {}
+        rr_month_mean = fnum(month_norms.get(month_key))
+        rr_year_mean = fnum(clim.get("normal_year"))
 
         stations.append({
             "id": sid,
@@ -1142,14 +1047,16 @@ def main() -> int:
             "rr24": rr24,
             "rr24_hours": valid_hours,
             "rr24_complete": valid_hours == 24,
+
             "rr_month_current": (
                 round(rr_month_current, 1)
                 if rr_month_current is not None
                 else None
             ),
-            "rr_month_current_through": (
-                month_through
-            ),
+            "rr_month_current_through": month_through,
+            "rr_month_current_complete": bool(month_complete),
+            "rr_month_current_method": month_method,
+
             "rr_month_mean": (
                 round(rr_month_mean, 1)
                 if rr_month_mean is not None
@@ -1161,63 +1068,82 @@ def main() -> int:
                 else None
             ),
             "normal_month_years": (
-                (
-                    clim.get(
-                        "normal_month_counts"
-                    )
-                    or {}
-                ).get(month_key)
+                (clim.get("normal_month_counts") or {}).get(month_key)
             ),
-            "normal_year_years": (
-                clim.get("normal_year_count")
-            ),
+            "normal_year_years": clim.get("normal_year_count"),
         })
 
+    stations.sort(
+        key=lambda st: (
+            -(st["rr24"] if st["rr24"] is not None else -1),
+            st["name"],
+        )
+    )
+
     def max_field(field: str) -> float:
-        vals = [
-            fnum(st.get(field))
-            for st in stations
-        ]
-        vals = [
-            x for x in vals
-            if x is not None
-        ]
+        vals = [fnum(st.get(field)) for st in stations]
+        vals = [v for v in vals if v is not None]
         return round(max(vals), 1) if vals else 0.0
 
+    through_values = sorted(
+        {
+            st["rr_month_current_through"]
+            for st in stations
+            if st.get("rr_month_current_through")
+        }
+    )
+
+    through_min = through_values[0] if through_values else None
+    through_max = through_values[-1] if through_values else None
+
+    live_month_stations = sum(
+        1
+        for st in stations
+        if (
+            st.get("rr_month_current_complete")
+            and st.get("rr_month_current_through") == latest_day_key
+        )
+    )
+
+    stale_month_stations = sum(
+        1
+        for st in stations
+        if (
+            st.get("rr_month_current") is not None
+            and st.get("rr_month_current_through") != latest_day_key
+        )
+    )
+
     month_label = (
-        f"{MONTHS_FR[latest_hour.month - 1]} "
-        f"{latest_hour.year}"
+        f"{MONTHS_FR[latest_hour.month - 1]} {latest_hour.year}"
     )
 
     output = {
-        "schema_version": 3,
+        "schema_version": 4,
         "module_version": VERSION,
         "status": "ok",
         "generated_at": iso(utcnow()),
-        "latest_observation_at": iso(
-            latest_hour
-        ),
+        "latest_observation_at": iso(latest_hour),
         "title": "Cumuls de précipitations",
         "unit": "mm",
-        "normal_period": (
-            f"{NORMAL_START}-{NORMAL_END}"
-        ),
+        "normal_period": f"{NORMAL_START}-{NORMAL_END}",
+
         "current_month": {
-            "id": (
-                f"{latest_hour.year:04d}-"
-                f"{latest_hour.month:02d}"
-            ),
+            "id": f"{latest_hour.year:04d}-{latest_hour.month:02d}",
             "label": month_label,
-            "generated_at": cache.get(
-                "current_month_generated_at"
-            ),
+            "generated_at": cache.get("current_month_generated_at"),
+            "through_min": through_min,
+            "through_max": through_max,
+            "latest_day": latest_day_key,
+            "stations_live": live_month_stations,
+            "stations_stale": stale_month_stations,
         },
+
         "metrics": {
             "rr24": {
                 "label": "24 h",
                 "long_label": (
-                    "Cumuls de précipitations "
-                    "sur les 24 dernières heures"
+                    "Cumuls de précipitations sur les 24 dernières heures"
                 ),
                 "max": max_field("rr24"),
             },
@@ -1227,72 +1153,50 @@ def main() -> int:
                     f"Cumul depuis le 1er "
                     f"{MONTHS_FR[latest_hour.month - 1]}"
                 ),
-                "max": max_field(
-                    "rr_month_current"
-                ),
+                "max": max_field("rr_month_current"),
             },
             "rr_month_mean": {
                 "label": "Moy. du mois",
                 "long_label": (
-                    f"Cumul moyen de "
-                    f"{MONTHS_FR[latest_hour.month - 1]} "
+                    f"Cumul moyen de {MONTHS_FR[latest_hour.month - 1]} "
                     f"({NORMAL_START}-{NORMAL_END})"
                 ),
-                "max": max_field(
-                    "rr_month_mean"
-                ),
+                "max": max_field("rr_month_mean"),
             },
             "rr_year_mean": {
                 "label": "Moy. annuelle",
                 "long_label": (
-                    f"Cumul moyen annuel "
-                    f"({NORMAL_START}-{NORMAL_END})"
+                    f"Cumul moyen annuel ({NORMAL_START}-{NORMAL_END})"
                 ),
-                "max": max_field(
-                    "rr_year_mean"
-                ),
+                "max": max_field("rr_year_mean"),
             },
         },
+
         "stations_total": len(stations),
         "stations_rr24": sum(
-            1
-            for st in stations
-            if st["rr24"] is not None
+            1 for st in stations if st["rr24"] is not None
         ),
+        "stations_excluded_sapc": len(excluded_sapc_ids),
+
         "source": {
             "observations": (
-                "Météo-France - "
-                "Package Observations V2"
+                "Météo-France - Package Observations V2"
             ),
             "rr24_method": (
-                "Somme de RR1 sur 24 paquets horaires"
+                "Somme de RR1 sur les 24 paquets horaires les plus récents"
             ),
             "current_month": (
-                "Météo-France - "
-                "données climatologiques quotidiennes "
-                "+ RR1 du jour si nécessaire"
+                "Données climatologiques quotidiennes Météo-France, "
+                "complétées uniquement si la continuité horaire est vérifiée"
             ),
             "normals": (
-                "Météo-France - "
-                "données climatologiques mensuelles"
+                "Météo-France - données climatologiques mensuelles"
             ),
-            "normal_period": (
-                f"{NORMAL_START}-{NORMAL_END}"
-            ),
+            "normal_period": f"{NORMAL_START}-{NORMAL_END}",
         },
+
         "stations": stations,
     }
-
-    stations.sort(
-        key=lambda st: (
-            -(
-                st["rr24"]
-                if st["rr24"] is not None
-                else -1
-            ),
-            st["name"],
-        )
-    )
 
     OUTPUT.write_text(
         json.dumps(
@@ -1306,22 +1210,15 @@ def main() -> int:
 
     print()
     print("=== TERMINÉ ===")
+    print(f"JSON : {OUTPUT}")
+    print(f"Stations : {len(stations)}")
+    print(f"SAPC exclues : {len(excluded_sapc_ids)}")
+    print(f"Stations RR24 exploitables : {output['stations_rr24']}")
+    print(f"Stations mois à jour : {live_month_stations}")
+    print(f"Stations mois en attente : {stale_month_stations}")
+    print(f"Cumul 24 h maximal : {output['metrics']['rr24']['max']} mm")
     print(
-        f"JSON : {OUTPUT}"
-    )
-    print(
-        f"Stations : {len(stations)}"
-    )
-    print(
-        "Stations RR24 exploitables : "
-        f"{output['stations_rr24']}"
-    )
-    print(
-        "Cumul 24 h maximal : "
-        f"{output['metrics']['rr24']['max']} mm"
-    )
-    print(
-        "Cumul mois maximal : "
+        f"Cumul mois maximal : "
         f"{output['metrics']['rr_month_current']['max']} mm"
     )
 
@@ -1332,8 +1229,5 @@ if __name__ == "__main__":
     try:
         raise SystemExit(main())
     except Exception as exc:
-        print(
-            f"ERREUR FATALE : {exc}",
-            file=sys.stderr,
-        )
+        print(f"ERREUR FATALE : {exc}", file=sys.stderr)
         raise
