@@ -1,0 +1,73 @@
+name: Update Carte Pluie Météo-France
+
+on:
+  schedule:
+    - cron: '15 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: carte-pluie-meteofrance
+  cancel-in-progress: true
+
+jobs:
+  generate:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Dépendances
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # On récupère le cache climatologique de la branche de publication.
+      # Ainsi les normales 1991-2020 ne sont pas recalculées toutes les heures.
+      - name: Récupérer le cache précédent
+        run: |
+          git fetch origin observations || true
+          git show origin/observations:cache_pluie_climatologie.json > cache_pluie_climatologie.json 2>/dev/null || true
+
+      - name: Générer les données pluie
+        env:
+          # Choix 1 : token Bearer généré depuis le portail
+          METEOFRANCE_OBS_TOKEN: ${{ secrets.METEOFRANCE_OBS_TOKEN }}
+
+          # Compatibilité si ton secret s'appelle déjà ainsi
+          METEOFRANCE_API_KEY: ${{ secrets.METEOFRANCE_API_KEY }}
+
+          # Choix 2 : APPLICATION_ID ; le script fabrique alors le Bearer automatiquement
+          METEOFRANCE_APPLICATION_ID: ${{ secrets.METEOFRANCE_APPLICATION_ID }}
+        run: python generer_pluie_meteofrance.py
+
+      - name: Publier JSON + cache sur la branche observations
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          publish_dir="$(mktemp -d)"
+          cp observations_pluie.json "$publish_dir/"
+          cp cache_pluie_climatologie.json "$publish_dir/"
+
+          cd "$publish_dir"
+          git init -b observations
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add observations_pluie.json cache_pluie_climatologie.json
+          git commit -m "Mise à jour carte pluie"
+
+          git push --force \
+            "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
+            HEAD:observations
