@@ -35,7 +35,7 @@ import update_harmonie as base
 
 
 LOGGER = logging.getLogger("harmonie.france")
-NATIONAL_PIPELINE_VERSION = "2.0.0"
+NATIONAL_PIPELINE_VERSION = "2.2.0"
 DEFAULT_CURRENT_METADATA_URL = (
     "https://raw.githubusercontent.com/alertesmeteo-hub/"
     "harmonie-knmi/data/index.json"
@@ -45,6 +45,7 @@ DEFAULT_CURRENT_METADATA_URL = (
 # reconstruits par le widget pour éviter de les répéter plusieurs millions de
 # fois dans les fichiers JSON.
 VALUE_COLUMNS = (
+    # Tableau général — conserver les 10 premières positions pour compatibilité.
     "temperature_c",
     "humidity_pct",
     "precipitation_mm",
@@ -55,7 +56,42 @@ VALUE_COLUMNS = (
     "pressure_hpa",
     "visibility_km",
     "condition_code",
+    # Tableau orages — diagnostics directs ou calculés à partir de HARMONIE P3.
+    "thunder_risk_code",
+    "cape_jkg",
+    "cin_jkg",
+    "lcl_m",
+    "k_index",
+    "total_totals",
+    "shear_0_1_ms",
+    "shear_0_3_ms",
+    "shear_0_6_ms",
+    "srh_0_1_m2s2",
+    "srh_0_3_m2s2",
+    "lightning_score",
+    "hail_risk_code",
+    "heavy_rain_risk_code",
+    "severe_wind_risk_code",
+    "storm_type_code",
+    "temperature_500_c",
+    "humidity_700_pct",
+    "freezing_level_m",
+    "minus20_level_m",
+    "omega_500_pas",
+    "convective_precipitation_mm",
+    "graupel_mm",
+    "dewpoint_c",
 )
+
+PRESSURE_LEVELS = (925, 850, 700, 500, 300)
+STANDARD_LEVEL_HEIGHTS_M = {
+    925: 750.0,
+    850: 1500.0,
+    700: 3000.0,
+    500: 5600.0,
+    300: 9200.0,
+}
+
 
 CONDITION_CODES = {
     0: "unknown",
@@ -70,18 +106,47 @@ CONDITION_CODES = {
     9: "windy",
 }
 
-REQUIRED_PARAMETERS = {
+SURFACE_PARAMETERS = {
     "pressure_pa",
     "temperature_k",
+    "dewpoint_k",
     "visibility_m",
     "wind_u_ms",
     "wind_v_ms",
     "humidity_pct",
     "precipitation_raw_mm",
     "cloud_pct",
+    "cloud_low_pct",
+    "cloud_mid_pct",
+    "cloud_high_pct",
     "gust_u_ms",
     "gust_v_ms",
 }
+
+PRESSURE_PARAMETERS = {
+    f"{prefix}_{level}_{suffix}"
+    for level in PRESSURE_LEVELS
+    for prefix, suffix in (
+        ("temperature", "k"),
+        ("humidity", "pct"),
+        ("wind_u", "ms"),
+        ("wind_v", "ms"),
+        ("geopotential_height", "m"),
+        ("omega", "pas"),
+    )
+}
+
+OPTIONAL_CONVECTIVE_PARAMETERS = {
+    "cape_jkg",
+    "cin_jkg",
+    "convective_precipitation_raw_mm",
+    "graupel_raw_mm",
+}
+
+REQUIRED_PARAMETERS = (
+    SURFACE_PARAMETERS | PRESSURE_PARAMETERS | OPTIONAL_CONVECTIVE_PARAMETERS
+)
+
 
 
 @dataclass(frozen=True)
@@ -288,6 +353,163 @@ def empty_values(point_count: int) -> np.ndarray:
     return np.full(point_count, np.nan, dtype=np.float64)
 
 
+def national_parameter_name(gid: int) -> str | None:
+    """Reconnaît les champs P3 utiles au tableau général et au diagnostic orageux.
+
+    Les paramètres de surface continuent d'utiliser le mapping historique de
+    ``update_harmonie.py``. Les niveaux isobares sont reconnus par leur code
+    GRIB1 et leur niveau. Quelques diagnostics convectifs sont aussi détectés
+    par ``shortName``/``name`` lorsque le fichier KNMI les expose directement.
+    """
+
+    surface_name = base.parameter_name(gid)
+    if surface_name is not None:
+        return surface_name
+
+    code = base.safe_get_long(gid, "indicatorOfParameter")
+    level_type = base.safe_get_long(gid, "indicatorOfTypeOfLevel")
+    level = base.safe_get_long(gid, "level")
+
+    if level_type == 100 and level in PRESSURE_LEVELS:
+        mapping = {
+            7: ("geopotential_height", "m"),
+            11: ("temperature", "k"),
+            33: ("wind_u", "ms"),
+            34: ("wind_v", "ms"),
+            39: ("omega", "pas"),
+            52: ("humidity", "pct"),
+        }
+        if code in mapping:
+            prefix, suffix = mapping[code]
+            return f"{prefix}_{level}_{suffix}"
+
+    short_name = str(base.safe_get(gid, "shortName", "") or "").strip().lower()
+    long_name = str(base.safe_get(gid, "name", "") or "").strip().lower()
+    label = f"{short_name} {long_name}"
+    if short_name in {"cape", "mucape", "mlcape", "sbcape"} or (
+        "convective available potential energy" in label
+    ):
+        return "cape_jkg"
+    if short_name in {"cin", "mucin", "mlcin", "sbcin"} or (
+        "convective inhibition" in label
+    ):
+        return "cin_jkg"
+    if short_name in {"cp", "acpcp"} or "convective precipitation" in label:
+        return "convective_precipitation_raw_mm"
+    if "graupel" in label or short_name in {"grpl", "graupel"}:
+        return "graupel_raw_mm"
+    return None
+
+
+def normalize_relative_humidity(values: np.ndarray) -> np.ndarray:
+    values = np.asarray(values, dtype=np.float64).copy()
+    finite = values[np.isfinite(values)]
+    if finite.size and np.nanpercentile(np.abs(finite), 95) <= 1.5:
+        values *= 100.0
+    return np.clip(values, 0.0, 100.0)
+
+
+def dewpoint_from_temperature_rh(
+    temperature_c: np.ndarray,
+    humidity_pct: np.ndarray,
+) -> np.ndarray:
+    """Point de rosée par la formule de Magnus, en degrés Celsius."""
+
+    temperature_c = np.asarray(temperature_c, dtype=np.float64)
+    rh = np.clip(np.asarray(humidity_pct, dtype=np.float64), 0.1, 100.0)
+    a = 17.625
+    b = 243.04
+    gamma = np.log(rh / 100.0) + (a * temperature_c) / (b + temperature_c)
+    dewpoint = (b * gamma) / (a - gamma)
+    dewpoint[~np.isfinite(temperature_c) | ~np.isfinite(humidity_pct)] = np.nan
+    return dewpoint
+
+
+def rotate_uv(
+    u: np.ndarray,
+    v: np.ndarray,
+    angle_rad: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray]:
+    east = u * np.cos(angle_rad) + v * np.sin(angle_rad)
+    north = -u * np.sin(angle_rad) + v * np.cos(angle_rad)
+    return east, north
+
+
+def linear_vector_at_height(
+    low_u: np.ndarray,
+    low_v: np.ndarray,
+    low_height: float,
+    high_u: np.ndarray,
+    high_v: np.ndarray,
+    high_height: float,
+    target_height: float,
+) -> tuple[np.ndarray, np.ndarray]:
+    fraction = (target_height - low_height) / (high_height - low_height)
+    return (
+        low_u + fraction * (high_u - low_u),
+        low_v + fraction * (high_v - low_v),
+    )
+
+
+def crossing_height(
+    temperatures: list[np.ndarray],
+    heights: list[float],
+    target_temperature: float,
+) -> np.ndarray:
+    """Première altitude où le profil thermique coupe une isotherme."""
+
+    result = np.full_like(temperatures[0], np.nan, dtype=np.float64)
+    for index in range(len(temperatures) - 1):
+        t0 = temperatures[index]
+        t1 = temperatures[index + 1]
+        valid = np.isfinite(t0) & np.isfinite(t1) & ~np.isfinite(result)
+        crossing = valid & ((t0 - target_temperature) * (t1 - target_temperature) <= 0)
+        crossing &= np.abs(t1 - t0) > 1.0e-6
+        if not np.any(crossing):
+            continue
+        fraction = (target_temperature - t0) / (t1 - t0)
+        height = heights[index] + fraction * (heights[index + 1] - heights[index])
+        result[crossing] = height[crossing]
+    return result
+
+
+def approximate_srh(
+    u_profile: list[np.ndarray],
+    v_profile: list[np.ndarray],
+    storm_u: np.ndarray,
+    storm_v: np.ndarray,
+) -> np.ndarray:
+    """SRH discrète sur le profil P3 ; valeur absolue en m²/s².
+
+    Le profil P3 étant plus clairsemé qu'un radiosondage/P5, cette SRH est un
+    diagnostic d'organisation et non une reproduction exacte d'un calcul sur
+    90 niveaux modèle.
+    """
+
+    result = np.zeros_like(storm_u, dtype=np.float64)
+    count = np.zeros_like(storm_u, dtype=np.int16)
+    for index in range(len(u_profile) - 1):
+        u0, u1 = u_profile[index], u_profile[index + 1]
+        v0, v1 = v_profile[index], v_profile[index + 1]
+        valid = (
+            np.isfinite(u0) & np.isfinite(u1) & np.isfinite(v0) & np.isfinite(v1)
+            & np.isfinite(storm_u) & np.isfinite(storm_v)
+        )
+        term = (u1 - storm_u) * (v0 - storm_v) - (u0 - storm_u) * (v1 - storm_v)
+        result += np.where(valid, term, 0.0)
+        count += valid.astype(np.int16)
+    result[count == 0] = np.nan
+    return np.abs(result)
+
+
+def risk_code(score: np.ndarray) -> np.ndarray:
+    result = np.zeros(score.shape, dtype=np.int16)
+    result[np.isfinite(score) & (score >= 20)] = 1
+    result[np.isfinite(score) & (score >= 40)] = 2
+    result[np.isfinite(score) & (score >= 60)] = 3
+    result[np.isfinite(score) & (score >= 80)] = 4
+    return result
+
 def parse_grib_file(
     path: Path,
     grid: NationalGrid,
@@ -310,7 +532,7 @@ def parse_grib_file(
             if gid is None:
                 break
             try:
-                name = base.parameter_name(gid)
+                name = national_parameter_name(gid)
                 if name not in REQUIRED_PARAMETERS:
                     continue
                 if step["run_time"] is None:
@@ -353,10 +575,16 @@ def transform_step(
 ) -> tuple[dict[str, np.ndarray], np.ndarray | None]:
     raw = step["values"]
     temperature = rounded(raw["temperature_k"] - 273.15, 1)
-    humidity = rounded(np.clip(raw["humidity_pct"] * 100.0, 0, 100), 0)
-    cloud = rounded(np.clip(raw["cloud_pct"] * 100.0, 0, 100), 0)
+    humidity = rounded(normalize_relative_humidity(raw["humidity_pct"]), 0)
+    cloud = rounded(normalize_relative_humidity(raw["cloud_pct"]), 0)
     pressure = rounded(raw["pressure_pa"] / 100.0, 0)
     visibility = rounded(raw["visibility_m"] / 1000.0, 1)
+
+    dewpoint_direct = raw["dewpoint_k"] - 273.15
+    dewpoint_derived = dewpoint_from_temperature_rh(temperature, humidity)
+    dewpoint = np.where(np.isfinite(dewpoint_direct), dewpoint_direct, dewpoint_derived)
+    dewpoint = rounded(dewpoint, 1)
+    lcl = rounded(np.clip(125.0 * (temperature - dewpoint), 0.0, 5000.0), 0)
 
     precipitation_raw = np.maximum(raw["precipitation_raw_mm"], 0.0)
     if step.get("precip_start_step") == 0 and step.get("precip_end_step") is not None:
@@ -369,12 +597,14 @@ def transform_step(
         precipitation = precipitation_raw.copy()
     precipitation = rounded(precipitation, 1)
 
-    u = raw["wind_u_ms"]
-    v = raw["wind_v_ms"]
+    convective_precipitation = rounded(
+        np.maximum(raw["convective_precipitation_raw_mm"], 0.0), 1
+    )
+    graupel = rounded(np.maximum(raw["graupel_raw_mm"], 0.0), 2)
+
     angle = np.radians(step["rotations"])
-    east = u * np.cos(angle) + v * np.sin(angle)
-    north = -u * np.sin(angle) + v * np.cos(angle)
-    wind_speed = rounded(np.hypot(u, v) * 3.6, 0)
+    east, north = rotate_uv(raw["wind_u_ms"], raw["wind_v_ms"], angle)
+    wind_speed = rounded(np.hypot(raw["wind_u_ms"], raw["wind_v_ms"]) * 3.6, 0)
     wind_direction = rounded(np.degrees(np.arctan2(-east, -north)) % 360.0, 0)
     gust_speed = rounded(
         np.hypot(raw["gust_u_ms"], raw["gust_v_ms"]) * 3.6,
@@ -397,6 +627,175 @@ def transform_step(
     ] = 7
     condition[np.isfinite(visibility) & (visibility < 1.0)] = 8
 
+    # Profils P3 sur niveaux isobares.
+    t_levels: dict[int, np.ndarray] = {}
+    rh_levels: dict[int, np.ndarray] = {}
+    u_levels: dict[int, np.ndarray] = {}
+    v_levels: dict[int, np.ndarray] = {}
+    for level in PRESSURE_LEVELS:
+        t_levels[level] = raw[f"temperature_{level}_k"] - 273.15
+        rh_levels[level] = normalize_relative_humidity(raw[f"humidity_{level}_pct"])
+        u_levels[level], v_levels[level] = rotate_uv(
+            raw[f"wind_u_{level}_ms"], raw[f"wind_v_{level}_ms"], angle
+        )
+
+    td850 = dewpoint_from_temperature_rh(t_levels[850], rh_levels[850])
+    td700 = dewpoint_from_temperature_rh(t_levels[700], rh_levels[700])
+    k_index = (
+        t_levels[850] - t_levels[500]
+        + td850
+        - (t_levels[700] - td700)
+    )
+    total_totals = t_levels[850] + td850 - 2.0 * t_levels[500]
+
+    # Cisaillements avec interpolation aux hauteurs standard P3.
+    u_1km, v_1km = linear_vector_at_height(
+        u_levels[925], v_levels[925], STANDARD_LEVEL_HEIGHTS_M[925],
+        u_levels[850], v_levels[850], STANDARD_LEVEL_HEIGHTS_M[850], 1000.0,
+    )
+    u_3km, v_3km = u_levels[700], v_levels[700]
+    u_6km, v_6km = linear_vector_at_height(
+        u_levels[500], v_levels[500], STANDARD_LEVEL_HEIGHTS_M[500],
+        u_levels[300], v_levels[300], STANDARD_LEVEL_HEIGHTS_M[300], 6000.0,
+    )
+    shear_0_1 = np.hypot(u_1km - east, v_1km - north)
+    shear_0_3 = np.hypot(u_3km - east, v_3km - north)
+    shear_0_6 = np.hypot(u_6km - east, v_6km - north)
+
+    # Mouvement de Bunkers droit simplifié et SRH sur le profil P3.
+    profile_u = np.vstack([
+        east, u_levels[925], u_levels[850], u_levels[700], u_levels[500], u_6km
+    ])
+    profile_v = np.vstack([
+        north, v_levels[925], v_levels[850], v_levels[700], v_levels[500], v_6km
+    ])
+    valid_u = np.isfinite(profile_u)
+    valid_v = np.isfinite(profile_v)
+    count_u = valid_u.sum(axis=0)
+    count_v = valid_v.sum(axis=0)
+    mean_u = np.full(profile_u.shape[1], np.nan, dtype=np.float64)
+    mean_v = np.full(profile_v.shape[1], np.nan, dtype=np.float64)
+    np.divide(np.nansum(profile_u, axis=0), count_u, out=mean_u, where=count_u > 0)
+    np.divide(np.nansum(profile_v, axis=0), count_v, out=mean_v, where=count_v > 0)
+    shear_u = u_6km - east
+    shear_v = v_6km - north
+    shear_mag = np.hypot(shear_u, shear_v)
+    right_u = np.zeros_like(shear_mag)
+    right_v = np.zeros_like(shear_mag)
+    np.divide(7.5 * shear_v, shear_mag, out=right_u, where=shear_mag > 0.1)
+    np.divide(7.5 * shear_u, shear_mag, out=right_v, where=shear_mag > 0.1)
+    storm_u = mean_u + right_u
+    storm_v = mean_v - right_v
+    srh_0_1 = approximate_srh(
+        [east, u_levels[925], u_1km],
+        [north, v_levels[925], v_1km],
+        storm_u,
+        storm_v,
+    )
+    srh_0_3 = approximate_srh(
+        [east, u_levels[925], u_levels[850], u_3km],
+        [north, v_levels[925], v_levels[850], v_3km],
+        storm_u,
+        storm_v,
+    )
+
+    temperature_profile = [
+        temperature,
+        t_levels[925],
+        t_levels[850],
+        t_levels[700],
+        t_levels[500],
+        t_levels[300],
+    ]
+    height_profile = [0.0, 750.0, 1500.0, 3000.0, 5600.0, 9200.0]
+    freezing_level = crossing_height(temperature_profile, height_profile, 0.0)
+    minus20_level = crossing_height(temperature_profile, height_profile, -20.0)
+
+    cape = np.maximum(raw["cape_jkg"], 0.0)
+    cin = raw["cin_jkg"].copy()
+    omega_500 = raw["omega_500_pas"].copy()
+
+    # Score convectif : CAPE direct quand disponible, sinon indices P3 K/TT.
+    score = np.zeros(len(temperature), dtype=np.float64)
+    score += np.where(np.isfinite(cape), np.clip(cape / 50.0, 0.0, 30.0), 0.0)
+    score += np.where(np.isfinite(k_index), np.clip((k_index - 15.0) * 1.25, 0.0, 25.0), 0.0)
+    score += np.where(np.isfinite(total_totals), np.clip((total_totals - 38.0) * 1.25, 0.0, 20.0), 0.0)
+    score += np.where(np.isfinite(rh_levels[700]) & (rh_levels[700] >= 60.0), 5.0, 0.0)
+    score += np.where(np.isfinite(rh_levels[700]) & (rh_levels[700] >= 75.0), 5.0, 0.0)
+    score += np.where(np.isfinite(precipitation) & (precipitation >= 0.2), 5.0, 0.0)
+    score += np.where(np.isfinite(precipitation) & (precipitation >= 2.0), 5.0, 0.0)
+    score += np.where(np.isfinite(precipitation) & (precipitation >= 5.0), 5.0, 0.0)
+    score += np.where(np.isfinite(shear_0_6) & (shear_0_6 >= 15.0), 5.0, 0.0)
+    score += np.where(np.isfinite(shear_0_6) & (shear_0_6 >= 22.0), 5.0, 0.0)
+    score += np.where(np.isfinite(omega_500) & (omega_500 <= -0.15), 5.0, 0.0)
+    score = np.clip(score, 0.0, 100.0)
+    thunder_risk = risk_code(score)
+
+    lightning_score = np.zeros(len(temperature), dtype=np.float64)
+    lightning_score += np.where(np.isfinite(cape), np.clip(cape / 40.0, 0.0, 35.0), 0.0)
+    lightning_score += np.where(np.isfinite(k_index), np.clip((k_index - 18.0) * 1.4, 0.0, 25.0), 0.0)
+    lightning_score += np.where(np.isfinite(total_totals), np.clip((total_totals - 40.0) * 1.4, 0.0, 20.0), 0.0)
+    lightning_score += np.where(np.isfinite(convective_precipitation) & (convective_precipitation > 0.1), 10.0, 0.0)
+    lightning_score += np.where(np.isfinite(graupel) & (graupel > 0.0), 10.0, 0.0)
+    lightning_score += np.where(np.isfinite(precipitation) & (precipitation >= 2.0), 5.0, 0.0)
+    lightning_score = np.clip(lightning_score, 0.0, 100.0)
+
+    hail_points = np.zeros(len(temperature), dtype=np.int16)
+    hail_points += (np.isfinite(t_levels[500]) & (t_levels[500] <= -16.0)).astype(np.int16)
+    hail_points += (np.isfinite(t_levels[500]) & (t_levels[500] <= -20.0)).astype(np.int16)
+    hail_points += (np.isfinite(total_totals) & (total_totals >= 45.0)).astype(np.int16)
+    hail_points += (np.isfinite(total_totals) & (total_totals >= 50.0)).astype(np.int16)
+    hail_points += (np.isfinite(shear_0_6) & (shear_0_6 >= 15.0)).astype(np.int16)
+    hail_points += (np.isfinite(shear_0_6) & (shear_0_6 >= 20.0)).astype(np.int16)
+    hail_points += (np.isfinite(cape) & (cape >= 1000.0)).astype(np.int16)
+    hail_points += (np.isfinite(graupel) & (graupel > 0.0)).astype(np.int16) * 2
+    hail_risk = np.zeros(len(temperature), dtype=np.int16)
+    hail_risk[hail_points >= 2] = 1
+    hail_risk[hail_points >= 4] = 2
+    hail_risk[hail_points >= 6] = 3
+
+    heavy_rain_risk = np.zeros(len(temperature), dtype=np.int16)
+    heavy_rain_risk[np.isfinite(precipitation) & (precipitation >= 2.0)] = 1
+    heavy_rain_risk[np.isfinite(precipitation) & (precipitation >= 5.0)] = 2
+    heavy_rain_risk[np.isfinite(precipitation) & (precipitation >= 15.0)] = 3
+    moisture_boost = (
+        np.isfinite(k_index) & (k_index >= 30.0)
+        & np.isfinite(rh_levels[700]) & (rh_levels[700] >= 75.0)
+        & np.isfinite(precipitation) & (precipitation >= 1.0)
+    )
+    heavy_rain_risk[moisture_boost] = np.maximum(heavy_rain_risk[moisture_boost], 2)
+
+    severe_wind_risk = np.zeros(len(temperature), dtype=np.int16)
+    severe_wind_risk[np.isfinite(gust_speed) & (gust_speed >= 50.0)] = 1
+    severe_wind_risk[np.isfinite(gust_speed) & (gust_speed >= 70.0)] = 2
+    severe_wind_risk[np.isfinite(gust_speed) & (gust_speed >= 90.0)] = 3
+    organized_wind = (
+        (thunder_risk >= 2) & np.isfinite(shear_0_6) & (shear_0_6 >= 20.0)
+    )
+    severe_wind_risk[organized_wind] = np.maximum(severe_wind_risk[organized_wind], 2)
+
+    storm_type = np.zeros(len(temperature), dtype=np.int16)
+    storm_type[thunder_risk >= 1] = 1  # cellules isolées / faible organisation
+    multicell = (thunder_risk >= 2) & np.isfinite(shear_0_6) & (shear_0_6 >= 12.0)
+    storm_type[multicell] = 2
+    line_mcs = (
+        (thunder_risk >= 3)
+        & np.isfinite(shear_0_6) & (shear_0_6 >= 18.0)
+        & np.isfinite(precipitation) & (precipitation >= 3.0)
+    )
+    storm_type[line_mcs] = 3
+    strong_instability = (
+        (np.isfinite(cape) & (cape >= 800.0))
+        | (np.isfinite(total_totals) & (total_totals >= 50.0))
+    )
+    supercell = (
+        (thunder_risk >= 3)
+        & np.isfinite(shear_0_6) & (shear_0_6 >= 20.0)
+        & np.isfinite(srh_0_3) & (srh_0_3 >= 150.0)
+        & strong_instability
+    )
+    storm_type[supercell] = 4
+
     return (
         {
             "temperature_c": temperature,
@@ -409,6 +808,30 @@ def transform_step(
             "pressure_hpa": pressure,
             "visibility_km": visibility,
             "condition_code": condition,
+            "thunder_risk_code": thunder_risk,
+            "cape_jkg": rounded(cape, 0),
+            "cin_jkg": rounded(cin, 0),
+            "lcl_m": lcl,
+            "k_index": rounded(k_index, 1),
+            "total_totals": rounded(total_totals, 1),
+            "shear_0_1_ms": rounded(shear_0_1, 1),
+            "shear_0_3_ms": rounded(shear_0_3, 1),
+            "shear_0_6_ms": rounded(shear_0_6, 1),
+            "srh_0_1_m2s2": rounded(srh_0_1, 0),
+            "srh_0_3_m2s2": rounded(srh_0_3, 0),
+            "lightning_score": rounded(lightning_score, 0),
+            "hail_risk_code": hail_risk,
+            "heavy_rain_risk_code": heavy_rain_risk,
+            "severe_wind_risk_code": severe_wind_risk,
+            "storm_type_code": storm_type,
+            "temperature_500_c": rounded(t_levels[500], 1),
+            "humidity_700_pct": rounded(rh_levels[700], 0),
+            "freezing_level_m": rounded(freezing_level, 0),
+            "minus20_level_m": rounded(minus20_level, 0),
+            "omega_500_pas": rounded(omega_500, 2),
+            "convective_precipitation_mm": convective_precipitation,
+            "graupel_mm": graupel,
+            "dewpoint_c": dewpoint,
         },
         previous_cumulative,
     )
@@ -431,24 +854,40 @@ def compact_rows(
     point_ids: np.ndarray,
 ) -> list[list[int | float | None]]:
     rows: list[list[int | float | None]] = []
+    integer_columns = {
+        "humidity_pct",
+        "cloud_cover_pct",
+        "wind_speed_kmh",
+        "wind_direction_deg",
+        "wind_gust_kmh",
+        "pressure_hpa",
+        "condition_code",
+        "thunder_risk_code",
+        "cape_jkg",
+        "cin_jkg",
+        "lcl_m",
+        "srh_0_1_m2s2",
+        "srh_0_3_m2s2",
+        "lightning_score",
+        "hail_risk_code",
+        "heavy_rain_risk_code",
+        "severe_wind_risk_code",
+        "storm_type_code",
+        "humidity_700_pct",
+        "freezing_level_m",
+        "minus20_level_m",
+    }
     for point_id in point_ids:
         position = int(point_id)
-        rows.append(
-            [
-                json_number(transformed["temperature_c"][position]),
-                json_number(transformed["humidity_pct"][position], integer=True),
-                json_number(transformed["precipitation_mm"][position]),
-                json_number(transformed["cloud_cover_pct"][position], integer=True),
-                json_number(transformed["wind_speed_kmh"][position], integer=True),
+        row: list[int | float | None] = []
+        for column in VALUE_COLUMNS:
+            row.append(
                 json_number(
-                    transformed["wind_direction_deg"][position], integer=True
-                ),
-                json_number(transformed["wind_gust_kmh"][position], integer=True),
-                json_number(transformed["pressure_hpa"][position], integer=True),
-                json_number(transformed["visibility_km"][position]),
-                json_number(transformed["condition_code"][position], integer=True),
-            ]
-        )
+                    transformed[column][position],
+                    integer=column in integer_columns,
+                )
+            )
+        rows.append(row)
     return rows
 
 
@@ -579,6 +1018,7 @@ def decode_national_archive(
         "dataset": base.DATASET_NAME,
         "version": base.DATASET_VERSION,
         "pipeline_version": NATIONAL_PIPELINE_VERSION,
+        "storm_diagnostics": "P3 pressure levels + direct GRIB diagnostics when present",
         "catalog_version": catalog.version,
         "domain": "Europe (DINI/N55)",
         "resolution_km": 5.5,
@@ -681,6 +1121,8 @@ def decode_national_archive(
             "departments": len(catalog.departments),
         },
         "condition_codes": CONDITION_CODES,
+        "storm_risk_codes": {0: "minimal", 1: "low", 2: "moderate", 3: "strong", 4: "severe"},
+        "storm_type_codes": {0: "none", 1: "isolated", 2: "multicell", 3: "line_mcs", 4: "supercell_potential"},
         "search": {
             "provider": "API Découpage administratif — République française",
             "endpoint": "https://geo.api.gouv.fr/communes",
@@ -742,7 +1184,15 @@ def main() -> int:
                 "secret KNMI_API_KEY pour la production à long terme."
             )
         session = base.api_session(api_key)
-        source = base.latest_archive_metadata(session)
+        try:
+            source = base.latest_archive_metadata(session)
+        except base.KNMIRateLimitError as exc:
+            LOGGER.warning(
+                "%s Conservation de la dernière production nationale publiée ; "
+                "aucune donnée existante n'est supprimée.",
+                exc,
+            )
+            return 0
         source_filename = str(source.get("filename", ""))
         if not source_filename:
             raise RuntimeError("Nom de l'archive KNMI absent")
