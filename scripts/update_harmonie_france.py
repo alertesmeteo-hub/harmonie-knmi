@@ -35,7 +35,7 @@ import update_harmonie as base
 
 
 LOGGER = logging.getLogger("harmonie.france")
-NATIONAL_PIPELINE_VERSION = "2.2.0"
+NATIONAL_PIPELINE_VERSION = "2.3.0"
 DEFAULT_CURRENT_METADATA_URL = (
     "https://raw.githubusercontent.com/alertesmeteo-hub/"
     "harmonie-knmi/data/index.json"
@@ -81,6 +81,16 @@ VALUE_COLUMNS = (
     "convective_precipitation_mm",
     "graupel_mm",
     "dewpoint_c",
+    # Tableau neige — sorties directes P3 + diagnostics de tenue.
+    "snow_risk_code",
+    "snowfall_mm",
+    "snow_fresh_cm",
+    "snow_depth_cm",
+    "snow_water_equivalent_mm",
+    "surface_temperature_c",
+    "snow_stick_risk_code",
+    "snow_phase_code",
+    "temperature_850_c",
 )
 
 PRESSURE_LEVELS = (925, 850, 700, 500, 300)
@@ -108,7 +118,9 @@ CONDITION_CODES = {
 
 SURFACE_PARAMETERS = {
     "pressure_pa",
+    "surface_pressure_pa",
     "temperature_k",
+    "surface_temperature_k",
     "dewpoint_k",
     "visibility_m",
     "wind_u_ms",
@@ -121,6 +133,9 @@ SURFACE_PARAMETERS = {
     "cloud_high_pct",
     "gust_u_ms",
     "gust_v_ms",
+    "snowfall_raw_mm",
+    "snow_depth_m",
+    "snow_water_equivalent_mm",
 }
 
 PRESSURE_PARAMETERS = {
@@ -137,8 +152,6 @@ PRESSURE_PARAMETERS = {
 }
 
 OPTIONAL_CONVECTIVE_PARAMETERS = {
-    "cape_jkg",
-    "cin_jkg",
     "convective_precipitation_raw_mm",
     "graupel_raw_mm",
 }
@@ -386,14 +399,6 @@ def national_parameter_name(gid: int) -> str | None:
     short_name = str(base.safe_get(gid, "shortName", "") or "").strip().lower()
     long_name = str(base.safe_get(gid, "name", "") or "").strip().lower()
     label = f"{short_name} {long_name}"
-    if short_name in {"cape", "mucape", "mlcape", "sbcape"} or (
-        "convective available potential energy" in label
-    ):
-        return "cape_jkg"
-    if short_name in {"cin", "mucin", "mlcin", "sbcin"} or (
-        "convective inhibition" in label
-    ):
-        return "cin_jkg"
     if short_name in {"cp", "acpcp"} or "convective precipitation" in label:
         return "convective_precipitation_raw_mm"
     if "graupel" in label or short_name in {"grpl", "graupel"}:
@@ -424,6 +429,152 @@ def dewpoint_from_temperature_rh(
     dewpoint[~np.isfinite(temperature_c) | ~np.isfinite(humidity_pct)] = np.nan
     return dewpoint
 
+
+
+def saturation_vapor_pressure_hpa(temperature_c: np.ndarray) -> np.ndarray:
+    """Pression de vapeur saturante (Magnus), hPa."""
+    t = np.asarray(temperature_c, dtype=np.float64)
+    return 6.112 * np.exp((17.67 * t) / (t + 243.5))
+
+
+def mixing_ratio_kgkg(
+    temperature_c: np.ndarray,
+    humidity_pct: np.ndarray,
+    pressure_hpa: np.ndarray,
+) -> np.ndarray:
+    """Rapport de mélange à partir de T, RH et pression."""
+    t = np.asarray(temperature_c, dtype=np.float64)
+    rh = np.clip(np.asarray(humidity_pct, dtype=np.float64), 0.0, 100.0)
+    p = np.asarray(pressure_hpa, dtype=np.float64)
+    e = saturation_vapor_pressure_hpa(t) * rh / 100.0
+    e = np.minimum(e, np.maximum(p - 0.1, 0.1))
+    w = 0.622 * e / np.maximum(p - e, 0.1)
+    w[~np.isfinite(t) | ~np.isfinite(rh) | ~np.isfinite(p) | (p <= 0)] = np.nan
+    return w
+
+
+def saturation_mixing_ratio_kgkg(
+    temperature_k: np.ndarray,
+    pressure_hpa: np.ndarray,
+) -> np.ndarray:
+    t_c = np.asarray(temperature_k, dtype=np.float64) - 273.15
+    p = np.asarray(pressure_hpa, dtype=np.float64)
+    e = saturation_vapor_pressure_hpa(t_c)
+    e = np.minimum(e, np.maximum(p - 0.1, 0.1))
+    return 0.622 * e / np.maximum(p - e, 0.1)
+
+
+def approximate_cape_cin_p3(
+    temperature_c: np.ndarray,
+    dewpoint_c: np.ndarray,
+    surface_pressure_hpa: np.ndarray,
+    t_levels: dict[int, np.ndarray],
+    rh_levels: dict[int, np.ndarray],
+) -> tuple[np.ndarray, np.ndarray]:
+    """Estime SBCAPE/CIN à partir du profil P3 clairsemé.
+
+    P3 Europe ne contient pas de CAPE/CIN directs. On intègre donc la flottabilité
+    d'une parcelle de surface sur un profil vertical interpolé entre 2 m et les
+    niveaux 925/850/700/500/300 hPa. Le résultat est un diagnostic approché,
+    volontairement signalé comme tel dans le widget.
+    """
+    t0_c = np.asarray(temperature_c, dtype=np.float64)
+    td0_c = np.asarray(dewpoint_c, dtype=np.float64)
+    ps = np.asarray(surface_pressure_hpa, dtype=np.float64)
+    valid = np.isfinite(t0_c) & np.isfinite(td0_c) & np.isfinite(ps) & (ps > 700.0)
+    for level in (925, 850, 700, 500, 300):
+        valid &= np.isfinite(t_levels[level]) & np.isfinite(rh_levels[level])
+
+    # Pour les rares points où PSRF ou le profil P3 serait absent, le calcul restera NaN.
+    t0_k = t0_c + 273.15
+    td0_k = td0_c + 273.15
+    lcl_m = np.clip(125.0 * (t0_c - td0_c), 0.0, 5000.0)
+    rh_surface = np.full_like(t0_c, 100.0)
+    # Le rapport de mélange de la parcelle est fixé par le Td de surface.
+    e0 = saturation_vapor_pressure_hpa(td0_c)
+    w0 = 0.622 * e0 / np.maximum(ps - e0, 0.1)
+
+    heights = np.array([0.0, 750.0, 1500.0, 3000.0, 5600.0, 9200.0])
+    pressure_scalars = [None, 925.0, 850.0, 700.0, 500.0, 300.0]
+    temp_anchors = [t0_c, t_levels[925], t_levels[850], t_levels[700], t_levels[500], t_levels[300]]
+    rh_anchors = [rh_surface, rh_levels[925], rh_levels[850], rh_levels[700], rh_levels[500], rh_levels[300]]
+
+    def environment_at_height(z: float) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        idx = int(np.searchsorted(heights, z, side="right") - 1)
+        idx = max(0, min(idx, len(heights) - 2))
+        z0, z1 = heights[idx], heights[idx + 1]
+        f = (z - z0) / (z1 - z0)
+        te = temp_anchors[idx] + f * (temp_anchors[idx + 1] - temp_anchors[idx])
+        rhe = rh_anchors[idx] + f * (rh_anchors[idx + 1] - rh_anchors[idx])
+        p0 = ps if idx == 0 else np.full_like(ps, pressure_scalars[idx])
+        p1 = np.full_like(ps, pressure_scalars[idx + 1])
+        pe = np.exp(np.log(np.maximum(p0, 1.0)) + f * (np.log(p1) - np.log(np.maximum(p0, 1.0))))
+        return te, np.clip(rhe, 0.0, 100.0), pe
+
+    parcel_t = t0_k.copy()
+    cape = np.zeros_like(t0_c)
+    cin = np.zeros_like(t0_c)
+    lfc_found = np.zeros_like(t0_c, dtype=bool)
+
+    env_t0, env_rh0, p_prev = environment_at_height(0.0)
+    env_w0 = mixing_ratio_kgkg(env_t0, env_rh0, p_prev)
+    env_q0 = env_w0 / (1.0 + env_w0)
+    parcel_q0 = w0 / (1.0 + w0)
+    tv_env_prev = (env_t0 + 273.15) * (1.0 + 0.61 * env_q0)
+    tv_par_prev = parcel_t * (1.0 + 0.61 * parcel_q0)
+    b_prev = 9.80665 * (tv_par_prev - tv_env_prev) / tv_env_prev
+
+    dz = 250.0
+    z = 0.0
+    while z < 9000.0:
+        z_next = z + dz
+        env_t, env_rh, p_next = environment_at_height(z_next)
+
+        dry_dz = np.clip(lcl_m - z, 0.0, dz)
+        moist_dz = dz - dry_dz
+        parcel_t = parcel_t - 0.0098 * dry_dz
+
+        if np.any(moist_dz > 0.0):
+            ws = saturation_mixing_ratio_kgkg(parcel_t, p_next)
+            # Pseudoadiabatique : formule standard de gradient humide.
+            lv = 2.5e6
+            rd = 287.05
+            cp = 1004.0
+            eps = 0.622
+            numerator = 9.80665 * (1.0 + lv * ws / (rd * parcel_t))
+            denominator = cp + (lv * lv * ws * eps) / (rd * parcel_t * parcel_t)
+            gamma_m = np.clip(numerator / denominator, 0.003, 0.0098)
+            parcel_t = parcel_t - gamma_m * moist_dz
+
+        env_w = mixing_ratio_kgkg(env_t, env_rh, p_next)
+        env_q = env_w / (1.0 + env_w)
+        parcel_ws = saturation_mixing_ratio_kgkg(parcel_t, p_next)
+        parcel_w = np.where(z_next <= lcl_m, w0, parcel_ws)
+        parcel_q = parcel_w / (1.0 + parcel_w)
+
+        tv_env = (env_t + 273.15) * (1.0 + 0.61 * env_q)
+        tv_par = parcel_t * (1.0 + 0.61 * parcel_q)
+        b = 9.80665 * (tv_par - tv_env) / tv_env
+        b_avg = 0.5 * (b_prev + b)
+
+        can_find_lfc = valid & (z_next >= lcl_m) & np.isfinite(b) & (b > 0.0)
+        newly_lfc = (~lfc_found) & can_find_lfc
+        before_lfc = valid & (~lfc_found)
+        cin += np.where(before_lfc & np.isfinite(b_avg) & (b_avg < 0.0), b_avg * dz, 0.0)
+        lfc_found |= newly_lfc
+        cape += np.where(lfc_found & np.isfinite(b_avg) & (b_avg > 0.0), b_avg * dz, 0.0)
+
+        b_prev = b
+        p_prev = p_next
+        z = z_next
+
+    cape = np.where(valid, np.maximum(cape, 0.0), np.nan)
+    cin = np.where(valid, np.minimum(cin, 0.0), np.nan)
+    cin = np.where(np.isfinite(cin), np.maximum(cin, -1000.0), np.nan)
+    # Évite de surinterpréter les très petites intégrales numériques.
+    cape = np.where(np.isfinite(cape) & (cape < 5.0), 0.0, cape)
+    cin = np.where(np.isfinite(cin) & (np.abs(cin) < 2.0), 0.0, cin)
+    return cape, cin
 
 def rotate_uv(
     u: np.ndarray,
@@ -574,17 +725,24 @@ def transform_step(
     previous_cumulative: np.ndarray | None,
 ) -> tuple[dict[str, np.ndarray], np.ndarray | None]:
     raw = step["values"]
-    temperature = rounded(raw["temperature_k"] - 273.15, 1)
-    humidity = rounded(normalize_relative_humidity(raw["humidity_pct"]), 0)
+    temperature_calc = raw["temperature_k"] - 273.15
+    humidity_calc = normalize_relative_humidity(raw["humidity_pct"])
+    temperature = rounded(temperature_calc, 0)
+    humidity = rounded(humidity_calc, 0)
     cloud = rounded(normalize_relative_humidity(raw["cloud_pct"]), 0)
     pressure = rounded(raw["pressure_pa"] / 100.0, 0)
     visibility = rounded(raw["visibility_m"] / 1000.0, 1)
+    surface_pressure = raw["surface_pressure_pa"] / 100.0
+    surface_temperature = rounded(raw["surface_temperature_k"] - 273.15, 0)
+    snowfall = rounded(np.maximum(raw["snowfall_raw_mm"], 0.0), 1)
+    snow_depth_cm = rounded(np.maximum(raw["snow_depth_m"], 0.0) * 100.0, 1)
+    snow_water_equivalent = rounded(np.maximum(raw["snow_water_equivalent_mm"], 0.0), 1)
 
     dewpoint_direct = raw["dewpoint_k"] - 273.15
-    dewpoint_derived = dewpoint_from_temperature_rh(temperature, humidity)
-    dewpoint = np.where(np.isfinite(dewpoint_direct), dewpoint_direct, dewpoint_derived)
-    dewpoint = rounded(dewpoint, 1)
-    lcl = rounded(np.clip(125.0 * (temperature - dewpoint), 0.0, 5000.0), 0)
+    dewpoint_derived = dewpoint_from_temperature_rh(temperature_calc, humidity_calc)
+    dewpoint_calc = np.where(np.isfinite(dewpoint_direct), dewpoint_direct, dewpoint_derived)
+    dewpoint = rounded(dewpoint_calc, 1)
+    lcl = rounded(np.clip(125.0 * (temperature_calc - dewpoint_calc), 0.0, 5000.0), 0)
 
     precipitation_raw = np.maximum(raw["precipitation_raw_mm"], 0.0)
     if step.get("precip_start_step") == 0 and step.get("precip_end_step") is not None:
@@ -619,12 +777,13 @@ def transform_step(
     condition[np.isfinite(gust_speed) & (gust_speed >= 70)] = 9
     condition[np.isfinite(precipitation) & (precipitation >= 0.1)] = 5
     condition[np.isfinite(precipitation) & (precipitation >= 5.0)] = 6
-    condition[
-        np.isfinite(precipitation)
-        & (precipitation >= 0.1)
-        & np.isfinite(temperature)
-        & (temperature <= 1.0)
-    ] = 7
+    direct_snow = np.isfinite(snowfall) & (snowfall >= 0.05)
+    fallback_snow = (
+        ~np.isfinite(snowfall)
+        & np.isfinite(precipitation) & (precipitation >= 0.1)
+        & np.isfinite(temperature_calc) & (temperature_calc <= 1.0)
+    )
+    condition[direct_snow | fallback_snow] = 7
     condition[np.isfinite(visibility) & (visibility < 1.0)] = 8
 
     # Profils P3 sur niveaux isobares.
@@ -711,11 +870,16 @@ def transform_step(
     freezing_level = crossing_height(temperature_profile, height_profile, 0.0)
     minus20_level = crossing_height(temperature_profile, height_profile, -20.0)
 
-    cape = np.maximum(raw["cape_jkg"], 0.0)
-    cin = raw["cin_jkg"].copy()
+    cape, cin = approximate_cape_cin_p3(
+        temperature_calc,
+        dewpoint_calc,
+        surface_pressure,
+        t_levels,
+        rh_levels,
+    )
     omega_500 = raw["omega_500_pas"].copy()
 
-    # Score convectif : CAPE direct quand disponible, sinon indices P3 K/TT.
+    # Score convectif : CAPE/CIN estimés sur P3 + indices K/TT.
     score = np.zeros(len(temperature), dtype=np.float64)
     score += np.where(np.isfinite(cape), np.clip(cape / 50.0, 0.0, 30.0), 0.0)
     score += np.where(np.isfinite(k_index), np.clip((k_index - 15.0) * 1.25, 0.0, 25.0), 0.0)
@@ -796,6 +960,61 @@ def transform_step(
     )
     storm_type[supercell] = 4
 
+    # --- Diagnostic neige P3 ---
+    # Estimation de neige fraîche à partir de l'équivalent en eau HGTY.
+    snow_ratio_cm_per_mm = np.select(
+        [temperature_calc <= -8.0, temperature_calc <= -3.0, temperature_calc <= 1.0, temperature_calc <= 2.0],
+        [1.5, 1.2, 1.0, 0.7],
+        default=0.4,
+    )
+    snow_fresh_cm = rounded(snowfall * snow_ratio_cm_per_mm, 1)
+
+    snow_risk = np.zeros(len(temperature), dtype=np.int16)
+    snow_risk[np.isfinite(snowfall) & (snowfall >= 0.05)] = 1
+    snow_risk[np.isfinite(snowfall) & (snowfall >= 0.5)] = 2
+    snow_risk[np.isfinite(snowfall) & (snowfall >= 1.5)] = 3
+    snow_risk[np.isfinite(snowfall) & (snowfall >= 3.0)] = 4
+    cold_boost = (
+        np.isfinite(snowfall) & (snowfall >= 0.2)
+        & np.isfinite(temperature_calc) & (temperature_calc <= 0.5)
+    )
+    snow_risk[cold_boost] = np.minimum(4, snow_risk[cold_boost] + 1)
+    low_iso_boost = (
+        np.isfinite(snowfall) & (snowfall >= 0.2)
+        & np.isfinite(freezing_level) & (freezing_level <= 500.0)
+    )
+    snow_risk[low_iso_boost] = np.maximum(snow_risk[low_iso_boost], 2)
+
+    snow_stick = np.zeros(len(temperature), dtype=np.int16)
+    snow_stick[np.isfinite(snowfall) & (snowfall >= 0.05)] = 1
+    stick_moderate = (
+        np.isfinite(snowfall) & (snowfall >= 0.2)
+        & np.isfinite(surface_temperature) & (surface_temperature <= 1.0)
+    )
+    snow_stick[stick_moderate] = 2
+    stick_high = (
+        np.isfinite(snowfall) & (snowfall >= 0.5)
+        & np.isfinite(surface_temperature) & (surface_temperature <= 0.0)
+    )
+    snow_stick[stick_high] = 3
+    snow_stick[np.isfinite(snow_depth_cm) & (snow_depth_cm >= 1.0)] = np.maximum(
+        snow_stick[np.isfinite(snow_depth_cm) & (snow_depth_cm >= 1.0)], 2
+    )
+
+    snow_phase = np.zeros(len(temperature), dtype=np.int16)  # 0 aucun, 1 pluie, 2 mixte, 3 neige
+    precip_present = np.isfinite(precipitation) & (precipitation >= 0.05)
+    snow_phase[precip_present] = 1
+    snow_fraction = np.zeros(len(temperature), dtype=np.float64)
+    np.divide(
+        snowfall,
+        np.maximum(precipitation, 0.01),
+        out=snow_fraction,
+        where=np.isfinite(snowfall) & np.isfinite(precipitation),
+    )
+    snow_phase[precip_present & (snow_fraction >= 0.15)] = 2
+    snow_phase[precip_present & (snow_fraction >= 0.65)] = 3
+    snow_phase[np.isfinite(snowfall) & (snowfall >= 0.05) & ~precip_present] = 3
+
     return (
         {
             "temperature_c": temperature,
@@ -832,6 +1051,15 @@ def transform_step(
             "convective_precipitation_mm": convective_precipitation,
             "graupel_mm": graupel,
             "dewpoint_c": dewpoint,
+            "snow_risk_code": snow_risk,
+            "snowfall_mm": snowfall,
+            "snow_fresh_cm": snow_fresh_cm,
+            "snow_depth_cm": snow_depth_cm,
+            "snow_water_equivalent_mm": snow_water_equivalent,
+            "surface_temperature_c": surface_temperature,
+            "snow_stick_risk_code": snow_stick,
+            "snow_phase_code": snow_phase,
+            "temperature_850_c": rounded(t_levels[850], 0),
         },
         previous_cumulative,
     )
@@ -855,6 +1083,7 @@ def compact_rows(
 ) -> list[list[int | float | None]]:
     rows: list[list[int | float | None]] = []
     integer_columns = {
+        "temperature_c",
         "humidity_pct",
         "cloud_cover_pct",
         "wind_speed_kmh",
@@ -876,6 +1105,11 @@ def compact_rows(
         "humidity_700_pct",
         "freezing_level_m",
         "minus20_level_m",
+        "surface_temperature_c",
+        "temperature_850_c",
+        "snow_risk_code",
+        "snow_stick_risk_code",
+        "snow_phase_code",
     }
     for point_id in point_ids:
         position = int(point_id)
@@ -1018,7 +1252,7 @@ def decode_national_archive(
         "dataset": base.DATASET_NAME,
         "version": base.DATASET_VERSION,
         "pipeline_version": NATIONAL_PIPELINE_VERSION,
-        "storm_diagnostics": "P3 pressure levels + direct GRIB diagnostics when present",
+        "storm_diagnostics": "P3 pressure levels + approximate CAPE/CIN + direct snow diagnostics",
         "catalog_version": catalog.version,
         "domain": "Europe (DINI/N55)",
         "resolution_km": 5.5,
@@ -1123,6 +1357,9 @@ def decode_national_archive(
         "condition_codes": CONDITION_CODES,
         "storm_risk_codes": {0: "minimal", 1: "low", 2: "moderate", 3: "strong", 4: "severe"},
         "storm_type_codes": {0: "none", 1: "isolated", 2: "multicell", 3: "line_mcs", 4: "supercell_potential"},
+        "snow_risk_codes": {0: "none", 1: "low", 2: "moderate", 3: "strong", 4: "very_strong"},
+        "snow_stick_risk_codes": {0: "none", 1: "low", 2: "moderate", 3: "high"},
+        "snow_phase_codes": {0: "none", 1: "rain", 2: "mixed", 3: "snow"},
         "search": {
             "provider": "API Découpage administratif — République française",
             "endpoint": "https://geo.api.gouv.fr/communes",

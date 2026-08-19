@@ -45,7 +45,7 @@ LOGGER = logging.getLogger("harmonie")
 API_BASE = "https://api.dataplatform.knmi.nl/open-data/v1"
 DATASET_NAME = "harmonie_arome_cy43_p3"
 DATASET_VERSION = "1.0"
-PIPELINE_VERSION = "1.2.0"
+PIPELINE_VERSION = "1.3.0"
 
 # Clé anonyme publiée par le KNMI, valable jusqu'au 1er août 2027. Une clé
 # personnelle placée dans le secret GitHub KNMI_API_KEY la remplace aussitôt.
@@ -94,7 +94,9 @@ class ParameterSpec:
 
 PARAMETERS = (
     ParameterSpec("pressure_pa", 1, 103, 0, 0),
+    ParameterSpec("surface_pressure_pa", 1, 105, 0, 0),
     ParameterSpec("temperature_k", 11, 105, 2, 0),
+    ParameterSpec("surface_temperature_k", 11, 105, 0, 0),
     ParameterSpec("dewpoint_k", 17, 105, 2, 0),
     ParameterSpec("visibility_m", 20, 105, 0, 0),
     ParameterSpec("wind_u_ms", 33, 105, 10, 0),
@@ -105,6 +107,10 @@ PARAMETERS = (
     ParameterSpec("cloud_low_pct", 73, 105, 0, 0),
     ParameterSpec("cloud_mid_pct", 74, 105, 0, 0),
     ParameterSpec("cloud_high_pct", 75, 105, 0, 0),
+    ParameterSpec("snow_water_equivalent_mm", 65, 105, 0, 0),
+    ParameterSpec("snow_depth_m", 66, 105, 0, 0),
+    ParameterSpec("snowfall_raw_mm", 184, 105, 0, 4),
+    ParameterSpec("graupel_raw_mm", 201, 105, 0, 4),
     ParameterSpec("gust_u_ms", 162, 105, 10, 2),
     ParameterSpec("gust_v_ms", 163, 105, 10, 2),
 )
