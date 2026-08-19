@@ -9,33 +9,65 @@ jobs:
 
     steps:
       - name: Tester le token Observation V2
+        shell: bash
         env:
           METEOFRANCE_OBS_TOKEN: ${{ secrets.METEOFRANCE_OBS_TOKEN }}
         run: |
-          if [ -z "$METEOFRANCE_OBS_TOKEN" ]; then
+          set -euo pipefail
+
+          RAW_TOKEN="${METEOFRANCE_OBS_TOKEN:-}"
+
+          if [ -z "$RAW_TOKEN" ]; then
             echo "ERREUR : le secret METEOFRANCE_OBS_TOKEN est vide ou introuvable."
             exit 1
           fi
 
-          HTTP_CODE=$(curl -sS \
-            -o /tmp/mf_stations \
-            -w "%{http_code}" \
-            -H "accept: */*" \
-            -H "Authorization: Bearer ${METEOFRANCE_OBS_TOKEN}" \
-            "https://public-api.meteofrance.fr/public/DPObs/v2/liste-stations")
+          # Nettoyage :
+          # - retire CR/LF accidentels
+          # - retire espaces en début/fin
+          # - accepte un secret enregistré sous la forme "Bearer xxxxx"
+          TOKEN="$(printf '%s' "$RAW_TOKEN" | tr -d '\r\n' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+          TOKEN="${TOKEN#Bearer }"
+          TOKEN="${TOKEN#bearer }"
 
-          echo "HTTP Météo-France : ${HTTP_CODE}"
-
-          if [ "$HTTP_CODE" != "200" ]; then
-            echo "ERREUR : accès API Observations V2 refusé."
-            echo "Début de la réponse :"
-            head -c 1000 /tmp/mf_stations || true
-            echo
+          if [ -z "$TOKEN" ]; then
+            echo "ERREUR : le token est vide après nettoyage."
             exit 1
           fi
 
-          echo "API Observations V2 : OK"
-          echo "Taille de la réponse : $(wc -c < /tmp/mf_stations) octets"
-          echo "Les 300 premiers caractères :"
-          head -c 300 /tmp/mf_stations
+          echo "Secret détecté : oui"
+          echo "Longueur du token après nettoyage : ${#TOKEN} caractères"
+          echo "Test de /public/DPObs/v2/liste-stations..."
+
+          HTTP_CODE="$(curl -sS \
+            --connect-timeout 15 \
+            --max-time 45 \
+            -o /tmp/mf_stations \
+            -w "%{http_code}" \
+            -H "accept: */*" \
+            -H "Authorization: Bearer ${TOKEN}" \
+            "https://public-api.meteofrance.fr/public/DPObs/v2/liste-stations")"
+
+          echo "HTTP Météo-France : ${HTTP_CODE}"
+
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "API Observations V2 : OK"
+            echo "Taille de la réponse : $(wc -c < /tmp/mf_stations) octets"
+            exit 0
+          fi
+
+          echo "API Observations V2 : REFUSÉE"
+          echo "Réponse Météo-France :"
+          head -c 1000 /tmp/mf_stations || true
           echo
+
+          if [ "$HTTP_CODE" = "401" ]; then
+            echo
+            echo "DIAGNOSTIC :"
+            echo "- le secret est bien transmis à GitHub Actions ;"
+            echo "- mais il n'est pas accepté par l'API DPObs V2 ;"
+            echo "- régénère alors un token depuis l'abonnement « Les données d'observation V2 » ;"
+            echo "- colle uniquement la valeur du token dans METEOFRANCE_OBS_TOKEN."
+          fi
+
+          exit 1
