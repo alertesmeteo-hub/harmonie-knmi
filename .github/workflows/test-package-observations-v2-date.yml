@@ -1,0 +1,88 @@
+name: Test Package Observations V2 avec date
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test_package_obs_v2:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Tester Package Observations V2
+        shell: bash
+        env:
+          METEOFRANCE_PACKAGE_OBS_KEY: ${{ secrets.METEOFRANCE_PACKAGE_OBS_KEY }}
+        run: |
+          set -euo pipefail
+
+          RAW="${METEOFRANCE_PACKAGE_OBS_KEY:-}"
+
+          if [ -z "$RAW" ]; then
+            echo "ERREUR : METEOFRANCE_PACKAGE_OBS_KEY est vide."
+            exit 1
+          fi
+
+          KEY="$(printf '%s' "$RAW" \
+            | tr -d '\r\n' \
+            | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+
+          KEY="${KEY#Bearer }"
+          KEY="${KEY#bearer }"
+          KEY="${KEY#apikey: }"
+          KEY="${KEY#apiKey: }"
+
+          BASE_URL="https://public-api.meteofrance.fr/public/DPPaquetObs/v2/paquet/stations/horaire"
+
+          echo "Clé Package Observations : détectée"
+          echo "Longueur : ${#KEY} caractères"
+          echo
+
+          SUCCESS=0
+
+          # Le paquet de l'heure courante peut ne pas encore être publié.
+          # On essaie H, H-1, H-2 et H-3 en UTC.
+          for BACK in 0 1 2 3; do
+            DATE_UTC="$(date -u -d "-${BACK} hour" '+%Y-%m-%dT%H:00:00Z')"
+
+            echo "--------------------------------------------"
+            echo "Test date : ${DATE_UTC}"
+
+            HTTP_CODE="$(curl -sS \
+              --connect-timeout 15 \
+              --max-time 90 \
+              -D /tmp/mf_headers \
+              -o /tmp/mf_package \
+              -w "%{http_code}" \
+              --get \
+              -H "accept: */*" \
+              -H "apikey: ${KEY}" \
+              --data-urlencode "date=${DATE_UTC}" \
+              --data-urlencode "format=csv" \
+              "${BASE_URL}")"
+
+            echo "HTTP : ${HTTP_CODE}"
+            echo "Taille : $(wc -c < /tmp/mf_package) octets"
+
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo
+              echo "PACKAGE OBSERVATIONS V2 : OK"
+              echo "DATE DISPONIBLE : ${DATE_UTC}"
+              echo "Content-Type : $(grep -i '^content-type:' /tmp/mf_headers | tail -1 | tr -d '\r' || true)"
+              echo
+              echo "Début du paquet :"
+              head -c 1000 /tmp/mf_package || true
+              echo
+              SUCCESS=1
+              break
+            fi
+
+            echo "Réponse :"
+            head -c 500 /tmp/mf_package || true
+            echo
+          done
+
+          if [ "$SUCCESS" != "1" ]; then
+            echo
+            echo "ERREUR : aucun paquet disponible entre H et H-3."
+            exit 1
+          fi
