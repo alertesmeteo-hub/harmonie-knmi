@@ -45,7 +45,7 @@ LOGGER = logging.getLogger("harmonie")
 API_BASE = "https://api.dataplatform.knmi.nl/open-data/v1"
 DATASET_NAME = "harmonie_arome_cy43_p3"
 DATASET_VERSION = "1.0"
-PIPELINE_VERSION = "1.3.0"
+PIPELINE_VERSION = "1.3.1"
 
 # Clé anonyme publiée par le KNMI, valable jusqu'au 1er août 2027. Une clé
 # personnelle placée dans le secret GitHub KNMI_API_KEY la remplace aussitôt.
@@ -1084,10 +1084,10 @@ def build_output(
                     ),
                     0,
                 ),
-                "wind_speed_kmh": round_or_none(wind_speed, 0),
+                "wind_speed_kmh": int(math.ceil(wind_speed)) if wind_speed is not None and math.isfinite(wind_speed) else None,
                 "wind_direction_deg": round_or_none(wind_direction, 0),
                 "wind_direction": compass_direction(wind_direction),
-                "wind_gust_kmh": round_or_none(gust_speed, 0),
+                "wind_gust_kmh": int(math.ceil(gust_speed)) if gust_speed is not None and math.isfinite(gust_speed) else None,
                 "pressure_hpa": round_or_none(
                     pressure_pa / 100.0 if pressure_pa is not None else None,
                     0,

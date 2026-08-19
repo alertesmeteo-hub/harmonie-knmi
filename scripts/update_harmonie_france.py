@@ -35,7 +35,7 @@ import update_harmonie as base
 
 
 LOGGER = logging.getLogger("harmonie.france")
-NATIONAL_PIPELINE_VERSION = "2.4.0"
+NATIONAL_PIPELINE_VERSION = "2.6.0"
 DEFAULT_CURRENT_METADATA_URL = (
     "https://raw.githubusercontent.com/alertesmeteo-hub/"
     "harmonie-knmi/data/index.json"
@@ -91,6 +91,18 @@ VALUE_COLUMNS = (
     "snow_stick_risk_code",
     "snow_phase_code",
     "temperature_850_c",
+    # Profil neige / thermodynamique basse couche. Les niveaux 975/950/900
+    # sont interpolés en log-pression à partir des niveaux P3 disponibles.
+    "thickness_1000_500_dam",
+    "temperature_975_c",
+    "temperature_950_c",
+    "temperature_925_c",
+    "temperature_900_c",
+    "geopotential_975_m",
+    "geopotential_950_m",
+    "geopotential_925_m",
+    "geopotential_900_m",
+    "geopotential_850_m",
 )
 
 PRESSURE_LEVELS = (925, 850, 700, 500, 300)
@@ -657,6 +669,56 @@ def approximate_srh(
     return np.abs(result)
 
 
+def log_pressure_interpolate(
+    target_hpa: float,
+    pressure1_hpa: np.ndarray | float,
+    value1: np.ndarray,
+    pressure2_hpa: np.ndarray | float,
+    value2: np.ndarray,
+) -> np.ndarray:
+    """Interpolation linéaire en ln(p), adaptée aux niveaux isobares."""
+
+    p1 = np.asarray(pressure1_hpa, dtype=np.float64)
+    p2 = np.asarray(pressure2_hpa, dtype=np.float64)
+    v1 = np.asarray(value1, dtype=np.float64)
+    v2 = np.asarray(value2, dtype=np.float64)
+    target = float(target_hpa)
+    denominator = np.log(p1) - np.log(p2)
+    fraction = np.full(np.broadcast(p1, p2, v1, v2).shape, np.nan, dtype=np.float64)
+    np.divide(
+        np.log(p1) - math.log(target),
+        denominator,
+        out=fraction,
+        where=np.isfinite(denominator) & (np.abs(denominator) > 1.0e-9),
+    )
+    result = v1 + fraction * (v2 - v1)
+    valid = (
+        np.isfinite(p1) & np.isfinite(p2)
+        & (p1 > 0.0) & (p2 > 0.0)
+        & np.isfinite(v1) & np.isfinite(v2)
+    )
+    return np.where(valid, result, np.nan)
+
+
+def near_surface_pressure_level(
+    target_hpa: float,
+    surface_pressure_hpa: np.ndarray,
+    surface_value: np.ndarray,
+    value_925: np.ndarray,
+) -> np.ndarray:
+    """Valeur à 975/950 hPa ; masque le niveau lorsqu'il est sous le sol."""
+
+    result = log_pressure_interpolate(
+        target_hpa,
+        surface_pressure_hpa,
+        surface_value,
+        925.0,
+        value_925,
+    )
+    above_ground = np.isfinite(surface_pressure_hpa) & (surface_pressure_hpa >= target_hpa)
+    return np.where(above_ground, result, np.nan)
+
+
 def risk_code(score: np.ndarray) -> np.ndarray:
     result = np.zeros(score.shape, dtype=np.int16)
     result[np.isfinite(score) & (score >= 20)] = 1
@@ -802,6 +864,41 @@ def transform_step(
         u_levels[level], v_levels[level] = rotate_uv(
             raw[f"wind_u_{level}_ms"], raw[f"wind_v_{level}_ms"], angle
         )
+
+    # Géopotentiels P3 convertis en hauteur géopotentielle (m).
+    z_levels: dict[int, np.ndarray] = {
+        level: raw[f"geopotential_{level}_m2s2"] / 9.80665
+        for level in PRESSURE_LEVELS
+    }
+    surface_height = raw["surface_geopotential_m2s2"] / 9.80665
+
+    # Profil basse couche demandé pour le diagnostic neige. P3 Europe fournit
+    # directement 925/850 hPa ; 975/950/900 hPa sont interpolés en ln(p).
+    temperature_975 = near_surface_pressure_level(
+        975.0, surface_pressure, temperature_calc, t_levels[925]
+    )
+    temperature_950 = near_surface_pressure_level(
+        950.0, surface_pressure, temperature_calc, t_levels[925]
+    )
+    temperature_900 = log_pressure_interpolate(
+        900.0, 925.0, t_levels[925], 850.0, t_levels[850]
+    )
+    geopotential_975 = near_surface_pressure_level(
+        975.0, surface_pressure, surface_height, z_levels[925]
+    )
+    geopotential_950 = near_surface_pressure_level(
+        950.0, surface_pressure, surface_height, z_levels[925]
+    )
+    geopotential_900 = log_pressure_interpolate(
+        900.0, 925.0, z_levels[925], 850.0, z_levels[850]
+    )
+
+    # Épaisseur 1000–500 hPa : z1000 est extrapolé à partir de 925/850 hPa
+    # lorsque ces deux champs sont valides, puis z500-z1000 est exprimé en dam.
+    geopotential_1000 = log_pressure_interpolate(
+        1000.0, 925.0, z_levels[925], 850.0, z_levels[850]
+    )
+    thickness_1000_500_dam = (z_levels[500] - geopotential_1000) / 10.0
 
     td850 = dewpoint_from_temperature_rh(t_levels[850], rh_levels[850])
     td700 = dewpoint_from_temperature_rh(t_levels[700], rh_levels[700])
@@ -1065,6 +1162,16 @@ def transform_step(
             "snow_stick_risk_code": snow_stick,
             "snow_phase_code": snow_phase,
             "temperature_850_c": rounded(t_levels[850], 0),
+            "thickness_1000_500_dam": rounded(thickness_1000_500_dam, 0),
+            "temperature_975_c": rounded(temperature_975, 0),
+            "temperature_950_c": rounded(temperature_950, 0),
+            "temperature_925_c": rounded(t_levels[925], 0),
+            "temperature_900_c": rounded(temperature_900, 0),
+            "geopotential_975_m": rounded(geopotential_975, 0),
+            "geopotential_950_m": rounded(geopotential_950, 0),
+            "geopotential_925_m": rounded(z_levels[925], 0),
+            "geopotential_900_m": rounded(geopotential_900, 0),
+            "geopotential_850_m": rounded(z_levels[850], 0),
             "model_altitude_m": model_altitude_m,
         },
         previous_cumulative,
@@ -1116,17 +1223,36 @@ def compact_rows(
         "snow_risk_code",
         "snow_stick_risk_code",
         "snow_phase_code",
+        "thickness_1000_500_dam",
+        "temperature_975_c",
+        "temperature_950_c",
+        "temperature_925_c",
+        "temperature_900_c",
+        "geopotential_975_m",
+        "geopotential_950_m",
+        "geopotential_925_m",
+        "geopotential_900_m",
+        "geopotential_850_m",
     }
     for point_id in point_ids:
         position = int(point_id)
         row: list[int | float | None] = []
         for column in VALUE_COLUMNS:
-            row.append(
-                json_number(
-                    transformed[column][position],
-                    integer=column in integer_columns,
+            raw_value = transformed[column][position]
+            if column in {"wind_speed_kmh", "wind_gust_kmh"}:
+                try:
+                    number = float(raw_value)
+                except (TypeError, ValueError):
+                    row.append(None)
+                else:
+                    row.append(int(math.ceil(max(0.0, number) / 5.0) * 5) if math.isfinite(number) else None)
+            else:
+                row.append(
+                    json_number(
+                        raw_value,
+                        integer=column in integer_columns,
+                    )
                 )
-            )
         rows.append(row)
     return rows
 
@@ -1261,7 +1387,7 @@ def decode_national_archive(
         "dataset": base.DATASET_NAME,
         "version": base.DATASET_VERSION,
         "pipeline_version": NATIONAL_PIPELINE_VERSION,
-        "storm_diagnostics": "P3 pressure levels + sparse CAPE/CIN diagnostic + direct snow diagnostics",
+        "storm_diagnostics": "P3 pressure levels + CAPE/CIN proxy + snow profile interpolation",
         "catalog_version": catalog.version,
         "domain": "Europe (DINI/N55)",
         "resolution_km": 5.5,
