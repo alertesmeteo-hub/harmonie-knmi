@@ -1,0 +1,41 @@
+name: Test API Observations Météo-France V2
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test_api:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Tester le token Observation V2
+        env:
+          METEOFRANCE_OBS_TOKEN: ${{ secrets.METEOFRANCE_OBS_TOKEN }}
+        run: |
+          if [ -z "$METEOFRANCE_OBS_TOKEN" ]; then
+            echo "ERREUR : le secret METEOFRANCE_OBS_TOKEN est vide ou introuvable."
+            exit 1
+          fi
+
+          HTTP_CODE=$(curl -sS \
+            -o /tmp/mf_stations \
+            -w "%{http_code}" \
+            -H "accept: */*" \
+            -H "Authorization: Bearer ${METEOFRANCE_OBS_TOKEN}" \
+            "https://public-api.meteofrance.fr/public/DPObs/v2/liste-stations")
+
+          echo "HTTP Météo-France : ${HTTP_CODE}"
+
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "ERREUR : accès API Observations V2 refusé."
+            echo "Début de la réponse :"
+            head -c 1000 /tmp/mf_stations || true
+            echo
+            exit 1
+          fi
+
+          echo "API Observations V2 : OK"
+          echo "Taille de la réponse : $(wc -c < /tmp/mf_stations) octets"
+          echo "Les 300 premiers caractères :"
+          head -c 300 /tmp/mf_stations
+          echo
