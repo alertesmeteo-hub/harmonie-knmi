@@ -2,22 +2,31 @@
 # -*- coding: utf-8 -*-
 
 """
-Carte pluie Météo-France
-========================
+Météo Climat Pro — Carte pluie Météo-France
+Version 2.1.0
 
-Produit un JSON unique pour le module WordPress :
-- cumul de précipitations sur 24 h (DPObs / observations)
-- cumul du mois en cours (données climatologiques quotidiennes ouvertes)
-- cumul moyen du mois 1991-2020
-- cumul moyen annuel 1991-2020
+Produit :
+  observations_pluie.json
 
-Authentification DPObs V2 :
-1) METEOFRANCE_OBS_TOKEN (Bearer déjà généré), ou
-2) METEOFRANCE_API_KEY (compatibilité avec un ancien nom de secret), ou
-3) METEOFRANCE_APPLICATION_ID (permet de générer automatiquement un Bearer).
+Vues :
+  - rr24              : cumul des 24 dernières heures à partir de RR1
+  - rr_month_current  : cumul du mois en cours
+  - rr_month_mean     : cumul moyen du mois sur 1991-2020
+  - rr_year_mean      : cumul annuel moyen sur 1991-2020
 
-Les moyennes 1991-2020 ne sont PAS recalculées à chaque exécution :
-elles sont conservées dans cache_pluie_climatologie.json.
+Sources :
+  - Météo-France DPPaquetObs V2 pour les observations horaires
+  - Météo-France DPObs V2 /liste-stations pour les noms
+  - Données climatologiques quotidiennes Météo-France pour le mois en cours
+  - Données climatologiques mensuelles Météo-France pour les normales 1991-2020
+
+Secrets GitHub :
+  METEOFRANCE_PACKAGE_OBS_KEY
+  METEOFRANCE_OBS_TOKEN
+
+IMPORTANT :
+  Ces deux secrets contiennent des API Keys du portail Météo-France.
+  Elles sont envoyées dans l'en-tête HTTP "apikey".
 """
 
 from __future__ import annotations
@@ -38,18 +47,28 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import requests
 
-OBS_V2 = "https://public-api.meteofrance.fr/public/DPObs/v2"
-OBS_V1 = "https://public-api.meteofrance.fr/public/DPObs/v1"
-TOKEN_URL = "https://portail-api.meteofrance.fr/token"
 
-# Jeux officiels Météo-France publiés sur data.gouv.fr
-DATASET_MONTHLY_MAIN = "6569b3d7d193b4daf2b43edc"
-DATASET_MONTHLY_COMPLEMENT = "6791045ba9116b0a49e6a720"
-DATASET_DAILY_MAIN = "6569b51ae64326786e4e8e1a"
-DATASET_DAILY_COMPLEMENT = "679103e271c55090cfe86871"
+VERSION = "2.1.0"
 
-DATAGOUV_DATASET_API = "https://www.data.gouv.fr/api/1/datasets/{dataset_id}/"
-TABULAR_API = "https://tabular-api.data.gouv.fr/api/resources/{resource_id}/data/csv/"
+PACKAGE_BASE = (
+    "https://public-api.meteofrance.fr/public/"
+    "DPPaquetObs/v2/paquet/stations/horaire"
+)
+
+DPObs_STATIONS_URL = (
+    "https://public-api.meteofrance.fr/public/"
+    "DPObs/v2/liste-stations"
+)
+
+MF_S3_QUOT = (
+    "https://meteofrance.s3.sbg.io.cloud.ovh.net/"
+    "data/synchro_ftp/BASE/QUOT"
+)
+
+MF_S3_MENS = (
+    "https://meteofrance.s3.sbg.io.cloud.ovh.net/"
+    "data/synchro_ftp/BASE/MENS"
+)
 
 OUTPUT = Path("observations_pluie.json")
 CACHE = Path("cache_pluie_climatologie.json")
@@ -57,16 +76,22 @@ CACHE = Path("cache_pluie_climatologie.json")
 NORMAL_START = 1991
 NORMAL_END = 2020
 
-# Actualisation des données climatologiques.
-CURRENT_MONTH_CACHE_HOURS = 8
-NORMALS_CACHE_DAYS = 45
+HTTP_TIMEOUT = 90
+PACKAGE_RETRIES_HOURS = 4
 
-HTTP_TIMEOUT = 60
-UA = "alertes-meteo-carte-pluie/2.0 (+https://alertes-meteo.com/)"
+# On accepte un RR24 si au moins 22 des 24 heures sont présentes.
+# Le nombre d'heures est conservé dans le JSON pour contrôle.
+RR24_MIN_VALID_HOURS = 22
 
 session = requests.Session()
-session.headers.update({"User-Agent": UA})
+session.headers.update({
+    "User-Agent": f"alertes-meteo-carte-pluie/{VERSION}",
+})
 
+
+# ---------------------------------------------------------------------
+# Utilitaires
+# ---------------------------------------------------------------------
 
 def utcnow() -> datetime:
     return datetime.now(timezone.utc)
@@ -75,14 +100,18 @@ def utcnow() -> datetime:
 def iso(dt: Optional[datetime]) -> Optional[str]:
     if not dt:
         return None
-    return dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+    return dt.astimezone(timezone.utc).isoformat(
+        timespec="seconds"
+    ).replace("+00:00", "Z")
 
 
 def parse_iso(value: Any) -> Optional[datetime]:
     if not value:
         return None
     try:
-        dt = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        dt = datetime.fromisoformat(
+            str(value).replace("Z", "+00:00")
+        )
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=timezone.utc)
         return dt.astimezone(timezone.utc)
@@ -90,711 +119,1212 @@ def parse_iso(value: Any) -> Optional[datetime]:
         return None
 
 
-def finite_float(value: Any) -> Optional[float]:
-    if value is None or value == "":
+def fnum(value: Any) -> Optional[float]:
+    if value in (None, ""):
         return None
     try:
         x = float(str(value).replace(",", "."))
     except (TypeError, ValueError):
         return None
-    if not math.isfinite(x):
-        return None
-    return x
+    return x if math.isfinite(x) else None
 
 
-def clean_rr(value: Any) -> Optional[float]:
-    x = finite_float(value)
+def clean_rain(value: Any) -> Optional[float]:
+    x = fnum(value)
     if x is None:
         return None
-    # Écarte les valeurs sentinelles ou physiquement aberrantes.
+    # Valeurs négatives / sentinelles / aberrantes ignorées.
     if x < 0 or x > 10000:
         return None
     return x
 
 
-def env_token() -> Optional[str]:
-    for key in ("METEOFRANCE_OBS_TOKEN", "METEOFRANCE_API_KEY"):
-        value = os.getenv(key, "").strip()
-        if value:
-            if value.lower().startswith("bearer "):
-                value = value[7:].strip()
+def first(row: dict, names: Iterable[str]) -> Any:
+    for name in names:
+        if name in row and row[name] not in (None, ""):
+            return row[name]
+
+    lowered = {
+        str(k).strip().lower(): v
+        for k, v in row.items()
+    }
+    for name in names:
+        value = lowered.get(str(name).lower())
+        if value not in (None, ""):
             return value
     return None
 
 
-def get_bearer_token() -> str:
-    direct = env_token()
-    if direct:
-        return direct
-
-    application_id = os.getenv("METEOFRANCE_APPLICATION_ID", "").strip()
-    if not application_id:
-        raise RuntimeError(
-            "Secret Météo-France absent. Définissez METEOFRANCE_OBS_TOKEN "
-            "ou METEOFRANCE_APPLICATION_ID dans GitHub."
-        )
-
-    r = session.post(
-        TOKEN_URL,
-        data={"grant_type": "client_credentials"},
-        headers={"Authorization": f"Basic {application_id}"},
-        timeout=HTTP_TIMEOUT,
+def station_id(row: dict) -> Optional[str]:
+    value = first(
+        row,
+        (
+            "geo_id_insee",
+            "NUM_POSTE",
+            "num_poste",
+            "id_station",
+            "numer_sta",
+        ),
     )
-    r.raise_for_status()
-    payload = r.json()
-    token = payload.get("access_token")
-    if not token:
-        raise RuntimeError("Le serveur Météo-France n'a pas renvoyé access_token.")
-    return token
+    if value is None:
+        return None
+
+    s = str(value).strip()
+    if s.endswith(".0") and s[:-2].isdigit():
+        s = s[:-2]
+    return s or None
 
 
-def mf_get(path: str, token: str, params: Optional[dict] = None) -> requests.Response:
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Accept": "application/json, text/csv, */*",
-    }
-
-    last_error = None
-    # V2 en priorité, V1 seulement comme filet de sécurité.
-    for base in (OBS_V2, OBS_V1):
-        url = base + path
-        try:
-            r = session.get(url, headers=headers, params=params or {}, timeout=HTTP_TIMEOUT)
-            if r.status_code == 404:
-                last_error = RuntimeError(f"{url} -> HTTP 404")
-                continue
-            r.raise_for_status()
-            return r
-        except Exception as exc:
-            last_error = exc
-
-    raise RuntimeError(f"Échec DPObs pour {path}: {last_error}")
-
-
-def unwrap_records(payload: Any) -> List[dict]:
-    if isinstance(payload, list):
-        return [x for x in payload if isinstance(x, dict)]
-    if isinstance(payload, dict):
-        for key in ("data", "records", "result", "results", "features"):
-            value = payload.get(key)
-            if isinstance(value, list):
-                if key == "features":
-                    out = []
-                    for feat in value:
-                        if not isinstance(feat, dict):
-                            continue
-                        props = dict(feat.get("properties") or {})
-                        geom = feat.get("geometry") or {}
-                        coords = geom.get("coordinates")
-                        if isinstance(coords, list) and len(coords) >= 2:
-                            props.setdefault("lon", coords[0])
-                            props.setdefault("lat", coords[1])
-                        out.append(props)
-                    return out
-                return [x for x in value if isinstance(x, dict)]
-    return []
-
-
-def station_id_of(row: dict) -> Optional[str]:
-    for key in ("numer_sta", "id_station", "NUM_POSTE", "num_poste", "geo_id_insee"):
-        value = row.get(key)
-        if value is not None and str(value).strip():
-            s = str(value).strip()
-            # Préserve les zéros initiaux si déjà présents.
-            if s.endswith(".0") and s[:-2].isdigit():
-                s = s[:-2]
-            return s
-    return None
-
-
-def first_value(row: dict, keys: Iterable[str]) -> Any:
-    for key in keys:
-        if key in row and row.get(key) not in (None, ""):
-            return row.get(key)
-    return None
-
-
-def parse_csv_bytes(raw: bytes, content_encoding: str = "") -> List[dict]:
-    if raw[:2] == b"\x1f\x8b" or "gzip" in (content_encoding or "").lower():
-        try:
-            raw = gzip.decompress(raw)
-        except OSError:
-            pass
+def parse_delimited(raw: bytes) -> List[dict]:
+    if raw[:2] == b"\x1f\x8b":
+        raw = gzip.decompress(raw)
 
     text = None
-    for enc in ("utf-8-sig", "utf-8", "latin-1"):
+    for encoding in ("utf-8-sig", "utf-8", "latin-1"):
         try:
-            text = raw.decode(enc)
+            text = raw.decode(encoding)
             break
         except UnicodeDecodeError:
-            continue
+            pass
+
     if text is None:
         text = raw.decode("utf-8", errors="replace")
 
-    sample = text[:8192]
+    sample = text[:10000]
     delimiter = ";" if sample.count(";") >= sample.count(",") else ","
+
     reader = csv.DictReader(io.StringIO(text), delimiter=delimiter)
 
-    out = []
+    rows = []
     for row in reader:
         clean = {}
-        for k, v in row.items():
-            if k is None:
+        for key, value in row.items():
+            if key is None:
                 continue
-            clean[str(k).strip()] = v.strip() if isinstance(v, str) else v
-        out.append(clean)
-    return out
+            clean[str(key).strip()] = (
+                value.strip()
+                if isinstance(value, str)
+                else value
+            )
+        rows.append(clean)
+    return rows
 
 
-def load_station_metadata(token: str) -> Dict[str, dict]:
-    """
-    Récupère la liste des stations DPObs V2.
-    Le service peut renvoyer du CSV ou du JSON suivant la route/version.
-    """
-    try:
-        r = mf_get("/liste-stations", token)
-    except Exception as exc:
-        print(f"[AVERTISSEMENT] Liste des stations indisponible : {exc}")
-        return {}
+def get_secret(name: str) -> str:
+    value = os.getenv(name, "").strip()
+    if not value:
+        raise RuntimeError(
+            f"Secret GitHub absent : {name}"
+        )
 
-    content_type = (r.headers.get("content-type") or "").lower()
-    rows: List[dict]
-    if "json" in content_type:
-        try:
-            rows = unwrap_records(r.json())
-        except Exception:
-            rows = []
-    else:
-        rows = parse_csv_bytes(r.content, r.headers.get("content-encoding", ""))
+    # Nettoyage au cas où "apikey:" ou "Bearer" a été copié.
+    value = value.replace("\r", "").replace("\n", "").strip()
 
-    mapping: Dict[str, dict] = {}
-    for row in rows:
-        sid = station_id_of(row)
-        if not sid:
-            continue
+    for prefix in ("apikey:", "apiKey:", "Bearer ", "bearer "):
+        if value.startswith(prefix):
+            value = value[len(prefix):].strip()
 
-        lat = finite_float(first_value(row, ("lat", "LAT", "latitude", "Latitude")))
-        lon = finite_float(first_value(row, ("lon", "LON", "longitude", "Longitude")))
-        name = first_value(row, ("nom_usuel", "NOM_USUEL", "nom", "Nom", "name", "libelle"))
-
-        mapping[sid] = {
-            "name": str(name).strip() if name else sid,
-            "lat": lat,
-            "lon": lon,
-        }
-    return mapping
+    if not value:
+        raise RuntimeError(
+            f"Secret {name} vide après nettoyage."
+        )
+    return value
 
 
-def load_synop(token: str, metadata: Dict[str, dict]) -> Tuple[List[dict], Optional[datetime], str]:
-    """
-    Charge le paquet SYNOP national. Une seule requête utile pour la carte 24 h.
-    """
-    r = mf_get("/synop", token, params={"format": "json"})
-    try:
-        rows = unwrap_records(r.json())
-    except Exception as exc:
-        raise RuntimeError(f"Réponse SYNOP non JSON : {exc}")
-
-    stations: Dict[str, dict] = {}
-    latest_dt = None
-
-    for row in rows:
-        sid = station_id_of(row)
-        if not sid:
-            continue
-
-        rr24 = clean_rr(first_value(row, ("rr24", "RR24", "rr_24")))
-        lat = finite_float(first_value(row, ("lat", "LAT", "latitude")))
-        lon = finite_float(first_value(row, ("lon", "LON", "longitude")))
-
-        meta = metadata.get(sid, {})
-        if lat is None:
-            lat = finite_float(meta.get("lat"))
-        if lon is None:
-            lon = finite_float(meta.get("lon"))
-
-        if lat is None or lon is None:
-            continue
-        if not (-90 <= lat <= 90 and -180 <= lon <= 180):
-            continue
-
-        dt = None
-        for key in ("date", "validity_time", "reference_time", "insert_time"):
-            dt = parse_iso(row.get(key))
-            if dt:
-                break
-
-        name = first_value(row, ("nom", "nom_usuel", "NOM_USUEL", "name"))
-        if not name:
-            name = meta.get("name") or sid
-
-        old = stations.get(sid)
-        old_dt = parse_iso(old.get("date")) if old else None
-        if old is None or (dt and (old_dt is None or dt > old_dt)):
-            stations[sid] = {
-                "id": sid,
-                "name": str(name),
-                "lat": round(lat, 5),
-                "lon": round(lon, 5),
-                "date": iso(dt),
-                "rr24": round(rr24, 1) if rr24 is not None else None,
-            }
-
-        if dt and (latest_dt is None or dt > latest_dt):
-            latest_dt = dt
-
-    # Le nom de la route utilisée est conservé dans le JSON.
-    return list(stations.values()), latest_dt, r.url
+def apikey_headers(key: str) -> dict:
+    return {
+        "apikey": key,
+        "accept": "*/*",
+    }
 
 
-def station_department(sid: str) -> str:
-    """
-    Déduit le code de département des identifiants de stations Météo-France.
-    971/972/... utilisent trois chiffres ; métropole généralement deux.
-    """
-    digits = re.sub(r"\D", "", sid)
-    if digits.startswith(("971", "972", "973", "974", "975", "976", "977", "978", "984", "986", "987", "988")):
-        return digits[:3]
-    return digits[:2]
+# ---------------------------------------------------------------------
+# Package Observations V2
+# ---------------------------------------------------------------------
 
+def package_request(
+    key: str,
+    date_hour: datetime,
+) -> Optional[requests.Response]:
 
-_DATASET_CACHE: Dict[str, List[dict]] = {}
+    date_text = iso(
+        date_hour.replace(
+            minute=0,
+            second=0,
+            microsecond=0,
+        )
+    )
 
-
-def dataset_resources(dataset_id: str) -> List[dict]:
-    if dataset_id in _DATASET_CACHE:
-        return _DATASET_CACHE[dataset_id]
-
-    r = session.get(
-        DATAGOUV_DATASET_API.format(dataset_id=dataset_id),
+    response = session.get(
+        PACKAGE_BASE,
+        params={
+            "date": date_text,
+            "format": "csv",
+        },
+        headers=apikey_headers(key),
         timeout=HTTP_TIMEOUT,
     )
-    r.raise_for_status()
-    resources = r.json().get("resources", [])
-    resources = [x for x in resources if isinstance(x, dict)]
-    _DATASET_CACHE[dataset_id] = resources
-    return resources
 
+    if response.status_code == 200:
+        return response
 
-def resource_period(title: str) -> Optional[Tuple[int, int]]:
-    # Exemples attendus : 1950-2023, latest-2025-2026, avant_1950-1949...
-    pairs = re.findall(r"(?<!\d)(\d{4})-(\d{4})(?!\d)", title)
-    if not pairs:
+    if response.status_code in (400, 404):
         return None
-    a, b = pairs[-1]
-    return int(a), int(b)
+
+    if response.status_code == 401:
+        raise RuntimeError(
+            "Package Observations : HTTP 401, clé invalide."
+        )
+
+    if response.status_code == 403:
+        raise RuntimeError(
+            "Package Observations : HTTP 403, "
+            "abonnement ou droits insuffisants."
+        )
+
+    if response.status_code == 429:
+        raise RuntimeError(
+            "Package Observations : HTTP 429, quota dépassé."
+        )
+
+    response.raise_for_status()
+    return None
 
 
-def resource_matches_department(title: str, dep: str) -> bool:
-    t = title.lower().replace("é", "e")
-    variants = (
-        f"departement_{dep}",
-        f"departement-{dep}",
-        f"departement {dep}",
-        f"dep_{dep}",
-        f"dep-{dep}",
+def find_latest_package_hour(
+    key: str,
+) -> Tuple[datetime, requests.Response]:
+
+    base = utcnow().replace(
+        minute=0,
+        second=0,
+        microsecond=0,
     )
-    return any(v in t for v in variants)
+
+    for back in range(PACKAGE_RETRIES_HOURS):
+        candidate = base - timedelta(hours=back)
+        print(
+            "Recherche paquet :",
+            iso(candidate),
+        )
+        response = package_request(key, candidate)
+        if response is not None:
+            print(
+                "Dernier paquet disponible :",
+                iso(candidate),
+            )
+            return candidate, response
+
+    raise RuntimeError(
+        "Aucun paquet horaire disponible entre H et H-3."
+    )
 
 
-def pick_resources(
-    dataset_ids: Iterable[str],
+def load_24_hour_packages(
+    key: str,
+) -> Tuple[
+    datetime,
+    Dict[str, dict],
+    Dict[str, dict],
+]:
+
+    latest_hour, first_response = find_latest_package_hour(key)
+
+    # sid -> métadonnées géographiques
+    station_geo: Dict[str, dict] = {}
+
+    # sid -> données agrégées
+    agg: Dict[str, dict] = defaultdict(
+        lambda: {
+            "rr24_sum": 0.0,
+            "rr24_hours": 0,
+            "today_sum": 0.0,
+            "today_hours": 0,
+            "latest_date": None,
+        }
+    )
+
+    current_utc_day = latest_hour.date()
+
+    for offset in range(24):
+        target = latest_hour - timedelta(hours=offset)
+
+        if offset == 0:
+            response = first_response
+        else:
+            response = package_request(key, target)
+
+        if response is None:
+            print(
+                f"[WARN] Paquet absent : {iso(target)}"
+            )
+            continue
+
+        rows = parse_delimited(response.content)
+
+        print(
+            f"Paquet {iso(target)} : "
+            f"{len(rows)} lignes"
+        )
+
+        for row in rows:
+            sid = station_id(row)
+            if not sid:
+                continue
+
+            lat = fnum(first(row, ("lat", "LAT", "latitude")))
+            lon = fnum(first(row, ("lon", "LON", "longitude")))
+
+            if (
+                lat is not None
+                and lon is not None
+                and -90 <= lat <= 90
+                and -180 <= lon <= 180
+            ):
+                station_geo[sid] = {
+                    "lat": round(lat, 6),
+                    "lon": round(lon, 6),
+                }
+
+            rr1 = clean_rain(first(row, ("rr1", "RR1")))
+            if rr1 is None:
+                continue
+
+            validity = parse_iso(
+                first(
+                    row,
+                    (
+                        "validity_time",
+                        "reference_time",
+                        "date",
+                    ),
+                )
+            )
+
+            if validity is None:
+                validity = target
+
+            item = agg[sid]
+            item["rr24_sum"] += rr1
+            item["rr24_hours"] += 1
+
+            if validity.date() == current_utc_day:
+                item["today_sum"] += rr1
+                item["today_hours"] += 1
+
+            old = parse_iso(item["latest_date"])
+            if old is None or validity > old:
+                item["latest_date"] = iso(validity)
+
+        # 24 appels seulement, sous la limite du service.
+        time.sleep(0.10)
+
+    return latest_hour, station_geo, agg
+
+
+# ---------------------------------------------------------------------
+# DPObs V2 : noms des stations
+# ---------------------------------------------------------------------
+
+def load_station_names(
+    obs_key: str,
+) -> Dict[str, str]:
+
+    print("Chargement /DPObs/v2/liste-stations ...")
+
+    response = session.get(
+        DPObs_STATIONS_URL,
+        headers=apikey_headers(obs_key),
+        timeout=HTTP_TIMEOUT,
+    )
+
+    if response.status_code != 200:
+        print(
+            f"[WARN] liste-stations HTTP "
+            f"{response.status_code}; "
+            "les identifiants seront utilisés comme noms."
+        )
+        return {}
+
+    content_type = (
+        response.headers.get("content-type") or ""
+    ).lower()
+
+    rows: List[dict]
+
+    if "json" in content_type:
+        try:
+            payload = response.json()
+            if isinstance(payload, list):
+                rows = payload
+            elif isinstance(payload, dict):
+                rows = (
+                    payload.get("data")
+                    or payload.get("records")
+                    or payload.get("results")
+                    or []
+                )
+            else:
+                rows = []
+        except Exception:
+            rows = parse_delimited(response.content)
+    else:
+        rows = parse_delimited(response.content)
+
+    names = {}
+
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+
+        sid = station_id(row)
+        if not sid:
+            continue
+
+        name = first(
+            row,
+            (
+                "nom_usuel",
+                "NOM_USUEL",
+                "nom",
+                "NOM",
+                "name",
+                "libelle",
+            ),
+        )
+
+        if name:
+            names[sid] = str(name).strip()
+
+    print(
+        f"Noms récupérés : {len(names)} station(s)."
+    )
+    return names
+
+
+# ---------------------------------------------------------------------
+# Départements et fichiers climatologiques
+# ---------------------------------------------------------------------
+
+def department_candidates(
+    sid: str,
+) -> List[str]:
+
+    digits = re.sub(r"\D", "", sid)
+
+    # DROM / COM
+    for code in (
+        "971", "972", "973", "974", "975",
+        "976", "977", "978", "984",
+        "986", "987", "988",
+    ):
+        if digits.startswith(code):
+            return [code]
+
+    if digits.startswith("20"):
+        # Les identifiants historiques corses utilisent 20.
+        return ["2A", "2B", "20"]
+
+    return [digits[:2]] if len(digits) >= 2 else []
+
+
+def current_daily_url(
     dep: str,
-    start_year: int,
-    end_year: int,
-    daily_rr_only: bool = False,
-) -> List[dict]:
-    selected = []
-    seen = set()
+    now: datetime,
+) -> str:
 
-    for dataset_id in dataset_ids:
-        for res in dataset_resources(dataset_id):
-            if str(res.get("type", "main")).lower() not in ("main", ""):
-                continue
-            title = str(res.get("title") or "")
-            if not resource_matches_department(title, dep):
-                continue
-
-            if daily_rr_only:
-                low = title.lower()
-                # Le jeu quotidien sépare actuellement RR-T-Vent et autres paramètres.
-                # Si le titre précise le sous-groupe, on ne garde que RR.
-                if ("rr-t-vent" not in low and "rr_t_vent" not in low
-                        and "autres-parametres" in low):
-                    continue
-
-            period = resource_period(title)
-            if period:
-                p0, p1 = period
-                if p1 < start_year or p0 > end_year:
-                    continue
-
-            rid = res.get("id")
-            if rid and rid not in seen:
-                selected.append(res)
-                seen.add(rid)
-
-    return selected
+    return (
+        f"{MF_S3_QUOT}/"
+        f"Q_{dep}_latest-"
+        f"{now.year - 1}-{now.year}_RR-T-Vent.csv.gz"
+    )
 
 
-def tabular_rows(resource: dict, station_ids: List[str]) -> List[dict]:
-    rid = resource.get("id")
-    if not rid:
-        return []
+def historic_monthly_url(
+    dep: str,
+    now: datetime,
+) -> str:
 
-    params = {"NUM_POSTE__in": ",".join(station_ids)}
-    url = TABULAR_API.format(resource_id=rid)
+    return (
+        f"{MF_S3_MENS}/"
+        f"MENSQ_{dep}_previous-"
+        f"1950-{now.year - 2}.csv.gz"
+    )
+
+
+def download_climate_rows(
+    url: str,
+) -> Optional[List[dict]]:
 
     try:
-        r = session.get(url, params=params, timeout=HTTP_TIMEOUT)
-        r.raise_for_status()
-        rows = parse_csv_bytes(r.content, r.headers.get("content-encoding", ""))
-        if rows:
-            return rows
+        response = session.get(
+            url,
+            timeout=HTTP_TIMEOUT,
+        )
     except Exception as exc:
-        print(f"[INFO] Tabular API indisponible pour {rid}: {exc}")
-
-    # Filet de sécurité : téléchargement du fichier ressource.
-    direct_url = resource.get("url")
-    if not direct_url:
-        return []
-
-    r = session.get(direct_url, timeout=HTTP_TIMEOUT)
-    r.raise_for_status()
-    all_rows = parse_csv_bytes(r.content, r.headers.get("content-encoding", ""))
-    wanted = set(station_ids)
-    return [row for row in all_rows if station_id_of(row) in wanted]
-
-
-def date_digits(value: Any) -> str:
-    if value is None:
-        return ""
-    # Accepte AAAAMMJJ, AAAAMM ou ISO.
-    s = re.sub(r"\D", "", str(value))
-    return s
-
-
-def current_month_totals(station_ids: List[str], now: datetime) -> Tuple[Dict[str, float], Dict[str, str]]:
-    by_dep: Dict[str, List[str]] = defaultdict(list)
-    for sid in station_ids:
-        by_dep[station_department(sid)].append(sid)
-
-    totals: Dict[str, float] = defaultdict(float)
-    latest_day: Dict[str, str] = {}
-    year = now.year
-    month_key = f"{year:04d}{now.month:02d}"
-
-    for dep, ids in sorted(by_dep.items()):
-        resources = pick_resources(
-            (DATASET_DAILY_MAIN, DATASET_DAILY_COMPLEMENT),
-            dep,
-            year,
-            year,
-            daily_rr_only=True,
+        print(
+            f"[WARN] téléchargement impossible {url}: {exc}"
         )
-        if not resources:
-            print(f"[INFO] Aucun fichier quotidien trouvé pour département {dep}")
-            continue
+        return None
 
-        for res in resources:
-            try:
-                rows = tabular_rows(res, ids)
-            except Exception as exc:
-                print(f"[AVERTISSEMENT] Quotidien dep {dep}: {exc}")
-                continue
+    if response.status_code == 404:
+        return None
 
-            for row in rows:
-                sid = station_id_of(row)
-                if sid not in ids:
-                    continue
-
-                d = date_digits(first_value(row, ("AAAAMMJJ", "DATE", "date")))
-                if len(d) < 8 or not d.startswith(month_key):
-                    continue
-
-                rr = clean_rr(first_value(row, ("RR", "rr", "PRECIP", "PRECIPITATION")))
-                if rr is None:
-                    continue
-
-                # Protection contre les doublons si plusieurs ressources se chevauchent.
-                day = d[:8]
-                dedup_key = f"{sid}:{day}"
-                # stock temporaire attaché à la fonction
-                if not hasattr(current_month_totals, "_seen"):
-                    current_month_totals._seen = set()
-                if dedup_key in current_month_totals._seen:
-                    continue
-                current_month_totals._seen.add(dedup_key)
-
-                totals[sid] += rr
-                if day > latest_day.get(sid, ""):
-                    latest_day[sid] = day
-
-    # Nettoyage de l'attribut temporaire pour les tests / appels successifs.
-    if hasattr(current_month_totals, "_seen"):
-        delattr(current_month_totals, "_seen")
-
-    return {k: round(v, 1) for k, v in totals.items()}, latest_day
-
-
-def compute_normals(station_ids: List[str]) -> Dict[str, dict]:
-    by_dep: Dict[str, List[str]] = defaultdict(list)
-    for sid in station_ids:
-        by_dep[station_department(sid)].append(sid)
-
-    # sid -> year -> month -> rr
-    values: Dict[str, Dict[int, Dict[int, float]]] = defaultdict(lambda: defaultdict(dict))
-
-    for dep, ids in sorted(by_dep.items()):
-        resources = pick_resources(
-            (DATASET_MONTHLY_MAIN, DATASET_MONTHLY_COMPLEMENT),
-            dep,
-            NORMAL_START,
-            NORMAL_END,
-            daily_rr_only=False,
+    if response.status_code != 200:
+        print(
+            f"[WARN] HTTP {response.status_code}: {url}"
         )
-        if not resources:
-            print(f"[INFO] Aucun fichier mensuel 1991-2020 trouvé pour département {dep}")
-            continue
+        return None
 
-        for res in resources:
-            try:
-                rows = tabular_rows(res, ids)
-            except Exception as exc:
-                print(f"[AVERTISSEMENT] Mensuel dep {dep}: {exc}")
-                continue
+    try:
+        return parse_delimited(response.content)
+    except Exception as exc:
+        print(
+            f"[WARN] CSV illisible {url}: {exc}"
+        )
+        return None
 
-            for row in rows:
-                sid = station_id_of(row)
-                if sid not in ids:
-                    continue
 
-                d = date_digits(first_value(row, ("AAAAMM", "DATE", "date")))
-                if len(d) < 6:
-                    continue
-
-                try:
-                    year = int(d[:4])
-                    month = int(d[4:6])
-                except ValueError:
-                    continue
-
-                if not (NORMAL_START <= year <= NORMAL_END and 1 <= month <= 12):
-                    continue
-
-                rr = clean_rr(first_value(row, ("RR", "rr", "PRECIP", "PRECIPITATION")))
-                if rr is None:
-                    continue
-
-                values[sid][year][month] = rr
-
-    normals: Dict[str, dict] = {}
-
-    for sid in station_ids:
-        years = values.get(sid, {})
-        month_normals: Dict[str, Optional[float]] = {}
-        month_counts: Dict[str, int] = {}
-
-        for month in range(1, 13):
-            vals = [
-                months[month]
-                for year, months in years.items()
-                if NORMAL_START <= year <= NORMAL_END and month in months
-            ]
-            month_counts[str(month)] = len(vals)
-            # 15 ans minimum pour éviter une "moyenne" trop fragile.
-            month_normals[str(month)] = round(sum(vals) / len(vals), 1) if len(vals) >= 15 else None
-
-        valid_months = [month_normals[str(m)] for m in range(1, 13)]
-        normal_year = None
-        if all(v is not None for v in valid_months):
-            normal_year = round(sum(float(v) for v in valid_months), 1)
-
-        normals[sid] = {
-            "normal_months": month_normals,
-            "normal_month_counts": month_counts,
-            "normal_year": normal_year,
-        }
-
-    return normals
-
+# ---------------------------------------------------------------------
+# Cache
+# ---------------------------------------------------------------------
 
 def load_cache() -> dict:
     if not CACHE.exists():
-        return {"schema_version": 2, "stations": {}}
+        return {
+            "schema_version": 3,
+            "stations": {},
+        }
+
     try:
-        data = json.loads(CACHE.read_text(encoding="utf-8"))
-        if not isinstance(data, dict):
+        payload = json.loads(
+            CACHE.read_text(encoding="utf-8")
+        )
+        if not isinstance(payload, dict):
             raise ValueError("cache non objet")
-        data.setdefault("stations", {})
-        return data
+        payload.setdefault("stations", {})
+        return payload
     except Exception as exc:
-        print(f"[AVERTISSEMENT] Cache ignoré : {exc}")
-        return {"schema_version": 2, "stations": {}}
+        print(
+            f"[WARN] cache ignoré : {exc}"
+        )
+        return {
+            "schema_version": 3,
+            "stations": {},
+        }
 
 
-def cache_age_hours(cache: dict, key: str) -> float:
-    dt = parse_iso(cache.get(key))
-    if not dt:
-        return 10**9
-    return (utcnow() - dt).total_seconds() / 3600.0
+def cache_datetime(
+    cache: dict,
+    key: str,
+) -> Optional[datetime]:
+    return parse_iso(cache.get(key))
 
 
-def update_climate_cache(cache: dict, station_ids: List[str], now: datetime) -> dict:
-    cache.setdefault("stations", {})
+def hours_since(
+    dt: Optional[datetime],
+) -> float:
+    if dt is None:
+        return 999999.0
+    return (
+        utcnow() - dt
+    ).total_seconds() / 3600.0
+
+
+# ---------------------------------------------------------------------
+# Mois en cours
+# ---------------------------------------------------------------------
+
+def update_current_month(
+    cache: dict,
+    station_ids: List[str],
+    now: datetime,
+) -> None:
+
     month_id = f"{now.year:04d}-{now.month:02d}"
 
-    current_month_stale = (
+    stale = (
         cache.get("current_month_id") != month_id
-        or cache_age_hours(cache, "current_month_generated_at") >= CURRENT_MONTH_CACHE_HOURS
+        or hours_since(
+            cache_datetime(
+                cache,
+                "current_month_generated_at",
+            )
+        ) >= 8
     )
 
-    known_normals = sum(
-        1 for sid in station_ids
-        if cache["stations"].get(sid, {}).get("normal_year") is not None
+    if not stale:
+        print(
+            "Cache du mois en cours encore valide."
+        )
+        return
+
+    print(
+        "Actualisation des données quotidiennes "
+        "du mois en cours..."
     )
-    coverage = known_normals / max(1, len(station_ids))
-    normals_stale = (
-        cache_age_hours(cache, "normals_generated_at") >= NORMALS_CACHE_DAYS * 24
+
+    wanted = set(station_ids)
+    by_dep: Dict[str, set] = defaultdict(set)
+
+    for sid in station_ids:
+        for dep in department_candidates(sid):
+            by_dep[dep].add(sid)
+
+    totals: Dict[str, float] = defaultdict(float)
+    last_day: Dict[str, str] = {}
+    seen_days = set()
+
+    prefix = f"{now.year:04d}{now.month:02d}"
+
+    for dep, dep_stations in sorted(by_dep.items()):
+        url = current_daily_url(dep, now)
+        rows = download_climate_rows(url)
+
+        if rows is None:
+            continue
+
+        print(
+            f"Quotidien {dep}: {len(rows)} lignes"
+        )
+
+        for row in rows:
+            sid = station_id(row)
+            if sid not in dep_stations:
+                continue
+
+            date_value = first(
+                row,
+                ("AAAAMMJJ", "DATE", "date"),
+            )
+            date_digits = re.sub(
+                r"\D",
+                "",
+                str(date_value or ""),
+            )[:8]
+
+            if (
+                len(date_digits) != 8
+                or not date_digits.startswith(prefix)
+            ):
+                continue
+
+            rr = clean_rain(
+                first(
+                    row,
+                    (
+                        "RR",
+                        "rr",
+                        "PRECIP",
+                        "PRECIPITATION",
+                    ),
+                )
+            )
+            if rr is None:
+                continue
+
+            key = (sid, date_digits)
+            if key in seen_days:
+                continue
+            seen_days.add(key)
+
+            totals[sid] += rr
+
+            if date_digits > last_day.get(sid, ""):
+                last_day[sid] = date_digits
+
+    stations_cache = cache.setdefault(
+        "stations",
+        {},
+    )
+
+    for sid in station_ids:
+        entry = stations_cache.setdefault(sid, {})
+        entry["month_daily_total"] = (
+            round(totals[sid], 1)
+            if sid in totals
+            else None
+        )
+        entry["month_daily_through"] = (
+            last_day.get(sid)
+        )
+
+    cache["current_month_id"] = month_id
+    cache["current_month_generated_at"] = iso(
+        utcnow()
+    )
+
+
+# ---------------------------------------------------------------------
+# Normales 1991-2020
+# ---------------------------------------------------------------------
+
+def update_normals(
+    cache: dict,
+    station_ids: List[str],
+    now: datetime,
+) -> None:
+
+    stations_cache = cache.setdefault(
+        "stations",
+        {},
+    )
+
+    known = sum(
+        1
+        for sid in station_ids
+        if stations_cache.get(sid, {}).get(
+            "normal_year"
+        ) is not None
+    )
+
+    coverage = known / max(1, len(station_ids))
+
+    stale = (
+        hours_since(
+            cache_datetime(
+                cache,
+                "normals_generated_at",
+            )
+        ) >= 24 * 45
         or coverage < 0.80
     )
 
-    if current_month_stale:
-        print("Actualisation du cumul du mois en cours...")
-        totals, latest_days = current_month_totals(station_ids, now)
-        for sid in station_ids:
-            entry = cache["stations"].setdefault(sid, {})
-            entry["month_current"] = totals.get(sid)
-            entry["month_current_through"] = latest_days.get(sid)
-        cache["current_month_id"] = month_id
-        cache["current_month_generated_at"] = iso(utcnow())
+    if not stale:
+        print(
+            "Cache des normales 1991-2020 "
+            "encore valide."
+        )
+        return
 
-    if normals_stale:
-        print("Calcul / actualisation des moyennes 1991-2020...")
-        normals = compute_normals(station_ids)
-        for sid, data in normals.items():
-            entry = cache["stations"].setdefault(sid, {})
-            entry.update(data)
-        cache["normals_generated_at"] = iso(utcnow())
-        cache["normal_period"] = f"{NORMAL_START}-{NORMAL_END}"
-
-    CACHE.write_text(
-        json.dumps(cache, ensure_ascii=False, indent=2, allow_nan=False),
-        encoding="utf-8",
+    print(
+        "Calcul des normales 1991-2020..."
     )
-    return cache
 
+    by_dep: Dict[str, set] = defaultdict(set)
 
-def month_name_fr(month: int) -> str:
-    names = (
-        "janvier", "février", "mars", "avril", "mai", "juin",
-        "juillet", "août", "septembre", "octobre", "novembre", "décembre",
+    for sid in station_ids:
+        for dep in department_candidates(sid):
+            by_dep[dep].add(sid)
+
+    # station -> année -> mois -> RR
+    values: Dict[
+        str,
+        Dict[int, Dict[int, float]],
+    ] = defaultdict(
+        lambda: defaultdict(dict)
     )
-    return names[month - 1]
+
+    seen = set()
+
+    for dep, dep_stations in sorted(by_dep.items()):
+        url = historic_monthly_url(dep, now)
+        rows = download_climate_rows(url)
+
+        if rows is None:
+            continue
+
+        print(
+            f"Mensuel {dep}: {len(rows)} lignes"
+        )
+
+        for row in rows:
+            sid = station_id(row)
+            if sid not in dep_stations:
+                continue
+
+            date_value = first(
+                row,
+                ("AAAAMM", "DATE", "date"),
+            )
+            digits = re.sub(
+                r"\D",
+                "",
+                str(date_value or ""),
+            )
+
+            if len(digits) < 6:
+                continue
+
+            try:
+                year = int(digits[:4])
+                month = int(digits[4:6])
+            except ValueError:
+                continue
+
+            if not (
+                NORMAL_START <= year <= NORMAL_END
+                and 1 <= month <= 12
+            ):
+                continue
+
+            rr = clean_rain(
+                first(
+                    row,
+                    (
+                        "RR",
+                        "rr",
+                        "PRECIP",
+                        "PRECIPITATION",
+                    ),
+                )
+            )
+            if rr is None:
+                continue
+
+            dedup = (sid, year, month)
+            if dedup in seen:
+                continue
+            seen.add(dedup)
+
+            values[sid][year][month] = rr
+
+    for sid in station_ids:
+        entry = stations_cache.setdefault(sid, {})
+
+        month_normals = {}
+        month_counts = {}
+
+        for month in range(1, 13):
+            month_values = [
+                months[month]
+                for year, months
+                in values.get(sid, {}).items()
+                if month in months
+            ]
+
+            month_counts[str(month)] = len(
+                month_values
+            )
+
+            # Seuil de disponibilité minimal.
+            if len(month_values) >= 20:
+                month_normals[str(month)] = round(
+                    sum(month_values)
+                    / len(month_values),
+                    1,
+                )
+            else:
+                month_normals[str(month)] = None
+
+        annual_values = []
+
+        for year, months in values.get(
+            sid,
+            {},
+        ).items():
+            if all(
+                month in months
+                for month in range(1, 13)
+            ):
+                annual_values.append(
+                    sum(
+                        months[month]
+                        for month in range(1, 13)
+                    )
+                )
+
+        entry["normal_months"] = month_normals
+        entry["normal_month_counts"] = month_counts
+        entry["normal_year"] = (
+            round(
+                sum(annual_values)
+                / len(annual_values),
+                1,
+            )
+            if len(annual_values) >= 20
+            else None
+        )
+        entry["normal_year_count"] = len(
+            annual_values
+        )
+
+    cache["normals_generated_at"] = iso(
+        utcnow()
+    )
+    cache["normal_period"] = (
+        f"{NORMAL_START}-{NORMAL_END}"
+    )
+
+
+# ---------------------------------------------------------------------
+# Construction du mois en cours en quasi temps réel
+# ---------------------------------------------------------------------
+
+def month_total_with_today(
+    sid: str,
+    cache_entry: dict,
+    hourly: dict,
+    latest_hour: datetime,
+) -> Tuple[Optional[float], Optional[str]]:
+
+    daily_total = fnum(
+        cache_entry.get("month_daily_total")
+    )
+    daily_through = str(
+        cache_entry.get("month_daily_through")
+        or ""
+    )
+
+    latest_day = latest_hour.strftime("%Y%m%d")
+    previous_day = (
+        latest_hour.date() - timedelta(days=1)
+    ).strftime("%Y%m%d")
+
+    today_sum = fnum(
+        hourly.get("today_sum")
+    )
+    today_hours = int(
+        hourly.get("today_hours") or 0
+    )
+
+    # Cas idéal : données quotidiennes disponibles jusqu'à hier.
+    if daily_total is not None:
+        if daily_through == previous_day:
+            if today_sum is not None and today_hours > 0:
+                return (
+                    round(
+                        daily_total + today_sum,
+                        1,
+                    ),
+                    latest_day,
+                )
+            return round(daily_total, 1), daily_through
+
+        # Si le quotidien contient déjà aujourd'hui,
+        # ne surtout pas ajouter RR1 une seconde fois.
+        if daily_through == latest_day:
+            return round(daily_total, 1), daily_through
+
+        # Quotidien en retard de plus d'un jour :
+        # on garde uniquement le cumul contrôlé.
+        return round(daily_total, 1), (
+            daily_through or None
+        )
+
+    # En début de mois ou si le fichier quotidien n'est
+    # pas encore disponible, on peut au minimum fournir aujourd'hui.
+    if (
+        latest_hour.day == 1
+        and today_sum is not None
+        and today_hours > 0
+    ):
+        return round(today_sum, 1), latest_day
+
+    return None, None
+
+
+# ---------------------------------------------------------------------
+# Sortie
+# ---------------------------------------------------------------------
+
+MONTHS_FR = (
+    "janvier",
+    "février",
+    "mars",
+    "avril",
+    "mai",
+    "juin",
+    "juillet",
+    "août",
+    "septembre",
+    "octobre",
+    "novembre",
+    "décembre",
+)
 
 
 def main() -> int:
-    now = utcnow()
-    print("=== Carte pluie Météo-France ===")
-    print("Authentification DPObs...")
-    token = get_bearer_token()
 
-    print("Chargement des métadonnées stations...")
-    metadata = load_station_metadata(token)
-
-    print("Chargement du paquet SYNOP...")
-    obs, latest_obs, obs_url = load_synop(token, metadata)
-    if not obs:
-        raise RuntimeError("Aucune station récupérée depuis DPObs.")
-
-    station_ids = sorted({s["id"] for s in obs})
-    print(f"{len(station_ids)} station(s) d'observation récupérée(s).")
-
-    cache = load_cache()
-    cache = update_climate_cache(cache, station_ids, now)
-
-    current_month = str(now.month)
-    stations = []
-    for station in obs:
-        sid = station["id"]
-        clim = cache.get("stations", {}).get(sid, {})
-        month_norms = clim.get("normal_months") or {}
-
-        item = dict(station)
-        item["rr_month_current"] = clim.get("month_current")
-        item["rr_month_current_through"] = clim.get("month_current_through")
-        item["rr_month_mean"] = month_norms.get(current_month)
-        item["rr_year_mean"] = clim.get("normal_year")
-        item["normal_month_years"] = (clim.get("normal_month_counts") or {}).get(current_month)
-        stations.append(item)
-
-    stations.sort(
-        key=lambda s: (
-            -(s.get("rr24") if s.get("rr24") is not None else -1),
-            s.get("name") or "",
-        )
+    print(
+        f"=== Carte pluie Météo-France v{VERSION} ==="
     )
 
-    def vmax(field: str) -> float:
-        vals = [finite_float(s.get(field)) for s in stations]
-        vals = [v for v in vals if v is not None]
+    package_key = get_secret(
+        "METEOFRANCE_PACKAGE_OBS_KEY"
+    )
+    obs_key = get_secret(
+        "METEOFRANCE_OBS_TOKEN"
+    )
+
+    # 1. Observations horaires
+    latest_hour, station_geo, hourly = (
+        load_24_hour_packages(package_key)
+    )
+
+    station_ids = sorted(station_geo.keys())
+
+    print(
+        f"{len(station_ids)} station(s) "
+        "présente(s) dans les paquets."
+    )
+
+    # 2. Noms
+    names = load_station_names(obs_key)
+
+    # 3. Cache climatologique
+    cache = load_cache()
+
+    update_current_month(
+        cache,
+        station_ids,
+        latest_hour,
+    )
+
+    update_normals(
+        cache,
+        station_ids,
+        latest_hour,
+    )
+
+    CACHE.write_text(
+        json.dumps(
+            cache,
+            ensure_ascii=False,
+            indent=2,
+            allow_nan=False,
+        ),
+        encoding="utf-8",
+    )
+
+    # 4. JSON final
+    month_key = str(latest_hour.month)
+    stations = []
+
+    for sid in station_ids:
+        geo = station_geo[sid]
+        h = hourly.get(sid, {})
+        clim = cache.get(
+            "stations",
+            {},
+        ).get(sid, {})
+
+        valid_hours = int(
+            h.get("rr24_hours") or 0
+        )
+
+        rr24 = None
+
+        if valid_hours >= RR24_MIN_VALID_HOURS:
+            rr24 = round(
+                float(h.get("rr24_sum") or 0.0),
+                1,
+            )
+
+        rr_month_current, month_through = (
+            month_total_with_today(
+                sid,
+                clim,
+                h,
+                latest_hour,
+            )
+        )
+
+        month_norms = (
+            clim.get("normal_months")
+            or {}
+        )
+
+        rr_month_mean = fnum(
+            month_norms.get(month_key)
+        )
+
+        rr_year_mean = fnum(
+            clim.get("normal_year")
+        )
+
+        stations.append({
+            "id": sid,
+            "name": names.get(sid, sid),
+            "lat": geo["lat"],
+            "lon": geo["lon"],
+            "date": h.get("latest_date"),
+            "rr24": rr24,
+            "rr24_hours": valid_hours,
+            "rr24_complete": valid_hours == 24,
+            "rr_month_current": (
+                round(rr_month_current, 1)
+                if rr_month_current is not None
+                else None
+            ),
+            "rr_month_current_through": (
+                month_through
+            ),
+            "rr_month_mean": (
+                round(rr_month_mean, 1)
+                if rr_month_mean is not None
+                else None
+            ),
+            "rr_year_mean": (
+                round(rr_year_mean, 1)
+                if rr_year_mean is not None
+                else None
+            ),
+            "normal_month_years": (
+                (
+                    clim.get(
+                        "normal_month_counts"
+                    )
+                    or {}
+                ).get(month_key)
+            ),
+            "normal_year_years": (
+                clim.get("normal_year_count")
+            ),
+        })
+
+    def max_field(field: str) -> float:
+        vals = [
+            fnum(st.get(field))
+            for st in stations
+        ]
+        vals = [
+            x for x in vals
+            if x is not None
+        ]
         return round(max(vals), 1) if vals else 0.0
 
-    month_label = f"{month_name_fr(now.month)} {now.year}"
+    month_label = (
+        f"{MONTHS_FR[latest_hour.month - 1]} "
+        f"{latest_hour.year}"
+    )
 
     output = {
-        "schema_version": 2,
+        "schema_version": 3,
+        "module_version": VERSION,
         "status": "ok",
-        "generated_at": iso(now),
-        "latest_observation_at": iso(latest_obs),
+        "generated_at": iso(utcnow()),
+        "latest_observation_at": iso(
+            latest_hour
+        ),
         "title": "Cumuls de précipitations",
         "unit": "mm",
+        "normal_period": (
+            f"{NORMAL_START}-{NORMAL_END}"
+        ),
         "current_month": {
-            "id": f"{now.year:04d}-{now.month:02d}",
+            "id": (
+                f"{latest_hour.year:04d}-"
+                f"{latest_hour.month:02d}"
+            ),
             "label": month_label,
-            "generated_at": cache.get("current_month_generated_at"),
+            "generated_at": cache.get(
+                "current_month_generated_at"
+            ),
         },
-        "normal_period": f"{NORMAL_START}-{NORMAL_END}",
         "metrics": {
             "rr24": {
                 "label": "24 h",
-                "long_label": "Cumuls de précipitations sur 24 h",
-                "max": vmax("rr24"),
+                "long_label": (
+                    "Cumuls de précipitations "
+                    "sur les 24 dernières heures"
+                ),
+                "max": max_field("rr24"),
             },
             "rr_month_current": {
                 "label": "Mois en cours",
-                "long_label": f"Cumul depuis le 1er {month_name_fr(now.month)}",
-                "max": vmax("rr_month_current"),
+                "long_label": (
+                    f"Cumul depuis le 1er "
+                    f"{MONTHS_FR[latest_hour.month - 1]}"
+                ),
+                "max": max_field(
+                    "rr_month_current"
+                ),
             },
             "rr_month_mean": {
                 "label": "Moy. du mois",
-                "long_label": f"Cumul moyen de {month_name_fr(now.month)} ({NORMAL_START}-{NORMAL_END})",
-                "max": vmax("rr_month_mean"),
+                "long_label": (
+                    f"Cumul moyen de "
+                    f"{MONTHS_FR[latest_hour.month - 1]} "
+                    f"({NORMAL_START}-{NORMAL_END})"
+                ),
+                "max": max_field(
+                    "rr_month_mean"
+                ),
             },
             "rr_year_mean": {
                 "label": "Moy. annuelle",
-                "long_label": f"Cumul moyen annuel ({NORMAL_START}-{NORMAL_END})",
-                "max": vmax("rr_year_mean"),
+                "long_label": (
+                    f"Cumul moyen annuel "
+                    f"({NORMAL_START}-{NORMAL_END})"
+                ),
+                "max": max_field(
+                    "rr_year_mean"
+                ),
             },
         },
         "stations_total": len(stations),
+        "stations_rr24": sum(
+            1
+            for st in stations
+            if st["rr24"] is not None
+        ),
         "source": {
-            "observations": "Météo-France - API Données d'observation (DPObs)",
-            "observations_endpoint": obs_url,
-            "climatology": "Météo-France - Données climatologiques de base via data.gouv.fr",
-            "normal_method": "Moyennes calculées station par station sur 1991-2020",
+            "observations": (
+                "Météo-France - "
+                "Package Observations V2"
+            ),
+            "rr24_method": (
+                "Somme de RR1 sur 24 paquets horaires"
+            ),
+            "current_month": (
+                "Météo-France - "
+                "données climatologiques quotidiennes "
+                "+ RR1 du jour si nécessaire"
+            ),
+            "normals": (
+                "Météo-France - "
+                "données climatologiques mensuelles"
+            ),
+            "normal_period": (
+                f"{NORMAL_START}-{NORMAL_END}"
+            ),
         },
         "stations": stations,
     }
 
+    stations.sort(
+        key=lambda st: (
+            -(
+                st["rr24"]
+                if st["rr24"] is not None
+                else -1
+            ),
+            st["name"],
+        )
+    )
+
     OUTPUT.write_text(
-        json.dumps(output, ensure_ascii=False, indent=2, allow_nan=False),
+        json.dumps(
+            output,
+            ensure_ascii=False,
+            indent=2,
+            allow_nan=False,
+        ),
         encoding="utf-8",
     )
 
-    print(f"JSON généré : {OUTPUT}")
-    print(f"24 h max : {output['metrics']['rr24']['max']} mm")
-    print(f"Mois max : {output['metrics']['rr_month_current']['max']} mm")
+    print()
+    print("=== TERMINÉ ===")
+    print(
+        f"JSON : {OUTPUT}"
+    )
+    print(
+        f"Stations : {len(stations)}"
+    )
+    print(
+        "Stations RR24 exploitables : "
+        f"{output['stations_rr24']}"
+    )
+    print(
+        "Cumul 24 h maximal : "
+        f"{output['metrics']['rr24']['max']} mm"
+    )
+    print(
+        "Cumul mois maximal : "
+        f"{output['metrics']['rr_month_current']['max']} mm"
+    )
+
     return 0
 
 
@@ -802,5 +1332,8 @@ if __name__ == "__main__":
     try:
         raise SystemExit(main())
     except Exception as exc:
-        print(f"ERREUR FATALE : {exc}", file=sys.stderr)
+        print(
+            f"ERREUR FATALE : {exc}",
+            file=sys.stderr,
+        )
         raise
