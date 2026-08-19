@@ -22,14 +22,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      # IMPORTANT :
-      # on ne touche pas au requirements.txt HARMONIE.
-      # Le générateur pluie n'a besoin que de requests.
       - name: Python
         uses: actions/setup-python@v7
         with:
           python-version: '3.11'
 
+      # Le requirements.txt général HARMONIE reste inchangé.
       - name: Installer Requests
         run: |
           python -m pip install --upgrade pip
@@ -46,10 +44,11 @@ jobs:
         env:
           METEOFRANCE_PACKAGE_OBS_KEY: ${{ secrets.METEOFRANCE_PACKAGE_OBS_KEY }}
           METEOFRANCE_OBS_TOKEN: ${{ secrets.METEOFRANCE_OBS_TOKEN }}
+          MF_PACKAGE_DELAY: "1.25"
         run: |
           python generer_pluie_meteofrance.py
 
-      - name: Vérifier les fichiers
+      - name: Vérifier le JSON
         shell: bash
         run: |
           test -s observations_pluie.json
@@ -62,13 +61,34 @@ jobs:
               data = json.load(f)
 
           assert data["status"] == "ok"
+          assert data["schema_version"] >= 4
           assert isinstance(data["stations"], list)
           assert data["stations_total"] > 0
 
+          sapc = [
+              s for s in data["stations"]
+              if "SAPC" in str(s.get("name", "")).upper()
+          ]
+          assert not sapc, f"Stations SAPC encore présentes : {len(sapc)}"
+
           print("JSON valide")
           print("Stations :", data["stations_total"])
+          print("SAPC exclues :", data.get("stations_excluded_sapc"))
           print("Stations RR24 :", data["stations_rr24"])
+          print(
+              "Stations mois à jour :",
+              data["current_month"].get("stations_live")
+          )
+          print(
+              "Stations mois en attente :",
+              data["current_month"].get("stations_stale")
+          )
           print("Max 24h :", data["metrics"]["rr24"]["max"], "mm")
+          print(
+              "Max mois :",
+              data["metrics"]["rr_month_current"]["max"],
+              "mm"
+          )
           PY
 
       - name: Préparer la publication
@@ -104,5 +124,5 @@ jobs:
             exit 0
           fi
 
-          git commit -m "Mise à jour carte pluie Météo-France"
+          git commit -m "Mise à jour carte pluie Météo-France v2.2"
           git push origin observations
