@@ -1,0 +1,93 @@
+name: Test Package Observations Météo-France
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test_package_obs:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Tester Package Observations
+        shell: bash
+        env:
+          METEOFRANCE_OBS_TOKEN: ${{ secrets.METEOFRANCE_OBS_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          RAW="${METEOFRANCE_OBS_TOKEN:-}"
+
+          if [ -z "$RAW" ]; then
+            echo "ERREUR : METEOFRANCE_OBS_TOKEN est vide."
+            exit 1
+          fi
+
+          KEY="$(printf '%s' "$RAW" \
+            | tr -d '\r\n' \
+            | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+
+          KEY="${KEY#Bearer }"
+          KEY="${KEY#bearer }"
+          KEY="${KEY#apikey: }"
+          KEY="${KEY#apiKey: }"
+
+          echo "Secret API Key détecté : oui"
+          echo "Longueur : ${#KEY} caractères"
+          echo
+
+          test_url () {
+            local VERSION="$1"
+            local URL="https://public-api.meteofrance.fr/public/DPPaquetObs/${VERSION}/paquet/stations/horaire?format=csv"
+
+            echo "=================================================="
+            echo "Test DPPaquetObs ${VERSION}"
+            echo "${URL}"
+            echo "=================================================="
+
+            CODE="$(curl -sS \
+              --connect-timeout 15 \
+              --max-time 60 \
+              -D /tmp/mf_headers \
+              -o /tmp/mf_package \
+              -w "%{http_code}" \
+              -H "accept: */*" \
+              -H "apikey: ${KEY}" \
+              "${URL}")"
+
+            echo "HTTP : ${CODE}"
+            echo "Taille : $(wc -c < /tmp/mf_package) octets"
+
+            if [ "$CODE" = "200" ]; then
+              echo
+              echo "PACKAGE OBSERVATIONS ${VERSION} : OK"
+              echo "Content-Type : $(grep -i '^content-type:' /tmp/mf_headers | tail -1 | tr -d '\r' || true)"
+              echo
+              echo "Premières lignes du fichier :"
+              head -n 3 /tmp/mf_package || true
+              echo
+              echo "ROUTE À UTILISER=${URL}"
+              return 0
+            fi
+
+            echo "Réponse :"
+            head -c 500 /tmp/mf_package || true
+            echo
+            return 1
+          }
+
+          if test_url "v2"; then
+            exit 0
+          fi
+
+          echo
+          echo "La v2 n'a pas répondu 200, essai de la v1..."
+          echo
+
+          if test_url "v1"; then
+            exit 0
+          fi
+
+          echo
+          echo "ERREUR : aucune route Package Observations testée n'a répondu HTTP 200."
+          echo "Vérifie que l'abonnement Package Observations est bien en état « En cours »."
+          exit 1
