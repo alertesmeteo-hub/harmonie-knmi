@@ -95,6 +95,7 @@ class ParameterSpec:
 PARAMETERS = (
     ParameterSpec("pressure_pa", 1, 103, 0, 0),
     ParameterSpec("surface_pressure_pa", 1, 105, 0, 0),
+    ParameterSpec("surface_geopotential_m2s2", 6, 105, 0, 0),
     ParameterSpec("temperature_k", 11, 105, 2, 0),
     ParameterSpec("surface_temperature_k", 11, 105, 0, 0),
     ParameterSpec("dewpoint_k", 17, 105, 2, 0),

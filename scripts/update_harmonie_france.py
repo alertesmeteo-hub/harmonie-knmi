@@ -35,7 +35,7 @@ import update_harmonie as base
 
 
 LOGGER = logging.getLogger("harmonie.france")
-NATIONAL_PIPELINE_VERSION = "2.3.0"
+NATIONAL_PIPELINE_VERSION = "2.4.0"
 DEFAULT_CURRENT_METADATA_URL = (
     "https://raw.githubusercontent.com/alertesmeteo-hub/"
     "harmonie-knmi/data/index.json"
@@ -119,6 +119,7 @@ CONDITION_CODES = {
 SURFACE_PARAMETERS = {
     "pressure_pa",
     "surface_pressure_pa",
+    "surface_geopotential_m2s2",
     "temperature_k",
     "surface_temperature_k",
     "dewpoint_k",
@@ -146,7 +147,7 @@ PRESSURE_PARAMETERS = {
         ("humidity", "pct"),
         ("wind_u", "ms"),
         ("wind_v", "ms"),
-        ("geopotential_height", "m"),
+        ("geopotential", "m2s2"),
         ("omega", "pas"),
     )
 }
@@ -385,7 +386,7 @@ def national_parameter_name(gid: int) -> str | None:
 
     if level_type == 100 and level in PRESSURE_LEVELS:
         mapping = {
-            7: ("geopotential_height", "m"),
+            6: ("geopotential", "m2s2"),
             11: ("temperature", "k"),
             33: ("wind_u", "ms"),
             34: ("wind_v", "ms"),
@@ -571,9 +572,12 @@ def approximate_cape_cin_p3(
     cape = np.where(valid, np.maximum(cape, 0.0), np.nan)
     cin = np.where(valid, np.minimum(cin, 0.0), np.nan)
     cin = np.where(np.isfinite(cin), np.maximum(cin, -1000.0), np.nan)
-    # Évite de surinterpréter les très petites intégrales numériques.
-    cape = np.where(np.isfinite(cape) & (cape < 5.0), 0.0, cape)
-    cin = np.where(np.isfinite(cin) & (np.abs(cin) < 2.0), 0.0, cin)
+    # P3 ne comporte que quelques niveaux isobares : une intégrale quasi nulle
+    # n'est pas assez robuste pour être affichée comme « 0 ». On la publie
+    # comme donnée indisponible / non significative ; le widget affichera « — ».
+    cape = np.where(np.isfinite(cape) & (cape < 25.0), np.nan, cape)
+    cin = np.where(np.isfinite(cin) & (np.abs(cin) < 5.0), np.nan, cin)
+    cin = np.where(np.isfinite(cape), cin, np.nan)
     return cape, cin
 
 def rotate_uv(
@@ -734,6 +738,7 @@ def transform_step(
     visibility = rounded(raw["visibility_m"] / 1000.0, 1)
     surface_pressure = raw["surface_pressure_pa"] / 100.0
     surface_temperature = rounded(raw["surface_temperature_k"] - 273.15, 0)
+    model_altitude_m = rounded(raw["surface_geopotential_m2s2"] / 9.80665, 0)
     snowfall = rounded(np.maximum(raw["snowfall_raw_mm"], 0.0), 1)
     snow_depth_cm = rounded(np.maximum(raw["snow_depth_m"], 0.0) * 100.0, 1)
     snow_water_equivalent = rounded(np.maximum(raw["snow_water_equivalent_mm"], 0.0), 1)
@@ -1060,6 +1065,7 @@ def transform_step(
             "snow_stick_risk_code": snow_stick,
             "snow_phase_code": snow_phase,
             "temperature_850_c": rounded(t_levels[850], 0),
+            "model_altitude_m": model_altitude_m,
         },
         previous_cumulative,
     )
@@ -1199,6 +1205,7 @@ def decode_national_archive(
     grid = NationalGrid(catalog)
     previous_cumulative: np.ndarray | None = None
     model_run: datetime | None = None
+    model_altitudes: np.ndarray | None = None
     temporary_grib = working_directory / "current.grib"
 
     try:
@@ -1225,6 +1232,8 @@ def decode_national_archive(
                 transformed, previous_cumulative = transform_step(
                     step, previous_cumulative
                 )
+                if model_altitudes is None:
+                    model_altitudes = transformed["model_altitude_m"].copy()
                 valid_time: datetime = step["valid_time"]
                 iso_time = valid_time.isoformat().replace("+00:00", "Z")
                 for code, department in catalog.departments.items():
@@ -1252,7 +1261,7 @@ def decode_national_archive(
         "dataset": base.DATASET_NAME,
         "version": base.DATASET_VERSION,
         "pipeline_version": NATIONAL_PIPELINE_VERSION,
-        "storm_diagnostics": "P3 pressure levels + approximate CAPE/CIN + direct snow diagnostics",
+        "storm_diagnostics": "P3 pressure levels + sparse CAPE/CIN diagnostic + direct snow diagnostics",
         "catalog_version": catalog.version,
         "domain": "Europe (DINI/N55)",
         "resolution_km": 5.5,
@@ -1288,7 +1297,7 @@ def decode_national_archive(
             output.write(',"columns":')
             json.dump(
                 {
-                    "points": ["model_index", "latitude", "longitude"],
+                    "points": ["model_index", "latitude", "longitude", "model_altitude_m"],
                     "communes": [
                         "code_insee",
                         "name",
@@ -1305,8 +1314,12 @@ def decode_national_archive(
                 separators=(",", ":"),
             )
             output.write(',"points":')
+            enhanced_points = []
+            for point, global_id in zip(department.points, department.global_point_ids):
+                altitude = json_number(model_altitudes[int(global_id)], integer=True)
+                enhanced_points.append(point + [altitude])
             json.dump(
-                department.points,
+                enhanced_points,
                 output,
                 ensure_ascii=False,
                 separators=(",", ":"),
