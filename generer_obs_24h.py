@@ -2,53 +2,48 @@ import requests
 import folium
 from folium.features import DivIcon
 
-# URL de l'API Opendatasoft (Données SYNOP Météo-France)
-url = "https://public.opendatasoft.com/api/explore/v2.1/catalog/datasets/donnees-synoptiques-courantes-temps-reel-synop/exports/json"
-
-# On remonte sur 30h pour être certain d'attraper le relevé quotidien rr24 (souvent publié à 06h00)
+# On utilise l'API v1 d'Opendatasoft (stable et increvable)
+url = "https://public.opendatasoft.com/api/records/1.0/search/"
 params = {
-    "where": "date >= now(hours=-30)",
-    "select": "numer_sta,coordonnees,rr24,date"
+    "dataset": "donnees-synoptiques-courantes-temps-reel-synop",
+    "rows": 1000,
+    "sort": "-date"
 }
 
-print("Récupération des données Météo-France...")
+print("Récupération des données Météo-France via l'API v1...")
 try:
     response = requests.get(url, params=params)
     response.raise_for_status()
-    donnees = response.json()
+    data = response.json()
+    donnees = data.get('records', [])
 except Exception as e:
     print(f"Erreur API: {e}")
     donnees = []
 
 releves_pluie = {}
 
-# Tri pour ne garder que la donnée la plus récente par station
+# Extraction des données
 for obs in donnees:
-    sta = obs.get('numer_sta')
-    rr24 = obs.get('rr24')
-    coords = obs.get('coordonnees')
-    date_obs = obs.get('date')
+    fields = obs.get('fields', {})
+    sta = fields.get('numer_sta')
+    rr24 = fields.get('rr24')
+    coords = fields.get('coordonnees')
+    date_obs = fields.get('date')
     
     if sta and coords and rr24 is not None:
         try:
             val = float(rr24)
-            # On ne garde que s'il a plu (>= 0.2 mm)
+            # On ne garde que les relevés avec de la pluie (>= 0.2 mm)
             if val >= 0.2:
-                # Si on n'a pas encore la station ou si la date étudiée est plus récente
                 if sta not in releves_pluie or date_obs > releves_pluie[sta]['date']:
-                    if isinstance(coords, dict):
-                        lat, lon = coords.get('lat'), coords.get('lon')
-                    elif isinstance(coords, list):
+                    if isinstance(coords, list) and len(coords) == 2:
                         lat, lon = coords[0], coords[1]
-                    else:
-                        continue
-                        
-                    releves_pluie[sta] = {
-                        'val': val,
-                        'lat': lat,
-                        'lon': lon,
-                        'date': date_obs
-                    }
+                        releves_pluie[sta] = {
+                            'val': val,
+                            'lat': lat,
+                            'lon': lon,
+                            'date': date_obs
+                        }
         except Exception:
             continue
 
