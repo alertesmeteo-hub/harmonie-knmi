@@ -3,7 +3,7 @@
 
 """
 Alertes-Meteo.com — SST France continue
-Version 1.0.1
+Version 1.0.2
 
 Source :
 NASA/JPL MUR SST v4.1 via NOAA CoastWatch ERDDAP
@@ -34,9 +34,9 @@ from matplotlib import image as mpimg
 from matplotlib.colors import LinearSegmentedColormap, Normalize
 
 
-VERSION = "1.0.1"
+VERSION = "1.0.2"
 SCHEMA_VERSION = 1
-BUILD_ID = "sst-france-mur-landmask-v101-20260820"
+BUILD_ID = "sst-france-mur-oceanmask-v102-20260820"
 
 ERDDAP_BASE = (
     "https://coastwatch.pfeg.noaa.gov/"
@@ -205,16 +205,20 @@ def sea_mask_2d(mask_values: np.ndarray) -> np.ndarray:
         0,
     ).astype(np.int16)
 
-    # Flags officiels MUR :
-    # 1 = open_sea
-    # 2 = land
-    # 4 = open_lake
-    # 8 = open_sea_with_ice_in_the_grid
+    # Classes officielles MUR :
+    # 1  = open_sea
+    # 2  = land
+    # 4  = open_lake
+    # 8  = open_sea_with_ice_in_the_grid
     # 16 = open_lake_with_ice_in_the_grid
-    # On conserve uniquement la mer, avec ou sans glace.
-    return (
-        ((mask_raw & 1) != 0)
-        | ((mask_raw & 8) != 0)
+    #
+    # IMPORTANT :
+    # on compare ici les VALEURS de classe strictement.
+    # La v1.0.1 utilisait un test bit-à-bit, trop permissif,
+    # qui pouvait laisser passer des lacs intérieurs.
+    return np.isin(
+        mask_raw,
+        (1, 8),
     )
 
 
@@ -361,6 +365,28 @@ def main() -> int:
             MASK_VARIABLE
         ][:]
 
+        # Diagnostic explicite des classes présentes dans le sous-domaine.
+        mask_diag = np.ma.asarray(mur_mask)
+        if mask_diag.ndim == 3:
+            mask_diag = mask_diag[0]
+        mask_diag_raw = np.ma.filled(
+            mask_diag,
+            0,
+        ).astype(np.int16)
+
+        mask_values, mask_counts = np.unique(
+            mask_diag_raw,
+            return_counts=True,
+        )
+
+        print(
+            "Classes masque MUR :",
+            {
+                int(v): int(c)
+                for v, c in zip(mask_values, mask_counts)
+            },
+        )
+
         analysis_time = analysis_time_iso(
             dataset
         )
@@ -375,23 +401,6 @@ def main() -> int:
             mur_mask,
         )
 
-        south = round(
-            float(np.min(lat)),
-            4,
-        )
-        north = round(
-            float(np.max(lat)),
-            4,
-        )
-        west = round(
-            float(np.min(lon)),
-            4,
-        )
-        east = round(
-            float(np.max(lon)),
-            4,
-        )
-
         lat_step = (
             abs(float(lat[1] - lat[0]))
             if len(lat) > 1
@@ -402,6 +411,37 @@ def main() -> int:
             abs(float(lon[1] - lon[0]))
             if len(lon) > 1
             else None
+        )
+
+        # Les coordonnées ERDDAP sont les CENTRES des cellules.
+        # Leaflet imageOverlay attend les BORDS extérieurs de l'image.
+        # On ajoute donc un demi-pas sur chaque côté.
+        half_lat = (
+            lat_step / 2.0
+            if lat_step
+            else 0.0
+        )
+        half_lon = (
+            lon_step / 2.0
+            if lon_step
+            else 0.0
+        )
+
+        south = round(
+            float(np.min(lat)) - half_lat,
+            5,
+        )
+        north = round(
+            float(np.max(lat)) + half_lat,
+            5,
+        )
+        west = round(
+            float(np.min(lon)) - half_lon,
+            5,
+        )
+        east = round(
+            float(np.max(lon)) + half_lon,
+            5,
         )
 
         resolution_deg = None
@@ -470,6 +510,8 @@ def main() -> int:
                 "color_scale_max_c": 32.0,
                 "opacity": 0.90,
                 "land_mask_applied": True,
+                "ocean_only_classes": [1, 8],
+                "cell_edge_bounds": True,
                 "sea_flags_kept": [1, 8],
                 "png": "sst_france.png",
             },
