@@ -1,0 +1,116 @@
+name: Update Températures Min/Max de la veille
+
+on:
+  schedule:
+    # Une mise à jour quotidienne suffit : les valeurs concernent la veille.
+    # 05:18 UTC = 06:18 en hiver / 07:18 en été en France métropolitaine.
+    - cron: '18 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: temperature-veille
+  cancel-in-progress: true
+
+jobs:
+  generate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+
+      - name: Installer Requests
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests==2.33.0
+
+      - name: Générer observations_temperature_veille.json
+        env:
+          METEOFRANCE_PACKAGE_OBS_KEY: ${{ secrets.METEOFRANCE_PACKAGE_OBS_KEY }}
+          METEOFRANCE_OBS_TOKEN: ${{ secrets.METEOFRANCE_OBS_TOKEN }}
+          MF_PACKAGE_DELAY: "1.15"
+        run: |
+          python generer_temperature_veille.py
+
+      - name: Vérifier le JSON
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s observations_temperature_veille.json
+
+          python - <<'PY'
+          import json
+
+          with open("observations_temperature_veille.json", encoding="utf-8") as f:
+              data = json.load(f)
+
+          assert data["status"] == "ok"
+          assert data["schema_version"] >= 1
+          assert data["module_version"] == "1.0.0"
+          assert isinstance(data["stations"], list)
+          assert data["stations_total"] > 100, f"Trop peu de stations : {data['stations_total']}"
+
+          for field in ("tmin_yesterday", "tmax_yesterday"):
+              assert field in data["metrics"], f"Métrique absente : {field}"
+              n = int(data["metrics"][field].get("stations", 0))
+              assert n > 100, f"{field} insuffisant : {n}"
+
+          expected = int(data.get("package_hours_expected", 0))
+          available = int(data.get("package_hours_available", 0))
+          assert expected in (23, 24, 25), f"Fenêtre horaire inattendue : {expected}"
+          if available < expected:
+              print(f"::warning::Paquets disponibles : {available}/{expected}")
+
+          print("=== CONTRÔLE TEMPÉRATURES DE LA VEILLE ===")
+          print("Date :", data["date_label"])
+          print("Stations :", data["stations_total"])
+          print("Paquets :", available, "/", expected)
+          print("Tn France :", data["metrics"]["tmin_yesterday"]["min"], "°C")
+          print("Tx France :", data["metrics"]["tmax_yesterday"]["max"], "°C")
+          PY
+
+      - name: Préparer publication
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/temp-veille-publish
+          cp observations_temperature_veille.json /tmp/temp-veille-publish/
+          rm -f observations_temperature_veille.json
+
+      - name: Publier branche observations
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if git ls-remote --exit-code --heads origin observations >/dev/null 2>&1; then
+            git fetch origin observations
+            git switch -C observations origin/observations
+          else
+            git switch --orphan observations
+            git rm -rf . || true
+          fi
+
+          cp /tmp/temp-veille-publish/observations_temperature_veille.json .
+          git add observations_temperature_veille.json
+
+          if git diff --cached --quiet; then
+            echo "Aucun changement."
+            exit 0
+          fi
+
+          git commit -m "Températures min/max de la veille v1.0.0"
+          git push origin observations
