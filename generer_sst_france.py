@@ -3,7 +3,7 @@
 
 """
 Alertes-Meteo.com — SST France continue
-Version 1.0.0
+Version 1.0.1
 
 Source :
 NASA/JPL MUR SST v4.1 via NOAA CoastWatch ERDDAP
@@ -34,9 +34,9 @@ from matplotlib import image as mpimg
 from matplotlib.colors import LinearSegmentedColormap, Normalize
 
 
-VERSION = "1.0.0"
+VERSION = "1.0.1"
 SCHEMA_VERSION = 1
-BUILD_ID = "sst-france-mur-2km-20260820"
+BUILD_ID = "sst-france-mur-landmask-v101-20260820"
 
 ERDDAP_BASE = (
     "https://coastwatch.pfeg.noaa.gov/"
@@ -45,6 +45,7 @@ ERDDAP_BASE = (
 
 DATASET_ID = "jplMURSST41"
 VARIABLE = "analysed_sst"
+MASK_VARIABLE = "mask"
 
 # France + mers proches :
 # Manche, mer du Nord, golfe de Gascogne, Méditerranée, Corse.
@@ -77,11 +78,18 @@ def utcnow_iso() -> str:
 
 
 def build_nc_url() -> str:
-    query = (
-        f"{VARIABLE}"
+    selection = (
         f"[(last)]"
         f"[({SOUTH}):{STRIDE}:({NORTH})]"
         f"[({WEST}):{STRIDE}:({EAST})]"
+    )
+
+    # IMPORTANT : MUR fournit analysed_sst et un masque terre/mer séparé.
+    # analysed_sst peut contenir une analyse interpolée sur la terre ; le
+    # raster public doit donc utiliser explicitement la variable mask.
+    query = (
+        f"{VARIABLE}{selection},"
+        f"{MASK_VARIABLE}{selection}"
     )
 
     encoded = quote(
@@ -181,8 +189,38 @@ def build_colormap():
     )
 
 
+def sea_mask_2d(mask_values: np.ndarray) -> np.ndarray:
+    mask_data = np.ma.asarray(mask_values)
+
+    if mask_data.ndim == 3:
+        mask_data = mask_data[0]
+
+    if mask_data.ndim != 2:
+        raise RuntimeError(
+            f"Forme masque MUR inattendue : {mask_data.shape}"
+        )
+
+    mask_raw = np.ma.filled(
+        mask_data,
+        0,
+    ).astype(np.int16)
+
+    # Flags officiels MUR :
+    # 1 = open_sea
+    # 2 = land
+    # 4 = open_lake
+    # 8 = open_sea_with_ice_in_the_grid
+    # 16 = open_lake_with_ice_in_the_grid
+    # On conserve uniquement la mer, avec ou sans glace.
+    return (
+        ((mask_raw & 1) != 0)
+        | ((mask_raw & 8) != 0)
+    )
+
+
 def render_png(
     values: np.ndarray,
+    mask_values: np.ndarray,
 ) -> None:
     data = np.ma.asarray(
         values,
@@ -197,11 +235,19 @@ def render_png(
             f"Forme SST inattendue : {data.shape}"
         )
 
+    sea = sea_mask_2d(mask_values)
+
+    if sea.shape != data.shape:
+        raise RuntimeError(
+            f"Masque MUR {sea.shape} incompatible avec SST {data.shape}"
+        )
+
     invalid = (
         np.ma.getmaskarray(data)
         | ~np.isfinite(
             np.ma.filled(data, np.nan)
         )
+        | ~sea
     )
 
     raw = np.ma.filled(
@@ -247,19 +293,26 @@ def render_png(
 
 def finite_stats(
     values: np.ndarray,
+    mask_values: np.ndarray,
 ) -> tuple[float | None, float | None]:
     data = np.ma.asarray(
         values,
         dtype=float,
     )
 
+    if data.ndim == 3:
+        data = data[0]
+
     raw = np.ma.filled(
         data,
         np.nan,
     )
 
+    sea = sea_mask_2d(mask_values)
+
     valid = raw[
-        np.isfinite(raw)
+        sea
+        & np.isfinite(raw)
         & (raw >= -3.0)
         & (raw <= 45.0)
     ]
@@ -299,14 +352,27 @@ def main() -> int:
             VARIABLE
         ][:]
 
+        if MASK_VARIABLE not in dataset.variables:
+            raise RuntimeError(
+                "Variable mask absente du NetCDF MUR"
+            )
+
+        mur_mask = dataset.variables[
+            MASK_VARIABLE
+        ][:]
+
         analysis_time = analysis_time_iso(
             dataset
         )
 
-        render_png(sst)
+        render_png(
+            sst,
+            mur_mask,
+        )
 
         min_sst, max_sst = finite_stats(
-            sst
+            sst,
+            mur_mask,
         )
 
         south = round(
@@ -373,6 +439,7 @@ def main() -> int:
                     "MUR SST Analysis fv04.1"
                 ),
                 "variable": VARIABLE,
+                "mask_variable": MASK_VARIABLE,
                 "native_resolution_deg": 0.01,
                 "native_resolution_label": (
                     "~1 km"
@@ -402,6 +469,8 @@ def main() -> int:
                 "color_scale_min_c": -2.0,
                 "color_scale_max_c": 32.0,
                 "opacity": 0.90,
+                "land_mask_applied": True,
+                "sea_flags_kept": [1, 8],
                 "png": "sst_france.png",
             },
 
@@ -413,6 +482,7 @@ def main() -> int:
             "point_query": {
                 "dataset_id": DATASET_ID,
                 "variable": VARIABLE,
+                "mask_variable": MASK_VARIABLE,
                 "base_url": ERDDAP_BASE,
                 "note": (
                     "Valeur native 0.01° "
