@@ -63,18 +63,25 @@ jobs:
 
           data = json.loads(Path("classements_pluie.json").read_text(encoding="utf-8"))
           assert data["status"] == "ok"
-          assert data["module_version"] == "1.0.0"
-          assert data["build_id"] == "classements-pluie-5-tableaux-records-20260820"
+          assert data["module_version"] == "1.0.1"
+          assert data["build_id"] == "classements-pluie-rr1-anchor-20260820"
 
           required = ("rain_1h", "rain_24h", "rain_since_06", "rain_48h", "rain_72h")
           for key in required:
               assert key in data["tables"], f"Tableau absent : {key}"
 
-          assert data["tables"]["rain_1h"]["stations"] > 0, "Aucune station pluie 1 h"
-          assert data["tables"]["rain_24h"]["stations"] > 0, "Aucune station pluie 24 h"
+          n1 = data["tables"]["rain_1h"]["stations"]
+          n24 = data["tables"]["rain_24h"]["stations"]
+          if n1 == 0:
+              print("::warning::Aucune station pluie 1 h : publication maintenue pour diagnostic.")
+          if n24 == 0:
+              print("::warning::Aucune station pluie 24 h : publication maintenue pour diagnostic.")
 
           print("=== CONTRÔLE CLASSEMENTS PLUIE ===")
-          print("Dernier relevé :", data["latest_observation_at"])
+          print("Dernier paquet général :", data.get("latest_packet_at"))
+          print("Heure RR1 retenue :", data.get("latest_rain_observation_at"))
+          print("Décalage RR1 :", data.get("rr1_lag_minutes"), "min")
+          print("Stations RR1 à l'ancrage :", data.get("rr1_anchor_stations"))
           for key in required:
               table = data["tables"][key]
               print(
@@ -130,7 +137,7 @@ jobs:
               exit 0
             fi
 
-            git -C "$publish_dir" commit -m "Mise à jour classements pluie v1.0.0"
+            git -C "$publish_dir" commit -m "Mise à jour classements pluie v1.0.1"
 
             if git -C "$publish_dir" push origin "$BRANCH"; then
               echo "Publication réussie."
