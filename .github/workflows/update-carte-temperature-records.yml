@@ -1,4 +1,4 @@
-name: Update Carte Températures et Records
+name: Update Carte Températures Ressentis et Records
 
 on:
   schedule:
@@ -88,6 +88,32 @@ jobs:
           print(
               "Records absolus égalés :",
               data["record_counts"]["absolute_egales"]
+          )
+
+          for field in (
+              "humidex",
+              "wind_chill",
+              "variation_24h",
+              "min_12h",
+              "min_24h",
+              "max_12h",
+              "max_24h",
+          ):
+              assert field in data["metrics"], f"Métrique manquante : {field}"
+
+          print(
+              "Variation 24h :",
+              data["metrics"]["variation_24h"]["min"],
+              "à",
+              data["metrics"]["variation_24h"]["max"],
+              "°C"
+          )
+          print(
+              "Min/Max 24h :",
+              data["metrics"]["min_24h"]["min"],
+              "/",
+              data["metrics"]["max_24h"]["max"],
+              "°C"
           )
           PY
 
