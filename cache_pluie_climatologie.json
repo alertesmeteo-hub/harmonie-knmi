@@ -14725,7 +14725,7 @@
     },
     "20211001": {
       "month_daily_total": 0.0,
-      "month_daily_through": "20260817",
+      "month_daily_through": "20260818",
       "normal_months": {
         "1": 94.8,
         "2": 82.0,
@@ -72151,8 +72151,8 @@
     }
   },
   "current_month_id": "2026-08",
-  "current_month_generated_at": "2026-08-20T07:12:53Z",
-  "normals_generated_at": "2026-08-20T09:04:17Z",
+  "current_month_generated_at": "2026-08-20T09:54:44Z",
+  "normals_generated_at": "2026-08-20T09:57:45Z",
   "normal_period": "1991-2020",
   "current_month_global_through": "20260819",
   "current_month_logic_version": 2,
