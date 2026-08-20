@@ -1,0 +1,146 @@
+name: Update Classements Pluie Météo-France
+
+on:
+  schedule:
+    - cron: '26 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: classements-pluie-meteofrance
+  cancel-in-progress: true
+
+jobs:
+  generate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+
+      - name: Installer Requests
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests==2.33.0
+
+      - name: Récupérer les caches précédents
+        shell: bash
+        run: |
+          git fetch origin observations || true
+          git show origin/observations:cache_classements_pluie_96h.json \
+            > cache_classements_pluie_96h.json 2>/dev/null || true
+          git show origin/observations:cache_records_pluie.json \
+            > cache_records_pluie.json 2>/dev/null || true
+
+      - name: Générer classements_pluie.json
+        env:
+          METEOFRANCE_PACKAGE_OBS_KEY: ${{ secrets.METEOFRANCE_PACKAGE_OBS_KEY }}
+          METEOFRANCE_OBS_TOKEN: ${{ secrets.METEOFRANCE_OBS_TOKEN }}
+          MF_PACKAGE_DELAY: '1.15'
+        run: |
+          python generer_classements_pluie.py
+
+      - name: Contrôler le JSON
+        shell: bash
+        run: |
+          test -s classements_pluie.json
+          test -s cache_classements_pluie_96h.json
+          test -s cache_records_pluie.json
+
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          data = json.loads(Path("classements_pluie.json").read_text(encoding="utf-8"))
+          assert data["status"] == "ok"
+          assert data["module_version"] == "1.0.0"
+          assert data["build_id"] == "classements-pluie-5-tableaux-records-20260820"
+
+          required = ("rain_1h", "rain_24h", "rain_since_06", "rain_48h", "rain_72h")
+          for key in required:
+              assert key in data["tables"], f"Tableau absent : {key}"
+
+          assert data["tables"]["rain_1h"]["stations"] > 0, "Aucune station pluie 1 h"
+          assert data["tables"]["rain_24h"]["stations"] > 0, "Aucune station pluie 24 h"
+
+          print("=== CONTRÔLE CLASSEMENTS PLUIE ===")
+          print("Dernier relevé :", data["latest_observation_at"])
+          for key in required:
+              table = data["tables"][key]
+              print(
+                  key, ":", table.get("stations"), "stations ; max =",
+                  table.get("max"), "mm ; couverture =",
+                  f"{table.get('coverage_hours')}/{table.get('expected_hours')} h"
+              )
+              if key in ("rain_48h", "rain_72h") and not table.get("complete"):
+                  print(f"::warning::{key} partiel : cache 96 h en cours de constitution.")
+          PY
+
+      - name: Préparer publication
+        shell: bash
+        run: |
+          mkdir -p /tmp/classements-pluie-publish
+          cp classements_pluie.json /tmp/classements-pluie-publish/
+          cp cache_classements_pluie_96h.json /tmp/classements-pluie-publish/
+          cp cache_records_pluie.json /tmp/classements-pluie-publish/
+
+      - name: Publier branche observations
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          REPO_URL="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          BRANCH="observations"
+
+          for attempt in 1 2 3 4; do
+            echo "Publication tentative ${attempt}/4..."
+            publish_dir="$(mktemp -d)"
+
+            if git ls-remote --exit-code --heads "$REPO_URL" "$BRANCH" >/dev/null 2>&1; then
+              git clone --depth 1 --branch "$BRANCH" "$REPO_URL" "$publish_dir"
+            else
+              git init -b "$BRANCH" "$publish_dir"
+            fi
+
+            cp /tmp/classements-pluie-publish/classements_pluie.json "$publish_dir/"
+            cp /tmp/classements-pluie-publish/cache_classements_pluie_96h.json "$publish_dir/"
+            cp /tmp/classements-pluie-publish/cache_records_pluie.json "$publish_dir/"
+
+            git -C "$publish_dir" config user.name "github-actions[bot]"
+            git -C "$publish_dir" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git -C "$publish_dir" add \
+              classements_pluie.json \
+              cache_classements_pluie_96h.json \
+              cache_records_pluie.json
+
+            if git -C "$publish_dir" diff --cached --quiet; then
+              echo "Aucun changement à publier."
+              exit 0
+            fi
+
+            git -C "$publish_dir" commit -m "Mise à jour classements pluie v1.0.0"
+
+            if git -C "$publish_dir" push origin "$BRANCH"; then
+              echo "Publication réussie."
+              exit 0
+            fi
+
+            echo "::warning::Conflit de publication ; nouvel essai."
+            rm -rf "$publish_dir"
+            sleep $((attempt * 3))
+          done
+
+          echo "ERREUR : publication impossible après 4 tentatives."
+          exit 1
