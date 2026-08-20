@@ -3,7 +3,7 @@
 
 """
 Alertes-Meteo.com — Classements pluie France
-Version 1.0.0
+Version 1.0.1
 
 Produit un JSON pour 5 tableaux :
 1. Pluie 1 h
@@ -35,9 +35,9 @@ from zoneinfo import ZoneInfo
 
 import requests
 
-VERSION = "1.0.0"
+VERSION = "1.0.1"
 SCHEMA_VERSION = 1
-BUILD_ID = "classements-pluie-5-tableaux-records-20260820"
+BUILD_ID = "classements-pluie-rr1-anchor-20260820"
 
 PACKAGE_URL = (
     "https://public-api.meteofrance.fr/public/"
@@ -63,6 +63,7 @@ MAX_HTTP_ATTEMPTS = 4
 CACHE_HOURS = 96
 API_BACKFILL_HOURS = 24
 LATEST_PACKAGE_LOOKBACK_HOURS = 4
+MIN_RR1_STATIONS_ANCHOR = 20
 RECORD_EPSILON = 0.05
 HISTORICAL_RECORD_CACHE_DAYS = 35
 CURRENT_RECORD_REFRESH_HOURS = 6
@@ -142,7 +143,14 @@ def fnum(value: Any) -> Optional[float]:
 
 def rain_mm(value: Any) -> Optional[float]:
     n = fnum(value)
-    if n is None or n < 0 or n > 1000:
+    if n is None or n > 1000:
+        return None
+    # Certaines séries Météo-France peuvent coder une trace par une très
+    # faible valeur négative. Elle équivaut ici à 0 mm, tandis que les
+    # sentinelles franchement négatives restent exclues.
+    if -1.0 < n < 0:
+        return 0.0
+    if n < 0:
         return None
     return round(n, 2)
 
@@ -334,7 +342,7 @@ def simplify_package(rows: List[dict], fallback_hour: datetime) -> List[dict]:
         sid = station_id(row)
         if not sid or not is_metropole_station(sid):
             continue
-        rr1 = rain_mm(first(row, ("rr1", "RR1")))
+        rr1 = rain_mm(first(row, ("rr1", "RR1", "rr_1h", "RR_1H", "rr1h", "RR1H")))
         if rr1 is None:
             continue
         validity = parse_iso(first(row, ("validity_time", "reference_time", "date"))) or fallback_hour
@@ -388,9 +396,16 @@ def update_hour_cache(key: str) -> Tuple[dict, datetime]:
         if response is None:
             print("::warning::Paquet absent :", iso(target))
             continue
-        simplified = simplify_package(parse_csv(response.content), target)
+        raw_rows = parse_csv(response.content)
+        simplified = simplify_package(raw_rows, target)
         hours[iso(target)] = simplified
         print("  stations RR1 métropole :", len(simplified))
+        if not simplified and raw_rows:
+            keys = sorted(str(k) for k in raw_rows[0].keys())
+            print(
+                "::warning::Aucun RR1 exploitable dans ce paquet. "
+                "Champs reçus : " + ", ".join(keys[:80])
+            )
 
     cutoff = latest_hour - timedelta(hours=CACHE_HOURS - 1)
     pruned = {}
@@ -658,6 +673,46 @@ def hour_records(cache: dict) -> Dict[datetime, List[dict]]:
     return out
 
 
+def latest_rain_hour(cache: dict, latest_packet: datetime) -> Tuple[datetime, int]:
+    """Retourne la dernière heure avec un RR1 réellement exploitable.
+
+    Un paquet horaire peut être publié avant que RR1 soit suffisamment
+    renseigné. On préfère donc une heure comptant au moins
+    MIN_RR1_STATIONS_ANCHOR stations. À défaut, on prend la dernière heure
+    contenant au moins une mesure RR1.
+    """
+    hours = hour_records(cache)
+    candidates = []
+    fallback = []
+    for dt, rows in hours.items():
+        if dt > latest_packet or not isinstance(rows, list):
+            continue
+        count = sum(1 for row in rows if rain_mm(row.get("rr1")) is not None)
+        if count > 0:
+            fallback.append((dt, count))
+        if count >= MIN_RR1_STATIONS_ANCHOR:
+            candidates.append((dt, count))
+
+    pool = candidates or fallback
+    if not pool:
+        print(
+            "::warning::Aucune heure RR1 exploitable dans le cache ; "
+            "ancrage provisoire sur le dernier paquet général."
+        )
+        return latest_packet, 0
+
+    dt, count = max(pool, key=lambda item: item[0])
+    if dt < latest_packet:
+        lag = int((latest_packet - dt).total_seconds() // 60)
+        print(
+            f"::warning::RR1 décalé de {lag} min par rapport au dernier paquet ; "
+            f"tableaux ancrés sur {iso(dt)} ({count} stations RR1)."
+        )
+    else:
+        print(f"Heure RR1 de référence : {iso(dt)} ({count} stations).")
+    return dt, count
+
+
 def local_label(dt: datetime) -> str:
     loc = dt.astimezone(PARIS)
     return f"{WEEKDAYS_FR[loc.weekday()]} {loc.day} {MONTHS_FR[loc.month - 1]} {loc.year} à {loc:%H:%M}"
@@ -846,7 +901,8 @@ def main() -> int:
     print(f"=== Classements pluie v{VERSION} ===")
     package_key = get_package_key()
     obs_key = get_obs_key(package_key)
-    cache, latest = update_hour_cache(package_key)
+    cache, latest_packet = update_hour_cache(package_key)
+    latest, rr1_anchor_stations = latest_rain_hour(cache, latest_packet)
     meta = load_station_meta(obs_key)
 
     station_ids = sorted({
@@ -867,6 +923,10 @@ def main() -> int:
         "generated_at": iso(utcnow()),
         "latest_observation_at": iso(latest),
         "latest_observation_local": local_label(latest),
+        "latest_rain_observation_at": iso(latest),
+        "latest_packet_at": iso(latest_packet),
+        "rr1_anchor_stations": rr1_anchor_stations,
+        "rr1_lag_minutes": int((latest_packet - latest).total_seconds() // 60),
         "timezone_local": "Europe/Paris",
         "scope": "France métropolitaine",
         "unit": "mm",
@@ -877,6 +937,7 @@ def main() -> int:
             "field": "rr1",
             "rr1_unit": "kg/m² = mm",
             "hourly_retention": "24 h côté API ; cache local glissant 96 h",
+            "anchor_method": "dernière heure RR1 exploitable, indépendante du dernier paquet général",
             "daily_record_field": "RRAB / RRDAT des données climatologiques mensuelles",
             "daily_record_period": "06 UTC → 06 UTC",
         },
