@@ -1,0 +1,102 @@
+name: Update Carte Records Température LIVE
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 * * * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: records-temperature-live
+  cancel-in-progress: true
+
+jobs:
+  update:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+
+      - name: Installer requests
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests==2.33.0
+
+      - name: Récupérer l'état précédent
+        shell: bash
+        run: |
+          rm -rf /tmp/records-state
+          mkdir -p /tmp/records-state
+          if git ls-remote --exit-code --heads origin observations >/dev/null 2>&1; then
+            git clone --depth 1 --branch observations "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git" /tmp/records-state
+            if [ -d /tmp/records-state/records_temperature ]; then
+              rm -rf records_temperature
+              cp -a /tmp/records-state/records_temperature ./records_temperature
+            fi
+          fi
+
+      - name: Construire progressivement les historiques et générer le LIVE
+        env:
+          METEOFRANCE_PACKAGE_OBS_KEY: ${{ secrets.METEOFRANCE_PACKAGE_OBS_KEY }}
+          METEOFRANCE_OBS_TOKEN: ${{ secrets.METEOFRANCE_OBS_TOKEN }}
+          MF_PACKAGE_DELAY: '0.20'
+        run: |
+          python generer_records_temperature.py --bootstrap-next 4 --live
+
+      - name: Contrôler les sorties
+        shell: bash
+        run: |
+          test -s records_temperature/index.json
+          test -s records_temperature/live.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          idx=json.loads(Path('records_temperature/index.json').read_text(encoding='utf-8'))
+          live=json.loads(Path('records_temperature/live.json').read_text(encoding='utf-8'))
+          assert idx['status']=='ok'
+          assert live['status']=='ok'
+          assert live['module_version']=='1.0.0'
+          print('Couverture :', idx.get('coverage_departments'), '/', idx.get('coverage_target'))
+          print('Date live :', live.get('day',{}).get('date'))
+          print('Chaleur :', live.get('day',{}).get('counts',{}).get('heat'))
+          print('Froid :', live.get('day',{}).get('counts',{}).get('cold'))
+          print('Nuits tropicales :', live.get('day',{}).get('counts',{}).get('tropical'))
+          PY
+
+      - name: Publier sur observations
+        shell: bash
+        run: |
+          set -euo pipefail
+          REPO_URL="https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git"
+          for attempt in 1 2 3; do
+            pub="$(mktemp -d)"
+            git clone --depth 1 --branch observations "$REPO_URL" "$pub" 2>/dev/null || {
+              git init -b observations "$pub"
+              git -C "$pub" remote add origin "$REPO_URL"
+            }
+            rm -rf "$pub/records_temperature"
+            cp -a records_temperature "$pub/records_temperature"
+            git -C "$pub" config user.name "github-actions[bot]"
+            git -C "$pub" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git -C "$pub" add records_temperature
+            if git -C "$pub" diff --cached --quiet; then
+              echo "Aucun changement à publier."
+              exit 0
+            fi
+            git -C "$pub" commit -m "Records température LIVE v1.0.0"
+            if git -C "$pub" push origin observations; then exit 0; fi
+            rm -rf "$pub"
+            sleep $((attempt * 3))
+          done
+          exit 1
