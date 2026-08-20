@@ -1,0 +1,128 @@
+name: Update Carte Températures et Records
+
+on:
+  schedule:
+    - cron: '25 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: carte-temperature-records
+  cancel-in-progress: true
+
+jobs:
+  generate:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+
+      # On ne touche pas au requirements.txt HARMONIE.
+      - name: Installer Requests
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests==2.33.0
+
+      - name: Récupérer le cache records précédent
+        shell: bash
+        run: |
+          git fetch origin observations || true
+          git show origin/observations:cache_temperature_records.json \
+            > cache_temperature_records.json 2>/dev/null || true
+
+      - name: Générer observations_temperature.json
+        env:
+          METEOFRANCE_PACKAGE_OBS_KEY: ${{ secrets.METEOFRANCE_PACKAGE_OBS_KEY }}
+          METEOFRANCE_OBS_TOKEN: ${{ secrets.METEOFRANCE_OBS_TOKEN }}
+          MF_PACKAGE_DELAY: "1.25"
+        run: |
+          python generer_temperature_records.py
+
+      - name: Vérifier le JSON
+        shell: bash
+        run: |
+          test -s observations_temperature.json
+          test -s cache_temperature_records.json
+
+          python - <<'PY'
+          import json
+
+          with open("observations_temperature.json", encoding="utf-8") as f:
+              data = json.load(f)
+
+          assert data["status"] == "ok"
+          assert data["stations_total"] > 0
+          assert isinstance(data["stations"], list)
+
+          sapc = [
+              s for s in data["stations"]
+              if "SAPC" in str(s.get("name", "")).upper()
+          ]
+          assert not sapc, f"SAPC encore présentes : {len(sapc)}"
+
+          print("JSON valide")
+          print("Stations :", data["stations_total"])
+          print("Max du jour :", data["metrics"]["tx_today"]["max"], "°C")
+          print(
+              "Records mois battus :",
+              data["record_counts"]["month_battus"]
+          )
+          print(
+              "Records mois égalés :",
+              data["record_counts"]["month_egales"]
+          )
+          print(
+              "Records absolus battus :",
+              data["record_counts"]["absolute_battus"]
+          )
+          print(
+              "Records absolus égalés :",
+              data["record_counts"]["absolute_egales"]
+          )
+          PY
+
+      - name: Préparer la publication
+        shell: bash
+        run: |
+          mkdir -p /tmp/temp-records-publish
+          cp observations_temperature.json /tmp/temp-records-publish/
+          cp cache_temperature_records.json /tmp/temp-records-publish/
+
+      - name: Publier sur la branche observations
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if git ls-remote --exit-code --heads origin observations >/dev/null 2>&1; then
+            git fetch origin observations
+            git switch -C observations origin/observations
+          else
+            git switch --orphan observations
+            git rm -rf . || true
+          fi
+
+          cp /tmp/temp-records-publish/observations_temperature.json .
+          cp /tmp/temp-records-publish/cache_temperature_records.json .
+
+          git add observations_temperature.json cache_temperature_records.json
+
+          if git diff --cached --quiet; then
+            echo "Aucun changement à publier."
+            exit 0
+          fi
+
+          git commit -m "Mise à jour températures et records"
+          git push origin observations
