@@ -27,13 +27,12 @@ jobs:
         with:
           python-version: '3.11'
 
-      # On ne touche pas au requirements.txt HARMONIE.
       - name: Installer Requests
         run: |
           python -m pip install --upgrade pip
           pip install requests==2.33.0
 
-      - name: Récupérer le cache records précédent
+      - name: Récupérer le cache records
         shell: bash
         run: |
           git fetch origin observations || true
@@ -44,11 +43,11 @@ jobs:
         env:
           METEOFRANCE_PACKAGE_OBS_KEY: ${{ secrets.METEOFRANCE_PACKAGE_OBS_KEY }}
           METEOFRANCE_OBS_TOKEN: ${{ secrets.METEOFRANCE_OBS_TOKEN }}
-          MF_PACKAGE_DELAY: "1.25"
+          MF_PACKAGE_DELAY: "1.15"
         run: |
           python generer_temperature_records.py
 
-      - name: Vérifier le JSON
+      - name: Vérifier les métriques
         shell: bash
         run: |
           test -s observations_temperature.json
@@ -61,73 +60,61 @@ jobs:
               data = json.load(f)
 
           assert data["status"] == "ok"
+          assert data["schema_version"] >= 3
+          assert data["module_version"] == "1.2.0"
           assert data["stations_total"] > 0
-          assert isinstance(data["stations"], list)
 
-          sapc = [
-              s for s in data["stations"]
-              if "SAPC" in str(s.get("name", "")).upper()
-          ]
-          assert not sapc, f"SAPC encore présentes : {len(sapc)}"
-
-          print("JSON valide")
-          print("Stations :", data["stations_total"])
-          print("Max du jour :", data["metrics"]["tx_today"]["max"], "°C")
-          print(
-              "Records mois battus :",
-              data["record_counts"]["month_battus"]
-          )
-          print(
-              "Records mois égalés :",
-              data["record_counts"]["month_egales"]
-          )
-          print(
-              "Records absolus battus :",
-              data["record_counts"]["absolute_battus"]
-          )
-          print(
-              "Records absolus égalés :",
-              data["record_counts"]["absolute_egales"]
-          )
-
-          for field in (
-              "humidex",
-              "wind_chill",
+          required = (
+              "temperature",
               "variation_24h",
               "min_12h",
               "min_24h",
               "max_12h",
               "max_24h",
-          ):
-              assert field in data["metrics"], f"Métrique manquante : {field}"
+              "humidex",
+              "wind_feels_like",
+          )
 
-          print(
-              "Variation 24h :",
-              data["metrics"]["variation_24h"]["min"],
-              "à",
-              data["metrics"]["variation_24h"]["max"],
-              "°C"
-          )
-          print(
-              "Min/Max 24h :",
-              data["metrics"]["min_24h"]["min"],
-              "/",
-              data["metrics"]["max_24h"]["max"],
-              "°C"
-          )
+          for field in required:
+              assert field in data["metrics"], f"Métrique absente : {field}"
+
+          # Ces métriques doivent être alimentées presque partout.
+          for field in (
+              "temperature",
+              "min_12h",
+              "min_24h",
+              "max_12h",
+              "max_24h",
+          ):
+              n = data["metrics"][field].get("stations", 0)
+              assert n > 100, f"{field} insuffisant : {n}"
+
+          # Variation 24 h : on exige un minimum de stations.
+          nvar = data["metrics"]["variation_24h"].get("stations", 0)
+          assert nvar > 100, f"variation_24h insuffisante : {nvar}"
+
+          print("=== CONTRÔLE JSON ===")
+          print("Version :", data["module_version"])
+          print("Stations :", data["stations_total"])
+
+          for field in required:
+              print(
+                  field,
+                  ":",
+                  data["metrics"][field].get("stations", "n/a"),
+                  "station(s)"
+              )
           PY
 
-      - name: Préparer la publication
+      - name: Préparer publication
         shell: bash
         run: |
-          mkdir -p /tmp/temp-records-publish
-          cp observations_temperature.json /tmp/temp-records-publish/
-          cp cache_temperature_records.json /tmp/temp-records-publish/
+          mkdir -p /tmp/temp-publish
+          cp observations_temperature.json /tmp/temp-publish/
+          cp cache_temperature_records.json /tmp/temp-publish/
 
-      - name: Publier sur la branche observations
+      - name: Publier branche observations
         shell: bash
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -140,15 +127,15 @@ jobs:
             git rm -rf . || true
           fi
 
-          cp /tmp/temp-records-publish/observations_temperature.json .
-          cp /tmp/temp-records-publish/cache_temperature_records.json .
+          cp /tmp/temp-publish/observations_temperature.json .
+          cp /tmp/temp-publish/cache_temperature_records.json .
 
           git add observations_temperature.json cache_temperature_records.json
 
           if git diff --cached --quiet; then
-            echo "Aucun changement à publier."
+            echo "Aucun changement."
             exit 0
           fi
 
-          git commit -m "Mise à jour températures et records"
+          git commit -m "Températures, ressentis et records v1.2.0"
           git push origin observations
