@@ -1,0 +1,164 @@
+name: Update Classements Températures
+
+on:
+  schedule:
+    # Mise à jour horaire après la diffusion du relevé horaire Météo-France.
+    - cron: '12 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: classements-temperature
+  cancel-in-progress: true
+
+jobs:
+  generate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+
+      - name: Installer Requests
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests==2.33.0
+
+      - name: Récupérer cache 72 h
+        shell: bash
+        run: |
+          git fetch origin observations || true
+          git show origin/observations:cache_classements_temperature_72h.json \
+            > cache_classements_temperature_72h.json 2>/dev/null || true
+
+          if [ -s cache_classements_temperature_72h.json ]; then
+            echo "Cache 72 h récupéré."
+          else
+            echo "Premier lancement : cache absent."
+            rm -f cache_classements_temperature_72h.json
+          fi
+
+      - name: Générer les classements températures
+        env:
+          METEOFRANCE_PACKAGE_OBS_KEY: ${{ secrets.METEOFRANCE_PACKAGE_OBS_KEY }}
+          METEOFRANCE_OBS_TOKEN: ${{ secrets.METEOFRANCE_OBS_TOKEN }}
+          MF_PACKAGE_DELAY: "1.15"
+        run: |
+          python generer_classements_temperature.py
+
+      - name: Contrôler les sorties
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s classements_temperature.json
+          test -s cache_classements_temperature_72h.json
+
+          python - <<'PY'
+          import json
+
+          with open("classements_temperature.json", encoding="utf-8") as f:
+              data = json.load(f)
+
+          assert data["status"] == "ok"
+          assert data["schema_version"] >= 1
+          assert data["module_version"] == "1.0.0"
+          assert data["build_id"] == "classements-temperature-9-tableaux-20260820"
+          assert data["latest_observation_at"]
+          assert isinstance(data.get("hourly"), list)
+          assert len(data["hourly"]) > 0, "Aucun classement horaire"
+
+          required = (
+              "tn_provisoire",
+              "tn_18_06",
+              "tn_06_18",
+              "tn_finales",
+              "tx_provisoire",
+              "tx_06_18",
+              "tx_18_06",
+              "tx_finales",
+          )
+
+          for key in required:
+              assert key in data["tables"], f"Table absente : {key}"
+              table = data["tables"][key]
+              assert "rows" in table
+              assert "period_label" in table
+              if table.get("stations", 0) == 0:
+                  print(f"::warning::{key} encore indisponible : cache en cours de constitution")
+              elif not table.get("complete", False) and not table.get("provisional", False):
+                  print(
+                      f"::warning::{key} partiel : "
+                      f"{table.get('coverage_hours')}/{table.get('expected_hours')} h"
+                  )
+
+          print("=== CLASSEMENTS TEMPÉRATURES ===")
+          print("Dernier relevé :", data["latest_observation_at"])
+          print("Heures cache :", data["cache"]["hours_retained"])
+          print("Classements horaires :", len(data["hourly"]))
+          for key in required:
+              t = data["tables"][key]
+              print(
+                  key,
+                  ":",
+                  t.get("stations"),
+                  "stations ;",
+                  t.get("coverage_hours"),
+                  "/",
+                  t.get("expected_hours"),
+                  "h",
+              )
+          PY
+
+      - name: Préparer publication
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/classements-temperature-publish
+
+          cp classements_temperature.json \
+            /tmp/classements-temperature-publish/classements_temperature.json
+          cp cache_classements_temperature_72h.json \
+            /tmp/classements-temperature-publish/cache_classements_temperature_72h.json
+
+          # Évite le blocage git switch par des fichiers non suivis.
+          rm -f classements_temperature.json
+          rm -f cache_classements_temperature_72h.json
+
+      - name: Publier branche observations
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if git ls-remote --exit-code --heads origin observations >/dev/null 2>&1; then
+            git fetch origin observations
+            git switch -C observations origin/observations
+          else
+            git switch --orphan observations
+            git rm -rf . || true
+          fi
+
+          cp /tmp/classements-temperature-publish/classements_temperature.json .
+          cp /tmp/classements-temperature-publish/cache_classements_temperature_72h.json .
+
+          git add classements_temperature.json cache_classements_temperature_72h.json
+
+          if git diff --cached --quiet; then
+            echo "Aucun changement."
+            exit 0
+          fi
+
+          git commit -m "Classements températures v1.0.0"
+          git push origin observations
