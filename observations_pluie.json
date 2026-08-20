@@ -2,7 +2,7 @@
   "schema_version": 4,
   "module_version": "2.2.0",
   "status": "ok",
-  "generated_at": "2026-08-20T04:49:43Z",
+  "generated_at": "2026-08-20T05:02:14Z",
   "latest_observation_at": "2026-08-20T04:00:00Z",
   "title": "Cumuls de précipitations",
   "unit": "mm",
@@ -10,7 +10,7 @@
   "current_month": {
     "id": "2026-08",
     "label": "août 2026",
-    "generated_at": "2026-08-20T04:46:38Z",
+    "generated_at": "2026-08-20T04:58:47Z",
     "through_min": "20260817",
     "through_max": "20260818",
     "latest_day": "20260820",
