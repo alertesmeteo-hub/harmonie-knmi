@@ -3,7 +3,7 @@
 
 """
 Alertes-Meteo.com — SST France continue
-Version 1.0.2
+Version 1.0.3
 
 Source :
 NASA/JPL MUR SST v4.1 via NOAA CoastWatch ERDDAP
@@ -34,9 +34,9 @@ from matplotlib import image as mpimg
 from matplotlib.colors import LinearSegmentedColormap, Normalize
 
 
-VERSION = "1.0.2"
+VERSION = "1.0.3"
 SCHEMA_VERSION = 1
-BUILD_ID = "sst-france-mur-oceanmask-v102-20260820"
+BUILD_ID = "sst-france-mur-webmercator-hover-v103-20260820"
 
 ERDDAP_BASE = (
     "https://coastwatch.pfeg.noaa.gov/"
@@ -58,6 +58,7 @@ EAST = 15.0
 STRIDE = 2
 
 OUTPUT_PNG = Path("sst_france.png")
+OUTPUT_VALUES_PNG = Path("sst_france_values.png")
 OUTPUT_JSON = Path("sst_france_metadata.json")
 TEMP_NC = Path("sst_france_latest.nc")
 
@@ -222,10 +223,32 @@ def sea_mask_2d(mask_values: np.ndarray) -> np.ndarray:
     )
 
 
-def render_png(
-    values: np.ndarray,
-    mask_values: np.ndarray,
-) -> None:
+
+def mercator_y(lat_deg: np.ndarray | float) -> np.ndarray | float:
+    """
+    Coordonnée Y Web Mercator sans facteur R.
+    Leaflet utilise cette géométrie pour positionner imageOverlay.
+    """
+    lat = np.clip(
+        np.asarray(lat_deg, dtype=float),
+        -85.05112878,
+        85.05112878,
+    )
+    rad = np.radians(lat)
+    return np.log(
+        np.tan(np.pi / 4.0 + rad / 2.0)
+    )
+
+
+def inverse_mercator_y(y: np.ndarray) -> np.ndarray:
+    return np.degrees(
+        np.arctan(
+            np.sinh(y)
+        )
+    )
+
+
+def source_2d(values: np.ndarray) -> np.ndarray:
     data = np.ma.asarray(
         values,
         dtype=float,
@@ -239,29 +262,196 @@ def render_png(
             f"Forme SST inattendue : {data.shape}"
         )
 
-    sea = sea_mask_2d(mask_values)
-
-    if sea.shape != data.shape:
-        raise RuntimeError(
-            f"Masque MUR {sea.shape} incompatible avec SST {data.shape}"
-        )
-
-    invalid = (
-        np.ma.getmaskarray(data)
-        | ~np.isfinite(
-            np.ma.filled(data, np.nan)
-        )
-        | ~sea
-    )
-
-    raw = np.ma.filled(
+    return np.ma.filled(
         data,
         np.nan,
     )
 
-    # Valeurs physiquement aberrantes masquées.
-    invalid |= (raw < -3.0)
-    invalid |= (raw > 45.0)
+
+def mercator_resample(
+    values: np.ndarray,
+    mask_values: np.ndarray,
+    latitudes: np.ndarray,
+    south_edge: float,
+    north_edge: float,
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Rééchantillonne les lignes de la grille régulière en latitude
+    vers une image régulière en Y Web Mercator.
+
+    C'est indispensable pour superposer précisément le raster à
+    Leaflet/OSM : une image régulière en latitude étirée directement
+    dans imageOverlay produit un petit décalage nord-sud.
+    """
+
+    raw = source_2d(values)
+    sea = sea_mask_2d(mask_values)
+
+    if sea.shape != raw.shape:
+        raise RuntimeError(
+            f"Masque MUR {sea.shape} incompatible avec SST {raw.shape}"
+        )
+
+    lat = np.asarray(
+        latitudes,
+        dtype=float,
+    )
+
+    if lat.ndim != 1 or len(lat) != raw.shape[0]:
+        raise RuntimeError(
+            "Latitudes incompatibles avec la grille SST"
+        )
+
+    height = raw.shape[0]
+
+    y_north = float(
+        mercator_y(north_edge)
+    )
+    y_south = float(
+        mercator_y(south_edge)
+    )
+
+    # Centres des pixels de l'image finale, du nord vers le sud.
+    target_y = (
+        y_north
+        - (
+            np.arange(height, dtype=float)
+            + 0.5
+        )
+        * (
+            (y_north - y_south)
+            / height
+        )
+    )
+
+    target_lat = inverse_mercator_y(
+        target_y
+    )
+
+    # La grille source est régulièrement espacée en latitude.
+    if len(lat) > 1:
+        step = float(
+            np.median(
+                np.diff(lat)
+            )
+        )
+    else:
+        step = 1.0
+
+    if step == 0:
+        raise RuntimeError(
+            "Pas latitude MUR nul"
+        )
+
+    source_index = np.rint(
+        (target_lat - lat[0]) / step
+    ).astype(np.int64)
+
+    source_index = np.clip(
+        source_index,
+        0,
+        len(lat) - 1,
+    )
+
+    # target_y est nord -> sud, donc l'image est directement
+    # dans l'ordre attendu par Leaflet : pas de flipud ensuite.
+    return (
+        raw[source_index, :],
+        sea[source_index, :],
+    )
+
+
+def valid_ocean(
+    raw: np.ndarray,
+    sea: np.ndarray,
+) -> np.ndarray:
+    return (
+        sea
+        & np.isfinite(raw)
+        & (raw >= -3.0)
+        & (raw <= 45.0)
+    )
+
+
+def render_values_png(
+    raw: np.ndarray,
+    sea: np.ndarray,
+) -> None:
+    """
+    PNG invisible de données pour le survol.
+
+    Température encodée au dixième :
+        code = round((T + 10) * 10)
+        R = octet fort
+        G = octet faible
+        A = 255 uniquement sur océan valide
+
+    Cela permet au navigateur de lire instantanément la SST
+    sous la souris, sans requête réseau par mouvement.
+    """
+    valid = valid_ocean(
+        raw,
+        sea,
+    )
+
+    code = np.zeros(
+        raw.shape,
+        dtype=np.uint16,
+    )
+
+    code[valid] = np.clip(
+        np.rint(
+            (raw[valid] + 10.0)
+            * 10.0
+        ),
+        0,
+        65535,
+    ).astype(np.uint16)
+
+    rgba = np.zeros(
+        raw.shape + (4,),
+        dtype=np.uint8,
+    )
+
+    rgba[..., 0] = (
+        code >> 8
+    ).astype(np.uint8)
+
+    rgba[..., 1] = (
+        code & 255
+    ).astype(np.uint8)
+
+    rgba[..., 2] = 0
+    rgba[..., 3] = np.where(
+        valid,
+        255,
+        0,
+    ).astype(np.uint8)
+
+    mpimg.imsave(
+        OUTPUT_VALUES_PNG,
+        rgba,
+    )
+
+
+def render_png(
+    raw: np.ndarray,
+    sea: np.ndarray,
+) -> None:
+    if raw.ndim != 2:
+        raise RuntimeError(
+            f"Forme SST rendue inattendue : {raw.shape}"
+        )
+
+    if sea.shape != raw.shape:
+        raise RuntimeError(
+            "Masque et SST rendus incompatibles"
+        )
+
+    invalid = ~valid_ocean(
+        raw,
+        sea,
+    )
 
     cmap = build_colormap()
     norm = Normalize(
@@ -285,49 +475,39 @@ def render_png(
         0.90,
     )
 
-    # NetCDF latitude sud -> nord.
-    # Image Leaflet : première ligne = nord.
-    rgba = np.flipud(rgba)
-
+    # raw est déjà rééchantillonné nord -> sud en Web Mercator.
     mpimg.imsave(
         OUTPUT_PNG,
         rgba,
     )
 
 
+
 def finite_stats(
-    values: np.ndarray,
-    mask_values: np.ndarray,
+    raw: np.ndarray,
+    sea: np.ndarray,
 ) -> tuple[float | None, float | None]:
-    data = np.ma.asarray(
-        values,
-        dtype=float,
-    )
-
-    if data.ndim == 3:
-        data = data[0]
-
-    raw = np.ma.filled(
-        data,
-        np.nan,
-    )
-
-    sea = sea_mask_2d(mask_values)
-
     valid = raw[
-        sea
-        & np.isfinite(raw)
-        & (raw >= -3.0)
-        & (raw <= 45.0)
+        valid_ocean(
+            raw,
+            sea,
+        )
     ]
 
     if valid.size == 0:
         return None, None
 
     return (
-        round(float(np.min(valid)), 1),
-        round(float(np.max(valid)), 1),
+        round(
+            float(np.min(valid)),
+            1,
+        ),
+        round(
+            float(np.max(valid)),
+            1,
+        ),
     )
+
 
 
 def main() -> int:
@@ -391,16 +571,6 @@ def main() -> int:
             dataset
         )
 
-        render_png(
-            sst,
-            mur_mask,
-        )
-
-        min_sst, max_sst = finite_stats(
-            sst,
-            mur_mask,
-        )
-
         lat_step = (
             abs(float(lat[1] - lat[0]))
             if len(lat) > 1
@@ -442,6 +612,29 @@ def main() -> int:
         east = round(
             float(np.max(lon)) + half_lon,
             5,
+        )
+
+        mercator_raw, mercator_sea = mercator_resample(
+            sst,
+            mur_mask,
+            lat,
+            south,
+            north,
+        )
+
+        render_png(
+            mercator_raw,
+            mercator_sea,
+        )
+
+        render_values_png(
+            mercator_raw,
+            mercator_sea,
+        )
+
+        min_sst, max_sst = finite_stats(
+            mercator_raw,
+            mercator_sea,
         )
 
         resolution_deg = None
@@ -512,8 +705,18 @@ def main() -> int:
                 "land_mask_applied": True,
                 "ocean_only_classes": [1, 8],
                 "cell_edge_bounds": True,
+                "web_mercator_resampled": True,
+                "projection": "EPSG:3857-compatible",
                 "sea_flags_kept": [1, 8],
                 "png": "sst_france.png",
+                "values_png": "sst_france_values.png",
+                "values_encoding": {
+                    "offset_c": 10.0,
+                    "scale": 10.0,
+                    "red": "high_byte",
+                    "green": "low_byte",
+                    "alpha_zero": "no_ocean_data"
+                },
             },
 
             "stats": {
@@ -569,9 +772,17 @@ def main() -> int:
         "°C",
     )
     print(
-        "PNG :",
+        "PNG couleur :",
         OUTPUT_PNG.stat().st_size,
         "octets",
+    )
+    print(
+        "PNG valeurs survol :",
+        OUTPUT_VALUES_PNG.stat().st_size,
+        "octets",
+    )
+    print(
+        "Projection raster : Web Mercator / Leaflet"
     )
 
     return 0
