@@ -1,15 +1,15 @@
-name: Update Carte Température Mer STABLE v1.0.0
+name: Update Carte Température Mer DENSE v1.1.0
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: '32 * * * *'
+    - cron: '36 * * * *'
 
 permissions:
   contents: write
 
 concurrency:
-  group: carte-temperature-mer-stable-v100
+  group: carte-temperature-mer-dense-v110
   cancel-in-progress: true
 
 jobs:
@@ -32,7 +32,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install requests==2.33.0
 
-      - name: Vérifier générateur
+      - name: Vérifier générateur v1.1.0
         shell: bash
         run: |
           test -s generer_temperature_mer.py
@@ -44,20 +44,24 @@ jobs:
               "generer_temperature_mer.py"
           ).read_text(encoding="utf-8")
 
-          if 'VERSION = "1.0.0"' not in text:
+          if 'VERSION = "1.1.0"' not in text:
               raise SystemExit(
-                  "ERREUR : mauvais générateur température mer."
+                  "ERREUR : generer_temperature_mer.py "
+                  "n'est pas la v1.1.0 DENSE."
               )
 
           if (
-              'BUILD_ID = "temperature-mer-cache-72h-20260820"'
+              'BUILD_ID = "temperature-mer-dense-ship-buoy-20260820"'
               not in text
           ):
               raise SystemExit(
                   "ERREUR : mauvais build température mer."
               )
 
-          print("OK : générateur température mer v1.0.0")
+          print(
+              "OK : générateur température mer "
+              "DENSE v1.1.0."
+          )
           PY
 
       - name: Récupérer cache 72 h
@@ -72,11 +76,11 @@ jobs:
           if [ -s cache_temperature_mer_72h.json ]; then
             echo "Cache température mer récupéré."
           else
-            echo "Premier lancement : aucun cache."
+            echo "Aucun cache existant."
             rm -f cache_temperature_mer_72h.json
           fi
 
-      - name: Générer température de la mer
+      - name: Générer température mer dense
         run: |
           python generer_temperature_mer.py
 
@@ -96,12 +100,18 @@ jobs:
               ).read_text(encoding="utf-8")
           )
 
-          print("=== TEMPÉRATURE MER ===")
+          print("=== TEMPÉRATURE MER DENSE ===")
           print("Status :", data.get("status"))
           print("Version :", data.get("module_version"))
           print("Schema :", data.get("schema_version"))
           print("Build :", data.get("build_id"))
-          print("Stations :", data.get("stations_total"))
+          print("Points :", data.get("stations_total"))
+          print(
+              "Types :",
+              data.get("coverage", {}).get(
+                  "platforms_current"
+              ),
+          )
           print(
               "Sources :",
               data.get("coverage", {}).get(
@@ -110,11 +120,18 @@ jobs:
           )
 
           if data.get("status") != "ok":
-              raise SystemExit("ERREUR : status != ok")
-
-          if data.get("module_version") != "1.0.0":
               raise SystemExit(
-                  "ERREUR : module_version != 1.0.0"
+                  "ERREUR : status JSON != ok"
+              )
+
+          if data.get("module_version") != "1.1.0":
+              raise SystemExit(
+                  "ERREUR : module_version != 1.1.0"
+              )
+
+          if data.get("schema_version") != 2:
+              raise SystemExit(
+                  "ERREUR : schema_version != 2"
               )
 
           required = (
@@ -139,17 +156,19 @@ jobs:
                   field,
                   ":",
                   metrics[field].get("stations"),
-                  "station(s)"
+                  "point(s)"
               )
 
-          # Seule la température actuelle est obligatoire
-          # lors du premier lancement.
           if not metrics["sea_temp_c"].get("stations"):
               raise SystemExit(
-                  "ERREUR : aucune température de mer exploitable."
+                  "ERREUR : aucune température "
+                  "de mer exploitable."
               )
 
-          print("OK : JSON température mer.")
+          print(
+              "OK : JSON température mer "
+              "DENSE v1.1.0."
+          )
           PY
 
       - name: Préparer publication
@@ -194,7 +213,7 @@ jobs:
             exit 0
           fi
 
-          git commit -m "Température mer v1.0.0"
+          git commit -m "Température mer DENSE v1.1.0"
 
           if ! git push origin observations; then
             echo "Push concurrent : nouvel essai."
