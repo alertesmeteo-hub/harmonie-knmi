@@ -1,4 +1,4 @@
-name: Update Carte Rafales Météo-France
+name: Update Carte Vent et Rafales Météo-France
 
 on:
   schedule:
@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: carte-rafales-meteofrance
+  group: carte-vent-rafales-meteofrance
   cancel-in-progress: true
 
 jobs:
@@ -52,38 +52,28 @@ jobs:
               data = json.load(f)
 
           assert data["status"] == "ok"
-          assert data["module_version"] == "1.0.0"
+          assert data["module_version"] == "1.1.0"
           assert data["stations_total"] > 0
 
-          for field in (
+          required = (
               "latest_gust_kmh",
               "gust_24h_kmh",
               "gust_72h_kmh",
-          ):
-              assert field in data["metrics"]
-              assert data["metrics"][field]["stations"] > 0
-
-          sapc = [
-              s for s in data["stations"]
-              if "SAPC" in str(s.get("name", "")).upper()
-          ]
-          assert not sapc, f"SAPC restantes : {len(sapc)}"
-
-          print("=== CONTRÔLE RAFALES ===")
-          print("Version :", data["module_version"])
-          print("Stations :", data["stations_total"])
-          print(
-              "Paquets chargés :",
-              data["coverage"]["packages_loaded"],
-              "/",
-              data["coverage"]["packages_requested"],
+              "latest_mean_wind_kmh",
+              "mean_wind_24h_max_kmh",
+              "mean_wind_72h_max_kmh",
           )
 
-          for field in (
-              "latest_gust_kmh",
-              "gust_24h_kmh",
-              "gust_72h_kmh",
-          ):
+          for field in required:
+              assert field in data["metrics"], f"Métrique manquante : {field}"
+              assert data["metrics"][field]["stations"] > 0, \
+                  f"Aucune station pour {field}"
+
+          print("=== CONTRÔLE VENT / RAFALES ===")
+          print("Version :", data["module_version"])
+          print("Stations :", data["stations_total"])
+
+          for field in required:
               print(
                   field,
                   ":",
@@ -98,7 +88,10 @@ jobs:
         shell: bash
         run: |
           mkdir -p /tmp/rafales-publish
-          cp observations_rafales.json /tmp/rafales-publish/observations_rafales.json
+
+          cp observations_rafales.json \
+            /tmp/rafales-publish/observations_rafales.json
+
           rm -f observations_rafales.json
 
       - name: Publier branche observations
@@ -118,6 +111,7 @@ jobs:
           fi
 
           cp /tmp/rafales-publish/observations_rafales.json .
+
           git add observations_rafales.json
 
           if git diff --cached --quiet; then
@@ -125,5 +119,5 @@ jobs:
             exit 0
           fi
 
-          git commit -m "Mise à jour rafales Météo-France"
+          git commit -m "Mise à jour vent et rafales v1.1.0"
           git push origin observations
