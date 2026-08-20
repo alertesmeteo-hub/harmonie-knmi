@@ -615,8 +615,128 @@
       "time": "2026-08-20T11:30:00Z",
       "sea_temp_c": 29.5,
       "source": "NOAA/NDBC"
+    },
+    {
+      "id": "41043",
+      "name": "Bouée 41043",
+      "platform_type": "Bouée",
+      "lat": 21.09,
+      "lon": -64.864,
+      "time": "2026-08-20T11:50:00Z",
+      "sea_temp_c": 29.6,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "41046",
+      "name": "Bouée 41046",
+      "platform_type": "Bouée",
+      "lat": 23.84,
+      "lon": -68.34,
+      "time": "2026-08-20T11:50:00Z",
+      "sea_temp_c": 29.5,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "41121",
+      "name": "Bouée 41121",
+      "platform_type": "Bouée",
+      "lat": 18.491,
+      "lon": -66.701,
+      "time": "2026-08-20T12:00:00Z",
+      "sea_temp_c": 29.2,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "ATGM1",
+      "name": "Bateau / station ATGM1",
+      "platform_type": "Bateau / station marine",
+      "lat": 44.392,
+      "lon": -68.204,
+      "time": "2026-08-20T11:48:00Z",
+      "sea_temp_c": 14.1,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "CFWM1",
+      "name": "Bateau / station CFWM1",
+      "platform_type": "Bateau / station marine",
+      "lat": 44.657,
+      "lon": -67.205,
+      "time": "2026-08-20T11:48:00Z",
+      "sea_temp_c": 11.4,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "CHSV3",
+      "name": "Bateau / station CHSV3",
+      "platform_type": "Bateau / station marine",
+      "lat": 17.748,
+      "lon": -64.699,
+      "time": "2026-08-20T11:48:00Z",
+      "sea_temp_c": 29.9,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "CLBP4",
+      "name": "Bateau / station CLBP4",
+      "platform_type": "Bateau / station marine",
+      "lat": 18.301,
+      "lon": -65.302,
+      "time": "2026-08-20T11:48:00Z",
+      "sea_temp_c": 29.7,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "LAMV3",
+      "name": "Bateau / station LAMV3",
+      "platform_type": "Bateau / station marine",
+      "lat": 18.318,
+      "lon": -64.724,
+      "time": "2026-08-20T11:48:00Z",
+      "sea_temp_c": 29.2,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "LTBV3",
+      "name": "Bateau / station LTBV3",
+      "platform_type": "Bateau / station marine",
+      "lat": 17.695,
+      "lon": -64.754,
+      "time": "2026-08-20T11:48:00Z",
+      "sea_temp_c": 29.5,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "MGZP4",
+      "name": "Bateau / station MGZP4",
+      "platform_type": "Bateau / station marine",
+      "lat": 18.218,
+      "lon": -67.159,
+      "time": "2026-08-20T11:48:00Z",
+      "sea_temp_c": 28.1,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "PSBM1",
+      "name": "Bateau / station PSBM1",
+      "platform_type": "Bateau / station marine",
+      "lat": 44.905,
+      "lon": -66.983,
+      "time": "2026-08-20T11:48:00Z",
+      "sea_temp_c": 12.1,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "SJNP4",
+      "name": "Bateau / station SJNP4",
+      "platform_type": "Bateau / station marine",
+      "lat": 18.459,
+      "lon": -66.116,
+      "time": "2026-08-20T11:48:00Z",
+      "sea_temp_c": 29.6,
+      "source": "NOAA/NDBC"
     }
   ],
-  "generated_at": "2026-08-20T12:21:45Z",
+  "generated_at": "2026-08-20T12:24:47Z",
   "latest_observation_at": "2026-08-20T12:00:00Z"
 }
