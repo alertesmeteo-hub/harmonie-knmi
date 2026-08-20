@@ -3,7 +3,7 @@
 
 """
 Alertes-Meteo.com — Carte Vent & Rafales Météo-France
-Version 1.1.0
+Version 1.1.1
 
 Vues :
 - Dernières rafales
@@ -44,7 +44,7 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 import requests
 
 
-VERSION = "1.1.0"
+VERSION = "1.1.1"
 SCHEMA_VERSION = 2
 
 PACKAGE_URL = (
@@ -672,6 +672,7 @@ def main() -> int:
     output = {
         "schema_version": SCHEMA_VERSION,
         "module_version": VERSION,
+        "build_id": "vent-rafales-6-metrics-20260820",
         "status": "ok",
 
         "generated_at": iso(utcnow()),
@@ -715,6 +716,7 @@ def main() -> int:
     print()
     print("=== TERMINÉ ===")
     print("Module :", VERSION)
+    print("Build : vent-rafales-6-metrics-20260820")
     print("Stations :", len(stations))
     print("Paquets :", packages_loaded, "/", HISTORY_HOURS)
 
