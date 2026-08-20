@@ -2,21 +2,24 @@
 # -*- coding: utf-8 -*-
 
 """
-Alertes-Meteo.com — Température de la mer
-Version 1.0.0
+Alertes-Meteo.com — Température de la mer DENSE
+Version 1.1.0
 
-Source principale :
-- Météo-France, observations en mer SHIP / BUOY
-- paramètre tmer (K)
+Objectif :
+- récupérer le maximum de bouées / bateaux avec température de mer ;
+- source principale : Météo-France SHIP / BUOY ;
+- complément : NOAA / NDBC latest observations ;
+- récupérer 4 fichiers quotidiens Météo-France à chaque run :
+  aujourd'hui + J-1 + J-2 + J-3 ;
+- conserver un cache glissant 72 h.
 
-Secours :
-- NOAA/NDBC latest observations, champ WTMP (°C)
-
-Architecture stable :
-- téléchargement du fichier marin courant ;
-- cache glissant de 72 h ;
-- calcul température actuelle, variation 24 h,
-  min/max 24 h et min/max 72 h.
+Vues :
+- Température actuelle
+- Variation 24 h
+- Minimum 24 h
+- Maximum 24 h
+- Minimum 72 h
+- Maximum 72 h
 """
 
 from __future__ import annotations
@@ -25,10 +28,8 @@ import csv
 import io
 import json
 import math
-import os
 import re
 import sys
-import time
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -37,9 +38,9 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 import requests
 
 
-VERSION = "1.0.0"
-SCHEMA_VERSION = 1
-BUILD_ID = "temperature-mer-cache-72h-20260820"
+VERSION = "1.1.0"
+SCHEMA_VERSION = 2
+BUILD_ID = "temperature-mer-dense-ship-buoy-20260820"
 
 OUTPUT = Path("observations_temperature_mer.json")
 CACHE = Path("cache_temperature_mer_72h.json")
@@ -54,17 +55,25 @@ NDBC_LATEST = (
 )
 
 HTTP_TIMEOUT = 90
+
+# 4 fichiers quotidiens couvrent aujourd'hui + 3 jours précédents.
+MF_DAYS_TO_DOWNLOAD = 4
+
 HISTORY_HOURS = 72
-CACHE_MARGIN_HOURS = 6
+CACHE_MARGIN_HOURS = 8
+
+# Un point reste affiché sur la carte "actuelle" s'il a transmis
+# dans les 12 dernières heures.
+MAX_CURRENT_AGE_HOURS = 12
 
 session = requests.Session()
 session.headers.update({
-    "User-Agent": f"alertes-meteo-temperature-mer/{VERSION}",
+    "User-Agent": f"alertes-meteo-temperature-mer-dense/{VERSION}",
 })
 
 
 # ------------------------------------------------------------
-# Helpers
+# Utilitaires
 # ------------------------------------------------------------
 
 def utcnow() -> datetime:
@@ -74,29 +83,31 @@ def utcnow() -> datetime:
 def iso(dt: Optional[datetime]) -> Optional[str]:
     if dt is None:
         return None
+
     return dt.astimezone(timezone.utc).isoformat(
         timespec="seconds"
     ).replace("+00:00", "Z")
 
 
-def parse_iso(value: Any) -> Optional[datetime]:
-    if not value:
+def parse_datetime(value: Any) -> Optional[datetime]:
+    if value in (None, ""):
         return None
 
     s = str(value).strip()
 
-    # ISO
     try:
         dt = datetime.fromisoformat(
             s.replace("Z", "+00:00")
         )
+
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=timezone.utc)
+
         return dt.astimezone(timezone.utc)
+
     except Exception:
         pass
 
-    # Météo-France AAAAMMDDHHMISS
     for fmt in (
         "%Y%m%d%H%M%S",
         "%Y%m%d%H%M",
@@ -107,6 +118,7 @@ def parse_iso(value: Any) -> Optional[datetime]:
                 s,
                 fmt,
             ).replace(tzinfo=timezone.utc)
+
         except Exception:
             pass
 
@@ -114,11 +126,22 @@ def parse_iso(value: Any) -> Optional[datetime]:
 
 
 def fnum(value: Any) -> Optional[float]:
-    if value in (None, "", "MM", "999", "9999", "99999"):
+    if value in (
+        None,
+        "",
+        "MM",
+        "////",
+        "999",
+        "9999",
+        "99999",
+        "999999",
+    ):
         return None
 
     try:
-        n = float(str(value).replace(",", "."))
+        n = float(
+            str(value).strip().replace(",", ".")
+        )
     except (TypeError, ValueError):
         return None
 
@@ -128,7 +151,11 @@ def fnum(value: Any) -> Optional[float]:
     return n
 
 
-def first(row: dict, names: Iterable[str]) -> Any:
+def first(
+    row: dict,
+    names: Iterable[str],
+) -> Any:
+
     for name in names:
         if name in row and row[name] not in (None, ""):
             return row[name]
@@ -140,21 +167,48 @@ def first(row: dict, names: Iterable[str]) -> Any:
 
     for name in names:
         value = low.get(str(name).lower())
+
         if value not in (None, ""):
             return value
 
     return None
 
 
-def kelvin_to_c(value: Any) -> Optional[float]:
+def normalize_coord(
+    value: Any,
+    limit: float,
+) -> Optional[float]:
+
     n = fnum(value)
 
     if n is None:
         return None
 
-    # Le champ Météo-France tmer est documenté en K.
-    # Si la source renvoie déjà une valeur plausible en °C,
-    # on l'accepte également.
+    # Certains exports anciens peuvent encoder des centièmes
+    # de degré. On corrige uniquement si la valeur brute
+    # dépasse la plage géographique normale.
+    if abs(n) > limit:
+        if abs(n / 100.0) <= limit:
+            n = n / 100.0
+        elif abs(n / 1000.0) <= limit:
+            n = n / 1000.0
+
+    if abs(n) > limit:
+        return None
+
+    return n
+
+
+def kelvin_or_celsius_to_c(
+    value: Any,
+) -> Optional[float]:
+
+    n = fnum(value)
+
+    if n is None:
+        return None
+
+    # tmer Météo-France est documenté en kelvins.
     if n > 100:
         n -= 273.15
 
@@ -164,19 +218,32 @@ def kelvin_to_c(value: Any) -> Optional[float]:
     return round(n, 1)
 
 
-def celsius(value: Any) -> Optional[float]:
+def celsius(
+    value: Any,
+) -> Optional[float]:
+
     n = fnum(value)
 
-    if n is None or n < -3 or n > 45:
+    if n is None:
+        return None
+
+    if n < -3 or n > 45:
         return None
 
     return round(n, 1)
 
 
-def parse_delimited(raw: bytes) -> List[dict]:
+def parse_delimited(
+    raw: bytes,
+) -> List[dict]:
+
     text = None
 
-    for enc in ("utf-8-sig", "utf-8", "latin-1"):
+    for enc in (
+        "utf-8-sig",
+        "utf-8",
+        "latin-1",
+    ):
         try:
             text = raw.decode(enc)
             break
@@ -189,7 +256,8 @@ def parse_delimited(raw: bytes) -> List[dict]:
             errors="replace",
         )
 
-    sample = text[:10000]
+    sample = text[:15000]
+
     delimiter = (
         ";"
         if sample.count(";") >= sample.count(",")
@@ -220,39 +288,46 @@ def parse_delimited(raw: bytes) -> List[dict]:
 
 
 # ------------------------------------------------------------
-# Géographie
+# Zones conservées dans le JSON
 # ------------------------------------------------------------
 
-def in_french_area(
+def in_target_area(
     lat: float,
     lon: float,
 ) -> bool:
     """
-    France métropolitaine + principaux territoires ultramarins.
-    Boîtes volontairement larges pour inclure les bouées au large.
+    Zone très large autour de la France + territoires français.
+
+    L'objectif est de conserver bien plus de bouées/bateaux que
+    la v1.0.0 tout en évitant d'embarquer inutilement tous les
+    océans du globe dans le JSON WordPress.
     """
 
     boxes = (
-        # Métropole, Manche, Atlantique, Méditerranée, Corse
-        (39.0, 53.5, -12.0, 14.0),
+        # Europe / Atlantique NE / Manche / Mer du Nord /
+        # Méditerranée, avec marge importante.
+        (30.0, 66.0, -32.0, 32.0),
 
-        # Antilles
-        (13.0, 20.0, -66.5, -58.0),
+        # Caraïbes / Antilles
+        (8.0, 25.0, -75.0, -50.0),
 
-        # Guyane
-        (0.0, 9.0, -57.0, -48.0),
+        # Guyane / Atlantique équatorial ouest
+        (-5.0, 12.0, -65.0, -40.0),
 
-        # Réunion / Mayotte
-        (-25.0, -10.0, 38.0, 60.0),
+        # Saint-Pierre-et-Miquelon / NW Atlantique
+        (40.0, 55.0, -70.0, -45.0),
 
-        # Saint-Pierre-et-Miquelon
-        (45.0, 49.0, -59.0, -53.0),
+        # Réunion / Mayotte / océan Indien occidental
+        (-32.0, 2.0, 30.0, 75.0),
 
-        # Nouvelle-Calédonie
-        (-27.0, -17.0, 155.0, 173.0),
+        # Nouvelle-Calédonie / Pacifique SO
+        (-35.0, -10.0, 145.0, 180.0),
 
         # Polynésie française
-        (-32.0, -5.0, -160.0, -130.0),
+        (-35.0, 2.0, -170.0, -120.0),
+
+        # TAAF / sud océan Indien
+        (-58.0, -30.0, 35.0, 90.0),
     )
 
     for min_lat, max_lat, min_lon, max_lon in boxes:
@@ -263,6 +338,53 @@ def in_french_area(
             return True
 
     return False
+
+
+# ------------------------------------------------------------
+# Plateformes
+# ------------------------------------------------------------
+
+def canonical_id(
+    value: Any,
+) -> Optional[str]:
+
+    if value is None:
+        return None
+
+    sid = str(value).strip().upper()
+
+    if sid.endswith(".0") and sid[:-2].isdigit():
+        sid = sid[:-2]
+
+    sid = sid.replace(" ", "")
+
+    return sid or None
+
+
+def platform_type(
+    sid: str,
+) -> str:
+    """
+    Les indicatifs numériques des messages marins sont
+    majoritairement des bouées/stations marines OMM.
+    Les indicatifs alphanumériques sont généralement des
+    indicatifs de navires ou stations mobiles.
+    """
+
+    if sid.isdigit():
+        return "Bouée"
+
+    return "Bateau / station marine"
+
+
+def default_name(
+    sid: str,
+) -> str:
+
+    if platform_type(sid) == "Bouée":
+        return f"Bouée {sid}"
+
+    return f"Bateau / station {sid}"
 
 
 # ------------------------------------------------------------
@@ -300,6 +422,61 @@ def load_cache() -> dict:
         }
 
 
+def source_priority(
+    source: str,
+) -> int:
+
+    if source == "Météo-France":
+        return 20
+
+    if source == "NOAA/NDBC":
+        return 10
+
+    return 0
+
+
+def merge_samples(
+    samples: List[dict],
+) -> List[dict]:
+    """
+    Déduplique une même plateforme / même instant.
+    Météo-France est prioritaire si la même mesure existe
+    également chez NOAA/NDBC.
+    """
+
+    unique = {}
+
+    for sample in samples:
+        sid = canonical_id(sample.get("id"))
+        dt = parse_datetime(sample.get("time"))
+
+        if not sid or dt is None:
+            continue
+
+        key = (
+            sid,
+            iso(dt),
+        )
+
+        previous = unique.get(key)
+
+        if (
+            previous is None
+            or source_priority(
+                str(sample.get("source"))
+            )
+            > source_priority(
+                str(previous.get("source"))
+            )
+        ):
+            copy = dict(sample)
+            copy["id"] = sid
+            copy["time"] = iso(dt)
+            unique[key] = copy
+
+    return list(unique.values())
+
+
 def clean_cache(
     cache: dict,
     ref_time: datetime,
@@ -309,23 +486,17 @@ def clean_cache(
         hours=HISTORY_HOURS + CACHE_MARGIN_HOURS
     )
 
-    unique = {}
+    kept = []
 
     for sample in cache.get("samples", []):
-        dt = parse_iso(sample.get("time"))
+        dt = parse_datetime(sample.get("time"))
 
         if dt is None or dt < cutoff:
             continue
 
-        key = (
-            str(sample.get("id")),
-            str(sample.get("time")),
-            str(sample.get("source")),
-        )
+        kept.append(sample)
 
-        unique[key] = sample
-
-    cache["samples"] = list(unique.values())
+    cache["samples"] = merge_samples(kept)
 
     return cache
 
@@ -334,7 +505,10 @@ def clean_cache(
 # Météo-France SHIP / BUOY
 # ------------------------------------------------------------
 
-def marine_url(day: datetime) -> str:
+def mf_url(
+    day: datetime,
+) -> str:
+
     return (
         f"{MF_BASE}/bouees."
         f"{day.strftime('%Y%m%d')}.csv"
@@ -345,131 +519,152 @@ def download_mf_day(
     day: datetime,
 ) -> Optional[requests.Response]:
 
-    url = marine_url(day)
+    url = mf_url(day)
 
     try:
         response = session.get(
             url,
             timeout=HTTP_TIMEOUT,
         )
+
     except requests.RequestException as exc:
-        print("[WARN] Météo-France :", exc)
+        print(
+            "[WARN] Météo-France",
+            day.strftime("%Y-%m-%d"),
+            exc,
+        )
         return None
 
-    if response.status_code == 200 and response.content:
+    if (
+        response.status_code == 200
+        and response.content
+    ):
         print(
-            "Météo-France :",
+            "Météo-France",
             day.strftime("%Y-%m-%d"),
+            ":",
             len(response.content),
             "octets",
         )
+
         return response
 
     print(
-        "[INFO] Fichier Météo-France indisponible :",
+        "[INFO] Météo-France",
+        day.strftime("%Y-%m-%d"),
+        "HTTP",
         response.status_code,
-        url,
     )
 
     return None
 
 
-def mf_station_id(row: dict) -> Optional[str]:
-    value = first(
-        row,
-        (
-            "numer_sta",
-            "id_station",
-            "station",
-            "indicatif",
-            "id",
-        ),
-    )
-
-    if value is None:
-        return None
-
-    value = str(value).strip()
-
-    return value or None
-
-
-def mf_lat_lon(
+def mf_position(
     row: dict,
-) -> Tuple[Optional[float], Optional[float]]:
+) -> Tuple[
+    Optional[float],
+    Optional[float],
+]:
 
-    lat = fnum(
+    lat = normalize_coord(
         first(
             row,
             (
                 "lat",
                 "latitude",
-                "LAT",
-                "LATITUDE",
+                "lat_deg",
+                "latitude_deg",
+                "y",
             ),
-        )
+        ),
+        90.0,
     )
 
-    lon = fnum(
+    lon = normalize_coord(
         first(
             row,
             (
                 "lon",
                 "longitude",
-                "LON",
-                "LONGITUDE",
+                "long",
+                "lon_deg",
+                "longitude_deg",
+                "x",
             ),
-        )
+        ),
+        180.0,
     )
 
-    if (
-        lat is None
-        or lon is None
-        or not (-90 <= lat <= 90)
-        or not (-180 <= lon <= 180)
-    ):
+    if lat is None or lon is None:
         return None, None
 
     return lat, lon
 
 
-def parse_mf_response(
+def parse_mf(
     response: requests.Response,
 ) -> List[dict]:
 
-    rows = parse_delimited(response.content)
+    rows = parse_delimited(
+        response.content
+    )
+
     samples = []
 
     for row in rows:
-        sid = mf_station_id(row)
+        sid = canonical_id(
+            first(
+                row,
+                (
+                    "numer_sta",
+                    "station",
+                    "id_station",
+                    "indicatif",
+                    "callsign",
+                    "id",
+                ),
+            )
+        )
 
         if not sid:
             continue
 
-        temp = kelvin_to_c(
-            first(row, ("tmer", "TMER"))
+        temp = kelvin_or_celsius_to_c(
+            first(
+                row,
+                (
+                    "tmer",
+                    "TMER",
+                    "sst",
+                    "SST",
+                ),
+            )
         )
 
         if temp is None:
             continue
 
-        dt = parse_iso(
-            first(row, ("date", "DATE"))
+        dt = parse_datetime(
+            first(
+                row,
+                (
+                    "date",
+                    "DATE",
+                    "datetime",
+                    "time",
+                ),
+            )
         )
 
         if dt is None:
             continue
 
-        lat, lon = mf_lat_lon(row)
+        lat, lon = mf_position(row)
 
-        # Certaines versions historiques du fichier SHIP/BUOY
-        # peuvent ne pas exposer la position en colonnes CSV.
-        # Ces lignes ne sont pas cartographiables et sont donc
-        # laissées au fallback NDBC.
         if lat is None or lon is None:
             continue
 
-        if not in_french_area(lat, lon):
+        if not in_target_area(lat, lon):
             continue
 
         name = first(
@@ -479,16 +674,18 @@ def parse_mf_response(
                 "name",
                 "nom_station",
                 "libelle",
+                "station_name",
             ),
         )
 
         samples.append({
-            "id": f"MF-{sid}",
+            "id": sid,
             "name": (
                 str(name).strip()
                 if name
-                else f"Bouée {sid}"
+                else default_name(sid)
             ),
+            "platform_type": platform_type(sid),
             "lat": round(lat, 5),
             "lon": round(lon, 5),
             "time": iso(dt),
@@ -496,24 +693,41 @@ def parse_mf_response(
             "source": "Météo-France",
         })
 
+    print(
+        "  ->",
+        len(samples),
+        "mesure(s) tmer cartographiable(s)",
+    )
+
     return samples
 
 
 # ------------------------------------------------------------
-# NOAA / NDBC fallback
+# NOAA / NDBC
 # ------------------------------------------------------------
 
 def download_ndbc() -> Optional[requests.Response]:
+
     try:
         response = session.get(
             NDBC_LATEST,
             timeout=HTTP_TIMEOUT,
         )
+
     except requests.RequestException as exc:
         print("[WARN] NOAA/NDBC :", exc)
         return None
 
-    if response.status_code == 200 and response.text:
+    if (
+        response.status_code == 200
+        and response.text
+    ):
+        print(
+            "NOAA/NDBC latest_obs :",
+            len(response.content),
+            "octets",
+        )
+
         return response
 
     print(
@@ -524,14 +738,9 @@ def download_ndbc() -> Optional[requests.Response]:
     return None
 
 
-def parse_ndbc_latest(
+def parse_ndbc(
     response: requests.Response,
 ) -> List[dict]:
-    """
-    latest_obs.txt :
-    #STN LAT LON YYYY MM DD hh mm WDIR WSPD GST WVHT ...
-    ... ATMP WTMP ...
-    """
 
     lines = [
         line.rstrip()
@@ -542,21 +751,29 @@ def parse_ndbc_latest(
     if not lines:
         return []
 
-    header_index = None
     header = None
+    start = 0
 
-    for i, line in enumerate(lines[:5]):
-        if line.startswith("#") and "LAT" in line and "LON" in line:
-            header_index = i
+    for i, line in enumerate(lines[:10]):
+        if (
+            line.startswith("#")
+            and "LAT" in line
+            and "LON" in line
+            and "WTMP" in line
+        ):
             header = line.lstrip("#").split()
+            start = i + 1
             break
 
     if header is None:
+        print(
+            "[WARN] En-tête latest_obs NDBC non reconnu."
+        )
         return []
 
     samples = []
 
-    for line in lines[header_index + 1:]:
+    for line in lines[start:]:
         if line.startswith("#"):
             continue
 
@@ -565,28 +782,41 @@ def parse_ndbc_latest(
         if len(parts) < len(header):
             continue
 
-        row = dict(zip(header, parts))
+        row = dict(
+            zip(
+                header,
+                parts[:len(header)],
+            )
+        )
 
-        sid = str(
+        sid = canonical_id(
             row.get("STN")
             or row.get("#STN")
-            or ""
-        ).strip()
+        )
 
         if not sid:
             continue
 
-        lat = fnum(row.get("LAT"))
-        lon = fnum(row.get("LON"))
+        lat = normalize_coord(
+            row.get("LAT"),
+            90.0,
+        )
+
+        lon = normalize_coord(
+            row.get("LON"),
+            180.0,
+        )
 
         if (
             lat is None
             or lon is None
-            or not in_french_area(lat, lon)
+            or not in_target_area(lat, lon)
         ):
             continue
 
-        temp = celsius(row.get("WTMP"))
+        temp = celsius(
+            row.get("WTMP")
+        )
 
         if temp is None:
             continue
@@ -604,14 +834,21 @@ def parse_ndbc_latest(
             continue
 
         samples.append({
-            "id": f"NDBC-{sid}",
-            "name": f"Bouée {sid}",
+            "id": sid,
+            "name": default_name(sid),
+            "platform_type": platform_type(sid),
             "lat": round(lat, 5),
             "lon": round(lon, 5),
             "time": iso(dt),
             "sea_temp_c": temp,
             "source": "NOAA/NDBC",
         })
+
+    print(
+        "  ->",
+        len(samples),
+        "mesure(s) WTMP dans les zones suivies",
+    )
 
     return samples
 
@@ -623,14 +860,16 @@ def parse_ndbc_latest(
 def choose_nearest(
     samples: List[dict],
     target: datetime,
-    tolerance_hours: float = 2.5,
+    tolerance_hours: float,
 ) -> Optional[dict]:
 
     best = None
     best_delta = None
 
     for sample in samples:
-        dt = parse_iso(sample.get("time"))
+        dt = parse_datetime(
+            sample.get("time")
+        )
 
         if dt is None:
             continue
@@ -659,107 +898,128 @@ def choose_nearest(
 def extreme(
     samples: List[dict],
     mode: str,
-) -> Tuple[Optional[float], Optional[str]]:
+) -> Tuple[
+    Optional[float],
+    Optional[str],
+]:
 
-    vals = []
+    values = []
 
     for sample in samples:
-        temp = fnum(sample.get("sea_temp_c"))
+        temp = fnum(
+            sample.get("sea_temp_c")
+        )
 
         if temp is None:
             continue
 
-        vals.append(
+        values.append(
             (
                 temp,
                 sample.get("time"),
             )
         )
 
-    if not vals:
+    if not values:
         return None, None
 
     chosen = (
-        min(vals, key=lambda x: x[0])
+        min(values, key=lambda x: x[0])
         if mode == "min"
-        else max(vals, key=lambda x: x[0])
+        else max(values, key=lambda x: x[0])
     )
 
-    return round(chosen[0], 1), chosen[1]
+    return (
+        round(chosen[0], 1),
+        chosen[1],
+    )
 
 
 def main() -> int:
     print(
-        f"=== Température de la mer v{VERSION} ==="
+        f"=== Température de la mer DENSE v{VERSION} ==="
     )
     print("Build :", BUILD_ID)
 
     now = utcnow()
-    cache = clean_cache(
-        load_cache(),
-        now,
-    )
 
-    new_samples = []
+    cache = load_cache()
 
-    # Aujourd'hui + veille :
-    # permet le fonctionnement juste après minuit UTC.
-    for days_back in (0, 1):
-        day = now - timedelta(days=days_back)
+    imported = []
+
+    # 4 fichiers Météo-France = fenêtre 72 h pratiquement
+    # complète dès le premier lancement.
+    mf_total = 0
+
+    for days_back in range(
+        MF_DAYS_TO_DOWNLOAD
+    ):
+        day = now - timedelta(
+            days=days_back
+        )
+
         response = download_mf_day(day)
 
         if response is None:
             continue
 
-        new_samples.extend(
-            parse_mf_response(response)
-        )
+        rows = parse_mf(response)
 
-    mf_count = len(new_samples)
+        imported.extend(rows)
+        mf_total += len(rows)
 
-    # Secours / complément NDBC.
+    # Complément NOAA/NDBC
     ndbc_response = download_ndbc()
 
     if ndbc_response is not None:
-        ndbc_samples = parse_ndbc_latest(
+        ndbc_rows = parse_ndbc(
             ndbc_response
         )
-        new_samples.extend(ndbc_samples)
     else:
-        ndbc_samples = []
+        ndbc_rows = []
 
+    imported.extend(ndbc_rows)
+
+    print()
     print(
-        "Nouveaux échantillons :",
-        len(new_samples),
-        "(Météo-France:",
-        mf_count,
-        "/ NOAA-NDBC:",
-        len(ndbc_samples),
-        ")",
+        "Import courant :",
+        mf_total,
+        "Météo-France +",
+        len(ndbc_rows),
+        "NOAA/NDBC",
     )
 
-    # Ajout + déduplication.
-    cache["samples"].extend(new_samples)
+    cache["samples"].extend(
+        imported
+    )
 
-    latest_dt = now
+    # Référence temporelle = observation la plus récente
+    # réellement disponible.
+    all_times = [
+        parse_datetime(s.get("time"))
+        for s in cache["samples"]
+    ]
+    all_times = [
+        dt
+        for dt in all_times
+        if dt is not None
+    ]
 
-    if cache["samples"]:
-        times = [
-            parse_iso(s.get("time"))
-            for s in cache["samples"]
-        ]
-        times = [dt for dt in times if dt]
-
-        if times:
-            latest_dt = max(times)
+    ref_time = (
+        max(all_times)
+        if all_times
+        else now
+    )
 
     cache = clean_cache(
         cache,
-        latest_dt,
+        ref_time,
     )
 
     cache["generated_at"] = iso(now)
-    cache["latest_observation_at"] = iso(latest_dt)
+    cache["latest_observation_at"] = iso(
+        ref_time
+    )
 
     CACHE.write_text(
         json.dumps(
@@ -771,23 +1031,47 @@ def main() -> int:
         encoding="utf-8",
     )
 
-    by_station: Dict[str, List[dict]] = defaultdict(list)
+    print(
+        "Cache 72 h :",
+        len(cache["samples"]),
+        "échantillon(s)",
+    )
+
+    by_station: Dict[
+        str,
+        List[dict],
+    ] = defaultdict(list)
 
     for sample in cache["samples"]:
-        sid = str(sample.get("id") or "").strip()
+        sid = canonical_id(
+            sample.get("id")
+        )
 
         if sid:
-            by_station[sid].append(sample)
+            by_station[sid].append(
+                sample
+            )
 
-    start_24 = latest_dt - timedelta(hours=24)
-    start_72 = latest_dt - timedelta(hours=72)
+    start_24 = ref_time - timedelta(
+        hours=24
+    )
+
+    start_72 = ref_time - timedelta(
+        hours=72
+    )
+
+    current_cutoff = ref_time - timedelta(
+        hours=MAX_CURRENT_AGE_HOURS
+    )
 
     stations = []
 
     for sid, samples in by_station.items():
         samples.sort(
             key=lambda s: (
-                parse_iso(s.get("time"))
+                parse_datetime(
+                    s.get("time")
+                )
                 or datetime.min.replace(
                     tzinfo=timezone.utc
                 )
@@ -795,16 +1079,22 @@ def main() -> int:
         )
 
         latest = samples[-1]
-        latest_time = parse_iso(latest.get("time"))
+
+        latest_time = parse_datetime(
+            latest.get("time")
+        )
 
         if latest_time is None:
             continue
 
-        # Écarte les stations devenues trop anciennes.
-        if latest_time < latest_dt - timedelta(hours=6):
+        # Conserve davantage de plateformes que la v1.0,
+        # tout en évitant les données franchement obsolètes.
+        if latest_time < current_cutoff:
             continue
 
-        current = fnum(latest.get("sea_temp_c"))
+        current = fnum(
+            latest.get("sea_temp_c")
+        )
 
         if current is None:
             continue
@@ -812,21 +1102,29 @@ def main() -> int:
         s24 = [
             s
             for s in samples
-            if parse_iso(s.get("time"))
-            and parse_iso(s.get("time")) > start_24
+            if (
+                parse_datetime(s.get("time"))
+                and parse_datetime(s.get("time"))
+                > start_24
+            )
         ]
 
         s72 = [
             s
             for s in samples
-            if parse_iso(s.get("time"))
-            and parse_iso(s.get("time")) > start_72
+            if (
+                parse_datetime(s.get("time"))
+                and parse_datetime(s.get("time"))
+                > start_72
+            )
         ]
 
         old = choose_nearest(
             samples,
-            latest_time - timedelta(hours=24),
-            tolerance_hours=3.0,
+            latest_time - timedelta(
+                hours=24
+            ),
+            tolerance_hours=4.0,
         )
 
         old_temp = (
@@ -836,25 +1134,68 @@ def main() -> int:
         )
 
         variation = (
-            round(current - old_temp, 1)
+            round(
+                current - old_temp,
+                1,
+            )
             if old_temp is not None
             else None
         )
 
-        min24, min24time = extreme(s24, "min")
-        max24, max24time = extreme(s24, "max")
-        min72, min72time = extreme(s72, "min")
-        max72, max72time = extreme(s72, "max")
+        min24, min24time = extreme(
+            s24,
+            "min",
+        )
+
+        max24, max24time = extreme(
+            s24,
+            "max",
+        )
+
+        min72, min72time = extreme(
+            s72,
+            "min",
+        )
+
+        max72, max72time = extreme(
+            s72,
+            "max",
+        )
+
+        age_minutes = int(
+            max(
+                0,
+                (
+                    ref_time - latest_time
+                ).total_seconds()
+                / 60,
+            )
+        )
+
+        ptype = (
+            latest.get("platform_type")
+            or platform_type(sid)
+        )
 
         stations.append({
             "id": sid,
-            "name": latest.get("name") or sid,
+            "name": (
+                latest.get("name")
+                or default_name(sid)
+            ),
+            "platform_type": ptype,
             "lat": latest.get("lat"),
             "lon": latest.get("lon"),
             "source": latest.get("source"),
 
-            "sea_temp_c": round(current, 1),
-            "sea_temp_time": latest.get("time"),
+            "sea_temp_c": round(
+                current,
+                1,
+            ),
+            "sea_temp_time": latest.get(
+                "time"
+            ),
+            "age_minutes": age_minutes,
 
             "temp_24h_ago_c": (
                 round(old_temp, 1)
@@ -882,22 +1223,28 @@ def main() -> int:
         })
 
     stations.sort(
-        key=lambda s: (
-            -s["sea_temp_c"],
-            s["name"],
+        key=lambda st: (
+            -st["sea_temp_c"],
+            st["name"],
         )
     )
 
-    def values(field: str) -> List[float]:
-        vals = []
+    def values(
+        field: str,
+    ) -> List[float]:
+
+        result = []
 
         for station in stations:
-            value = fnum(station.get(field))
+            value = fnum(
+                station.get(field)
+            )
 
             if value is not None:
-                vals.append(value)
+                result.append(value)
 
-        return vals
+        return result
+
 
     def metric(
         field: str,
@@ -920,6 +1267,7 @@ def main() -> int:
                 else None
             ),
         }
+
 
     metrics = {
         "sea_temp_c": metric(
@@ -948,13 +1296,19 @@ def main() -> int:
         ),
     }
 
-    source_counts = {}
+    source_counts = defaultdict(int)
+    platform_counts = defaultdict(int)
 
     for station in stations:
-        source = station.get("source") or "Inconnue"
-        source_counts[source] = (
-            source_counts.get(source, 0) + 1
-        )
+        source_counts[
+            station.get("source")
+            or "Inconnue"
+        ] += 1
+
+        platform_counts[
+            station.get("platform_type")
+            or "Autre"
+        ] += 1
 
     output = {
         "schema_version": SCHEMA_VERSION,
@@ -963,34 +1317,54 @@ def main() -> int:
         "status": "ok",
 
         "generated_at": iso(now),
-        "latest_observation_at": iso(latest_dt),
+        "latest_observation_at": iso(
+            ref_time
+        ),
 
-        "title": "Température de la mer",
+        "title": (
+            "Température de la mer — "
+            "bouées & bateaux"
+        ),
         "unit": "°C",
 
         "coverage": {
-            "mode": "cache_glissant_72h",
+            "mode": (
+                "Météo-France SHIP/BUOY "
+                "+ NOAA/NDBC + cache 72h"
+            ),
+            "mf_daily_files_requested": (
+                MF_DAYS_TO_DOWNLOAD
+            ),
             "history_hours": HISTORY_HOURS,
-            "samples_cached": len(cache["samples"]),
-            "sources_current": source_counts,
-            "note": (
-                "Au premier lancement, les historiques 24 h et 72 h "
-                "se remplissent progressivement."
+            "current_max_age_hours": (
+                MAX_CURRENT_AGE_HOURS
+            ),
+            "samples_cached": len(
+                cache["samples"]
+            ),
+            "sources_current": dict(
+                source_counts
+            ),
+            "platforms_current": dict(
+                platform_counts
             ),
         },
 
         "metrics": metrics,
+
         "stations_total": len(stations),
 
         "source": {
             "primary": (
-                "Météo-France — observations en mer SHIP/BUOY, tmer"
+                "Météo-France — messages "
+                "SHIP et BUOY, paramètre tmer"
             ),
-            "fallback": (
-                "NOAA/NDBC — latest observations, WTMP"
+            "complement": (
+                "NOAA/NDBC — latest_obs, WTMP"
             ),
             "mf_url_pattern": (
-                MF_BASE + "/bouees.YYYYMMDD.csv"
+                MF_BASE
+                + "/bouees.YYYYMMDD.csv"
             ),
             "ndbc_url": NDBC_LATEST,
         },
@@ -1009,22 +1383,31 @@ def main() -> int:
     )
 
     print()
-    print("=== CONTRÔLE ===")
+    print("=== CONTRÔLE FINAL ===")
     print("Version :", VERSION)
     print("Schema :", SCHEMA_VERSION)
     print("Build :", BUILD_ID)
-    print("Stations :", len(stations))
-    print("Sources :", source_counts)
+    print(
+        "Plateformes actuelles :",
+        len(stations),
+    )
+    print(
+        "Types :",
+        dict(platform_counts),
+    )
+    print(
+        "Sources :",
+        dict(source_counts),
+    )
 
     for field, item in metrics.items():
         print(
             field,
             ":",
             item["stations"],
-            "station(s)",
-            "min",
+            "point(s) ; min",
             item["min"],
-            "max",
+            "; max",
             item["max"],
         )
 
@@ -1033,7 +1416,10 @@ def main() -> int:
 
 if __name__ == "__main__":
     try:
-        raise SystemExit(main())
+        raise SystemExit(
+            main()
+        )
+
     except Exception as exc:
         print(
             "ERREUR FATALE :",
