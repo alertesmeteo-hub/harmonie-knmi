@@ -117,8 +117,116 @@
       "time": "2026-08-20T10:48:00Z",
       "sea_temp_c": 29.5,
       "source": "NOAA/NDBC"
+    },
+    {
+      "id": "NDBC-62050",
+      "name": "Bouée 62050",
+      "lat": 50.0,
+      "lon": -4.4,
+      "time": "2026-08-20T11:00:00Z",
+      "sea_temp_c": 17.9,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "NDBC-62103",
+      "name": "Bouée 62103",
+      "lat": 49.9,
+      "lon": -2.9,
+      "time": "2026-08-20T11:00:00Z",
+      "sea_temp_c": 17.6,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "NDBC-62107",
+      "name": "Bouée 62107",
+      "lat": 50.102,
+      "lon": -6.1,
+      "time": "2026-08-20T11:00:00Z",
+      "sea_temp_c": 19.3,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "NDBC-62163",
+      "name": "Bouée 62163",
+      "lat": 47.55,
+      "lon": -8.47,
+      "time": "2026-08-20T11:00:00Z",
+      "sea_temp_c": 20.7,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "NDBC-62170",
+      "name": "Bouée 62170",
+      "lat": 51.24,
+      "lon": 2.0,
+      "time": "2026-08-20T11:00:00Z",
+      "sea_temp_c": 20.6,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "NDBC-62304",
+      "name": "Bouée 62304",
+      "lat": 51.102,
+      "lon": 1.8,
+      "time": "2026-08-20T11:00:00Z",
+      "sea_temp_c": 20.4,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "NDBC-62305",
+      "name": "Bouée 62305",
+      "lat": 50.4,
+      "lon": 0.0,
+      "time": "2026-08-20T11:00:00Z",
+      "sea_temp_c": 18.9,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "NDBC-CHSV3",
+      "name": "Bouée CHSV3",
+      "lat": 17.748,
+      "lon": -64.699,
+      "time": "2026-08-20T10:54:00Z",
+      "sea_temp_c": 29.9,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "NDBC-CLBP4",
+      "name": "Bouée CLBP4",
+      "lat": 18.301,
+      "lon": -65.302,
+      "time": "2026-08-20T10:54:00Z",
+      "sea_temp_c": 29.8,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "NDBC-LAMV3",
+      "name": "Bouée LAMV3",
+      "lat": 18.318,
+      "lon": -64.724,
+      "time": "2026-08-20T10:54:00Z",
+      "sea_temp_c": 29.2,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "NDBC-LTBV3",
+      "name": "Bouée LTBV3",
+      "lat": 17.695,
+      "lon": -64.754,
+      "time": "2026-08-20T10:54:00Z",
+      "sea_temp_c": 29.5,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "NDBC-SJNP4",
+      "name": "Bouée SJNP4",
+      "lat": 18.459,
+      "lon": -66.116,
+      "time": "2026-08-20T10:54:00Z",
+      "sea_temp_c": 29.5,
+      "source": "NOAA/NDBC"
     }
   ],
-  "generated_at": "2026-08-20T11:31:03Z",
+  "generated_at": "2026-08-20T11:56:18Z",
   "latest_observation_at": "2026-08-20T11:00:00Z"
 }
