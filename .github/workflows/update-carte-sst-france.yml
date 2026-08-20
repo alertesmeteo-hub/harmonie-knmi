@@ -1,4 +1,4 @@
-name: Update Carte SST France MUR v1.0.0
+name: Update Carte SST France MUR v1.0.1
 
 on:
   workflow_dispatch:
@@ -11,7 +11,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: carte-sst-france-mur-v100
+  group: carte-sst-france-mur-v101
   cancel-in-progress: true
 
 jobs:
@@ -47,9 +47,9 @@ jobs:
           ).read_text(encoding="utf-8")
 
           checks = (
-              'VERSION = "1.0.0"',
+              'VERSION = "1.0.1"',
               'SCHEMA_VERSION = 1',
-              'BUILD_ID = "sst-france-mur-2km-20260820"',
+              'BUILD_ID = "sst-france-mur-landmask-v101-20260820"',
               'DATASET_ID = "jplMURSST41"',
           )
 
@@ -61,7 +61,7 @@ jobs:
                   )
 
           print(
-              "OK : générateur SST France v1.0.0"
+              "OK : générateur SST France v1.0.1"
           )
           PY
 
@@ -124,7 +124,7 @@ jobs:
                   "ERREUR : status != ok"
               )
 
-          if data.get("module_version") != "1.0.0":
+          if data.get("module_version") != "1.0.1":
               raise SystemExit(
                   "ERREUR : mauvaise version"
               )
@@ -138,6 +138,13 @@ jobs:
               raise SystemExit(
                   "ERREUR : date analyse absente"
               )
+
+          if not data.get("render", {}).get("land_mask_applied"):
+              raise SystemExit(
+                  "ERREUR : masque terre/mer non appliqué"
+              )
+
+          print("Masque terre/mer : OK")
 
           png = Path("sst_france.png")
 
@@ -191,7 +198,7 @@ jobs:
             exit 0
           fi
 
-          git commit -m "SST France MUR v1.0.0"
+          git commit -m "SST France MUR v1.0.1"
 
           if ! git push origin observations; then
             echo "Push concurrent : nouvel essai."
