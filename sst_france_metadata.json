@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "module_version": "1.0.1",
-  "build_id": "sst-france-mur-landmask-v101-20260820",
+  "module_version": "1.0.3",
+  "build_id": "sst-france-mur-webmercator-hover-v103-20260820",
   "status": "ok",
-  "generated_at": "2026-08-20T16:32:09Z",
+  "generated_at": "2026-08-20T17:39:14Z",
   "analysis_time": "2026-08-19T09:00:00Z",
   "title": "Température de surface de la mer — SST France",
   "source": {
@@ -21,10 +21,10 @@
     "resolution_label": "~2 km",
     "stride": 2,
     "bounds": {
-      "south": 39.0,
-      "north": 55.0,
-      "west": -10.0,
-      "east": 15.0
+      "south": 38.99,
+      "north": 55.01,
+      "west": -10.01,
+      "east": 15.01
     },
     "width_cells": 1251,
     "height_cells": 801,
@@ -32,11 +32,26 @@
     "color_scale_max_c": 32.0,
     "opacity": 0.9,
     "land_mask_applied": true,
+    "ocean_only_classes": [
+      1,
+      8
+    ],
+    "cell_edge_bounds": true,
+    "web_mercator_resampled": true,
+    "projection": "EPSG:3857-compatible",
     "sea_flags_kept": [
       1,
       8
     ],
-    "png": "sst_france.png"
+    "png": "sst_france.png",
+    "values_png": "sst_france_values.png",
+    "values_encoding": {
+      "offset_c": 10.0,
+      "scale": 10.0,
+      "red": "high_byte",
+      "green": "low_byte",
+      "alpha_zero": "no_ocean_data"
+    }
   },
   "stats": {
     "min_c": 15.6,
