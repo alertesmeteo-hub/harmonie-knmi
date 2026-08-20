@@ -3,35 +3,35 @@
 
 """
 Météo Climat Pro — Carte Températures & Records
-Version 1.0.0
+Version 1.1.0
 
-Produit :
-    observations_temperature.json
-    cache_temperature_records.json
+Ajouts v1.1.0
+-------------
+- Humidex
+- Ressenti au vent / refroidissement éolien
+- Variation de température sur 24 h
+- Température minimale sur 12 h
+- Température minimale sur 24 h
+- Température maximale sur 12 h
+- Température maximale sur 24 h
 
-Vues du module :
-    1. Température maximale observée aujourd'hui
-    2. Record du mois calendaire en cours
-    3. Record du mois battu / égalé pendant le mois en cours ?
-    4. Record absolu de chaleur
-    5. Record absolu battu / égalé pendant le mois en cours ?
+Le module conserve aussi :
+- Température maximale du jour
+- Record du mois
+- Record du mois battu / égalé ?
+- Record absolu
+- Record absolu battu / égalé ?
 
-Méthode :
-- Température live + max du jour : Package Observations V2.
-- Records : données climatologiques mensuelles Météo-France.
-  TXAB = maximum absolu mensuel des TX quotidiennes.
-  TXDAT = jour associé au TXAB.
-- Le record "ancien" est calculé AVANT le mois en cours, afin qu'un record
-  battu ce mois-ci reste identifiable.
-- Le maximum du mois en cours est pris dans le fichier climatologique
-  mensuel récent, puis complété avec le maximum live du jour.
-- Stations portant le marqueur SAPC exclues, comme sur la carte pluie.
+Sources :
+- Package Observations V2 : t, td, ff, tx, tn
+- DPObs V2 /liste-stations : noms des stations
+- Données climatologiques mensuelles Météo-France : TXAB / TXDAT
 
-Secrets GitHub :
-    METEOFRANCE_PACKAGE_OBS_KEY
-    METEOFRANCE_OBS_TOKEN
+Secrets :
+- METEOFRANCE_PACKAGE_OBS_KEY
+- METEOFRANCE_OBS_TOKEN
 
-Les deux secrets sont des API Keys et sont envoyés via l'en-tête "apikey".
+Les API Keys sont envoyées dans l'en-tête "apikey".
 """
 
 from __future__ import annotations
@@ -46,15 +46,15 @@ import re
 import sys
 import time
 from collections import defaultdict
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import requests
 
 
-VERSION = "1.0.0"
-SCHEMA_VERSION = 1
+VERSION = "1.1.0"
+SCHEMA_VERSION = 2
 
 PACKAGE_URL = (
     "https://public-api.meteofrance.fr/public/"
@@ -78,13 +78,11 @@ HTTP_TIMEOUT = 90
 PACKAGE_DELAY = float(os.getenv("MF_PACKAGE_DELAY", "1.25"))
 PACKAGE_RETRIES_HOURS = 4
 
-# Recalcul historique à chaque changement de mois ou après 35 jours.
+# 25 paquets : H ... H-24 pour calculer la variation exacte à 24 h.
+OBS_HISTORY_HOURS = 25
+
 HISTORICAL_CACHE_DAYS = 35
-
-# TXAB du mois en cours est actualisé périodiquement.
 CURRENT_MONTH_REFRESH_HOURS = 6
-
-# Tolérance pour comparer des valeurs publiées au dixième.
 RECORD_EPSILON = 0.05
 
 EXCLUDE_SAPC = True
@@ -138,8 +136,7 @@ def celsius(value: Any) -> Optional[float]:
     if value is None:
         return None
 
-    # Les observations Package Obs sont en kelvins.
-    # Filet de sécurité si le service renvoie un jour directement des °C.
+    # Package Observations : températures généralement en kelvins.
     if value > 100:
         value -= 273.15
 
@@ -254,14 +251,6 @@ def is_sapc(name: str) -> bool:
 
 
 def quality_ok(value: Any) -> bool:
-    """
-    Codes qualité Météo-France :
-      0 protégée
-      1 validée
-      2 douteuse
-      9 filtrée
-    Pour un record, on écarte 2 si le code est renseigné.
-    """
     if value in (None, ""):
         return True
 
@@ -281,14 +270,12 @@ def month_day_date(
     ym = re.sub(r"\D", "", str(aaaamm or ""))
     if len(ym) < 6:
         return None
-
     ym = ym[:6]
 
     d = re.sub(r"\D", "", str(day_value or ""))
     if not d:
         return None
 
-    # Parfois la date peut déjà être fournie intégralement.
     if len(d) >= 8:
         candidate = d[:8]
     else:
@@ -330,7 +317,6 @@ def update_record(
     if current_value is None or candidate_value > current_value + RECORD_EPSILON:
         return round(candidate_value, 1), candidate_date
 
-    # En cas d'égalité, on conserve la date la plus ancienne connue.
     if abs(candidate_value - current_value) <= RECORD_EPSILON:
         if (
             candidate_date
@@ -345,7 +331,78 @@ def update_record(
 
 
 # ---------------------------------------------------------------------
-# Package Observations V2 : températures live
+# Humidex et refroidissement éolien
+# ---------------------------------------------------------------------
+
+def humidex_value(
+    temperature_c: Optional[float],
+    dewpoint_c: Optional[float],
+) -> Optional[float]:
+    """
+    Formule standard d'Environnement et Changement climatique Canada.
+
+    L'indice est affiché pour les conditions actuelles si :
+    - T >= 20 °C
+    - Humidex >= T + 1
+    """
+    if temperature_c is None or dewpoint_c is None:
+        return None
+
+    if temperature_c < 20.0:
+        return None
+
+    dewpoint_k = dewpoint_c + 273.15
+    if dewpoint_k <= 0:
+        return None
+
+    e = 6.11 * math.exp(
+        5417.7530 * (
+            (1.0 / 273.15)
+            - (1.0 / dewpoint_k)
+        )
+    )
+
+    humidex = temperature_c + 0.5555 * (e - 10.0)
+
+    if humidex < temperature_c + 1.0:
+        return None
+
+    return round(humidex, 1)
+
+
+def wind_chill_value(
+    temperature_c: Optional[float],
+    wind_ms: Optional[float],
+) -> Optional[float]:
+    """
+    Refroidissement éolien standard.
+    ff est converti de m/s vers km/h.
+
+    Le module ne publie l'indice que lorsque T <= 10 °C
+    et V >= 5 km/h.
+    """
+    if temperature_c is None or wind_ms is None:
+        return None
+
+    wind_kmh = wind_ms * 3.6
+
+    if temperature_c > 10.0 or wind_kmh < 5.0:
+        return None
+
+    power = wind_kmh ** 0.16
+
+    value = (
+        13.12
+        + 0.6215 * temperature_c
+        - 11.37 * power
+        + 0.3965 * temperature_c * power
+    )
+
+    return round(value, 1)
+
+
+# ---------------------------------------------------------------------
+# Package Observations V2
 # ---------------------------------------------------------------------
 
 def package_request(
@@ -406,6 +463,7 @@ def find_latest_package(
 
     for back in range(PACKAGE_RETRIES_HOURS):
         hour = base - timedelta(hours=back)
+
         print("Recherche paquet :", iso(hour))
 
         response = package_request(key, hour)
@@ -421,32 +479,46 @@ def find_latest_package(
     )
 
 
-def load_live_temperatures(
+def load_live_metrics(
     key: str,
 ) -> Tuple[datetime, Dict[str, dict]]:
 
     latest_hour, latest_response = find_latest_package(key)
-    current_day = latest_hour.date()
-
-    # De 00 UTC à l'heure disponible.
-    first_hour = latest_hour.replace(hour=0)
-    hours_count = int(
-        (latest_hour - first_hour).total_seconds() // 3600
-    ) + 1
 
     stations: Dict[str, dict] = defaultdict(
         lambda: {
             "lat": None,
             "lon": None,
+
             "date": None,
-            "temp_current": None,
+            "temperature": None,
+            "dewpoint": None,
+            "humidity": None,
+            "wind_ms": None,
+
             "tx_today": None,
             "tx_today_time": None,
-            "hours_today": 0,
+
+            "temp_24h_ago": None,
+
+            "min_12h": None,
+            "min_12h_time": None,
+            "min_24h": None,
+            "min_24h_time": None,
+
+            "max_12h": None,
+            "max_12h_time": None,
+            "max_24h": None,
+            "max_24h_time": None,
+
+            "hours_12h": 0,
+            "hours_24h": 0,
         }
     )
 
-    for offset in range(hours_count):
+    current_day = latest_hour.date()
+
+    for offset in range(OBS_HISTORY_HOURS):
         target = latest_hour - timedelta(hours=offset)
 
         if offset == 0:
@@ -474,9 +546,6 @@ def load_live_temperatures(
                 )
             ) or target
 
-            if validity.date() != current_day:
-                continue
-
             item = stations[sid]
 
             lat = fnum(first(row, ("lat", "LAT", "latitude")))
@@ -491,40 +560,122 @@ def load_live_temperatures(
                 item["lat"] = round(lat, 6)
                 item["lon"] = round(lon, 6)
 
-            temp = celsius(first(row, ("t", "T")))
-            tx_hour = celsius(first(row, ("tx", "TX")))
+            t = celsius(first(row, ("t", "T")))
+            td = celsius(first(row, ("td", "TD")))
+            rh = fnum(first(row, ("u", "U")))
+            ff = fnum(first(row, ("ff", "FF")))
 
-            # Si TX horaire manque, T peut au moins servir au max observé.
-            max_candidate = tx_hour if tx_hour is not None else temp
+            tx = celsius(first(row, ("tx", "TX")))
+            tn = celsius(first(row, ("tn", "TN")))
 
-            if max_candidate is not None:
-                item["hours_today"] += 1
+            # Les extrêmes horaires sont privilégiés ; sinon T sert de filet.
+            max_candidate = tx if tx is not None else t
+            min_candidate = tn if tn is not None else t
 
+            # Relevé courant = paquet H.
+            if offset == 0:
+                item["date"] = iso(validity)
+                item["temperature"] = t
+                item["dewpoint"] = td
+                item["humidity"] = (
+                    round(rh, 1)
+                    if rh is not None and 0 <= rh <= 100
+                    else None
+                )
+                item["wind_ms"] = (
+                    round(ff, 2)
+                    if ff is not None and ff >= 0
+                    else None
+                )
+
+            # Variation à 24 h = T(H) - T(H-24)
+            if offset == 24 and t is not None:
+                item["temp_24h_ago"] = t
+
+            # Minimum/maximum sur 12 h :
+            # H à H-11 = 12 paquets.
+            if offset < 12:
+                if min_candidate is not None:
+                    item["hours_12h"] += 1
+                    if (
+                        item["min_12h"] is None
+                        or min_candidate < item["min_12h"]
+                    ):
+                        item["min_12h"] = min_candidate
+                        item["min_12h_time"] = iso(validity)
+
+                if max_candidate is not None:
+                    if (
+                        item["max_12h"] is None
+                        or max_candidate > item["max_12h"]
+                    ):
+                        item["max_12h"] = max_candidate
+                        item["max_12h_time"] = iso(validity)
+
+            # Minimum/maximum sur 24 h :
+            # H à H-23 = 24 paquets.
+            if offset < 24:
+                if min_candidate is not None:
+                    item["hours_24h"] += 1
+                    if (
+                        item["min_24h"] is None
+                        or min_candidate < item["min_24h"]
+                    ):
+                        item["min_24h"] = min_candidate
+                        item["min_24h_time"] = iso(validity)
+
+                if max_candidate is not None:
+                    if (
+                        item["max_24h"] is None
+                        or max_candidate > item["max_24h"]
+                    ):
+                        item["max_24h"] = max_candidate
+                        item["max_24h_time"] = iso(validity)
+
+            # Max du jour calendaire UTC, comme dans la v1.0.
+            if validity.date() == current_day and max_candidate is not None:
                 if (
                     item["tx_today"] is None
                     or max_candidate > item["tx_today"]
                 ):
-                    item["tx_today"] = round(max_candidate, 1)
+                    item["tx_today"] = max_candidate
                     item["tx_today_time"] = iso(validity)
 
-            old_date = parse_iso(item["date"])
+    # Calculs dérivés.
+    for item in stations.values():
+        current = fnum(item.get("temperature"))
+        old = fnum(item.get("temp_24h_ago"))
 
-            # Température "actuelle" = valeur du relevé le plus récent.
-            if (
-                temp is not None
-                and (
-                    old_date is None
-                    or validity > old_date
-                )
-            ):
-                item["temp_current"] = round(temp, 1)
-                item["date"] = iso(validity)
+        item["variation_24h"] = (
+            round(current - old, 1)
+            if current is not None and old is not None
+            else None
+        )
+
+        item["humidex"] = humidex_value(
+            current,
+            fnum(item.get("dewpoint")),
+        )
+
+        item["wind_chill"] = wind_chill_value(
+            current,
+            fnum(item.get("wind_ms")),
+        )
+
+        if item["min_12h"] is not None:
+            item["min_12h"] = round(item["min_12h"], 1)
+        if item["min_24h"] is not None:
+            item["min_24h"] = round(item["min_24h"], 1)
+        if item["max_12h"] is not None:
+            item["max_12h"] = round(item["max_12h"], 1)
+        if item["max_24h"] is not None:
+            item["max_24h"] = round(item["max_24h"], 1)
 
     return latest_hour, dict(stations)
 
 
 # ---------------------------------------------------------------------
-# DPObs V2 : noms de stations
+# DPObs V2 : noms
 # ---------------------------------------------------------------------
 
 def load_station_names(
@@ -602,7 +753,7 @@ def load_station_names(
 
 
 # ---------------------------------------------------------------------
-# Climatologie mensuelle
+# Climatologie records
 # ---------------------------------------------------------------------
 
 def department_candidates(
@@ -619,7 +770,6 @@ def department_candidates(
         if digits.startswith(code):
             return [code]
 
-    # On essaie les deux fichiers corses.
     if digits.startswith("20"):
         return ["2A", "2B", "20"]
 
@@ -683,7 +833,7 @@ def download_rows(
 
 
 # ---------------------------------------------------------------------
-# Cache
+# Cache records
 # ---------------------------------------------------------------------
 
 def load_cache() -> dict:
@@ -765,19 +915,11 @@ def build_historical_records(
         for dep in department_candidates(sid):
             wanted_by_dep[dep].add(sid)
 
-    month_record_value: Dict[str, Optional[float]] = {
-        sid: None for sid in station_ids
-    }
-    month_record_date: Dict[str, Optional[str]] = {
-        sid: None for sid in station_ids
-    }
+    month_record_value = {sid: None for sid in station_ids}
+    month_record_date = {sid: None for sid in station_ids}
 
-    abs_record_value: Dict[str, Optional[float]] = {
-        sid: None for sid in station_ids
-    }
-    abs_record_date: Dict[str, Optional[str]] = {
-        sid: None for sid in station_ids
-    }
+    abs_record_value = {sid: None for sid in station_ids}
+    abs_record_date = {sid: None for sid in station_ids}
 
     seen_rows = set()
 
@@ -802,7 +944,6 @@ def build_historical_records(
                 if ym is None:
                     continue
 
-                # Le record de référence doit être antérieur au mois en cours.
                 if ym >= current_ym:
                     continue
 
@@ -883,12 +1024,8 @@ def update_current_month_climate(
         for dep in department_candidates(sid):
             wanted_by_dep[dep].add(sid)
 
-    month_value: Dict[str, Optional[float]] = {
-        sid: None for sid in station_ids
-    }
-    month_date: Dict[str, Optional[str]] = {
-        sid: None for sid in station_ids
-    }
+    month_value = {sid: None for sid in station_ids}
+    month_date = {sid: None for sid in station_ids}
 
     for dep, wanted in sorted(wanted_by_dep.items()):
         url = latest_monthly_url(dep, now)
@@ -979,8 +1116,6 @@ def current_record(
         return month_value, month_date
 
     if abs(month_value - old_value) <= RECORD_EPSILON:
-        # Le record officiel est égalé ; on conserve la date historique
-        # comme date du record de référence.
         return old_value, old_date
 
     return old_value, old_date
@@ -992,6 +1127,10 @@ MONTHS_FR = (
 )
 
 
+# ---------------------------------------------------------------------
+# Sortie
+# ---------------------------------------------------------------------
+
 def main() -> int:
     print(
         f"=== Carte Températures & Records v{VERSION} ==="
@@ -1000,8 +1139,8 @@ def main() -> int:
     package_key = get_secret("METEOFRANCE_PACKAGE_OBS_KEY")
     obs_key = get_secret("METEOFRANCE_OBS_TOKEN")
 
-    # 1. Observations live
-    latest_hour, live = load_live_temperatures(package_key)
+    # 1. Observations + métriques 12/24 h
+    latest_hour, live = load_live_metrics(package_key)
 
     # 2. Noms
     names = load_station_names(obs_key)
@@ -1021,7 +1160,8 @@ def main() -> int:
     excluded_set = set(excluded_sapc)
 
     station_ids = [
-        sid for sid in raw_ids
+        sid
+        for sid in raw_ids
         if sid not in excluded_set
     ]
 
@@ -1031,7 +1171,7 @@ def main() -> int:
         f"retenues : {len(station_ids)}"
     )
 
-    # 3. Records climatologiques
+    # 3. Records
     cache = load_cache()
 
     build_historical_records(
@@ -1076,8 +1216,6 @@ def main() -> int:
 
         tx_today = fnum(obs.get("tx_today"))
 
-        # TXAB courant publié par la climatologie, généralement avec un
-        # décalage de contrôle, complété avec le maximum live du jour.
         month_climate_value = fnum(
             clim.get("current_month_txab")
         )
@@ -1161,6 +1299,8 @@ def main() -> int:
         elif abs_status == "egale":
             count_abs_egale += 1
 
+        wind_ms = fnum(obs.get("wind_ms"))
+
         stations.append({
             "id": sid,
             "name": names.get(sid, sid),
@@ -1168,14 +1308,45 @@ def main() -> int:
             "lon": obs["lon"],
             "date": obs.get("date"),
 
-            "temperature": obs.get("temp_current"),
+            "temperature": obs.get("temperature"),
+            "dewpoint": obs.get("dewpoint"),
+            "humidity": obs.get("humidity"),
+            "wind_ms": (
+                round(wind_ms, 2)
+                if wind_ms is not None
+                else None
+            ),
+            "wind_kmh": (
+                round(wind_ms * 3.6, 1)
+                if wind_ms is not None
+                else None
+            ),
+
+            "humidex": obs.get("humidex"),
+            "wind_chill": obs.get("wind_chill"),
+
+            "temp_24h_ago": obs.get("temp_24h_ago"),
+            "variation_24h": obs.get("variation_24h"),
+
+            "min_12h": obs.get("min_12h"),
+            "min_12h_time": obs.get("min_12h_time"),
+            "min_24h": obs.get("min_24h"),
+            "min_24h_time": obs.get("min_24h_time"),
+
+            "max_12h": obs.get("max_12h"),
+            "max_12h_time": obs.get("max_12h_time"),
+            "max_24h": obs.get("max_24h"),
+            "max_24h_time": obs.get("max_24h_time"),
+
+            "hours_12h": int(obs.get("hours_12h") or 0),
+            "hours_24h": int(obs.get("hours_24h") or 0),
+
             "tx_today": (
                 round(tx_today, 1)
                 if tx_today is not None
                 else None
             ),
             "tx_today_time": obs.get("tx_today_time"),
-            "hours_today": int(obs.get("hours_today") or 0),
 
             "month_current_max": (
                 round(current_month_value, 1)
@@ -1231,12 +1402,14 @@ def main() -> int:
     )
 
     def vmax(field: str) -> Optional[float]:
-        values = [
-            fnum(st.get(field))
-            for st in stations
-        ]
+        values = [fnum(st.get(field)) for st in stations]
         values = [v for v in values if v is not None]
         return round(max(values), 1) if values else None
+
+    def vmin(field: str) -> Optional[float]:
+        values = [fnum(st.get(field)) for st in stations]
+        values = [v for v in values if v is not None]
+        return round(min(values), 1) if values else None
 
     output = {
         "schema_version": SCHEMA_VERSION,
@@ -1245,7 +1418,7 @@ def main() -> int:
         "generated_at": iso(utcnow()),
         "latest_observation_at": iso(latest_hour),
 
-        "title": "Températures et records de chaleur",
+        "title": "Températures, ressentis et records",
         "unit": "°C",
 
         "current_month": {
@@ -1260,18 +1433,16 @@ def main() -> int:
         "metrics": {
             "tx_today": {
                 "label": "Temp. max jour",
-                "long_label": (
-                    "Température maximale observée aujourd'hui"
-                ),
+                "long_label": "Température maximale observée aujourd'hui",
                 "max": vmax("tx_today"),
             },
+
             "record_month": {
                 "label": "Record du mois",
-                "long_label": (
-                    f"Record de chaleur pour un mois de {month_label}"
-                ),
+                "long_label": f"Record de chaleur pour un mois de {month_label}",
                 "max": vmax("record_month"),
             },
+
             "record_month_status": {
                 "label": "Record mois battu ?",
                 "long_label": (
@@ -1281,13 +1452,13 @@ def main() -> int:
                 "battus": count_month_battu,
                 "egales": count_month_egale,
             },
+
             "record_absolute": {
                 "label": "Record absolu",
-                "long_label": (
-                    "Record absolu de température maximale"
-                ),
+                "long_label": "Record absolu de température maximale",
                 "max": vmax("record_absolute"),
             },
+
             "record_absolute_status": {
                 "label": "Record abs. battu ?",
                 "long_label": (
@@ -1296,6 +1467,51 @@ def main() -> int:
                 ),
                 "battus": count_abs_battu,
                 "egales": count_abs_egale,
+            },
+
+            "humidex": {
+                "label": "Humidex",
+                "long_label": "Indice Humidex actuel",
+                "max": vmax("humidex"),
+            },
+
+            "wind_chill": {
+                "label": "Ressenti au vent",
+                "long_label": "Refroidissement éolien actuel",
+                "min": vmin("wind_chill"),
+            },
+
+            "variation_24h": {
+                "label": "Variation 24 h",
+                "long_label": (
+                    "Variation de température depuis la même heure hier"
+                ),
+                "min": vmin("variation_24h"),
+                "max": vmax("variation_24h"),
+            },
+
+            "min_12h": {
+                "label": "Min. 12 h",
+                "long_label": "Température minimale sur les 12 dernières heures",
+                "min": vmin("min_12h"),
+            },
+
+            "min_24h": {
+                "label": "Min. 24 h",
+                "long_label": "Température minimale sur les 24 dernières heures",
+                "min": vmin("min_24h"),
+            },
+
+            "max_12h": {
+                "label": "Max. 12 h",
+                "long_label": "Température maximale sur les 12 dernières heures",
+                "max": vmax("max_12h"),
+            },
+
+            "max_24h": {
+                "label": "Max. 24 h",
+                "long_label": "Température maximale sur les 24 dernières heures",
+                "max": vmax("max_24h"),
             },
         },
 
@@ -1310,23 +1526,28 @@ def main() -> int:
         },
 
         "source": {
-            "live": (
-                "Météo-France - Package Observations V2"
-            ),
+            "live": "Météo-France - Package Observations V2",
+            "fields": "t, td, u, ff, tx, tn",
             "records": (
                 "Météo-France - données climatologiques "
                 "de base mensuelles"
             ),
             "record_parameter": (
-                "TXAB = maximum absolu mensuel "
-                "des TX quotidiennes"
+                "TXAB = maximum absolu mensuel des TX quotidiennes"
             ),
-            "record_date_parameter": (
-                "TXDAT = jour du TXAB"
+            "record_date_parameter": "TXDAT = jour du TXAB",
+            "humidex_method": (
+                "Formule standard Environnement et Changement "
+                "climatique Canada, à partir de T et du point de rosée"
             ),
-            "note": (
-                "Les comparaisons portent sur les records "
-                "de chaleur (température maximale TX)."
+            "wind_chill_method": (
+                "Formule standard de refroidissement éolien "
+                "avec vent à 10 m"
+            ),
+            "variation_24h_method": "T(H) - T(H-24)",
+            "extremes_method": (
+                "Extrêmes des champs horaires TN/TX, "
+                "avec T comme valeur de secours"
             ),
         },
 
@@ -1349,6 +1570,20 @@ def main() -> int:
     print(f"Stations : {len(stations)}")
     print(f"SAPC exclues : {len(excluded_sapc)}")
     print(f"Max du jour : {output['metrics']['tx_today']['max']} °C")
+    print(
+        "Variation 24h :",
+        output["metrics"]["variation_24h"]["min"],
+        "à",
+        output["metrics"]["variation_24h"]["max"],
+        "°C"
+    )
+    print(
+        "Min 24h / Max 24h :",
+        output["metrics"]["min_24h"]["min"],
+        "/",
+        output["metrics"]["max_24h"]["max"],
+        "°C"
+    )
     print(
         "Records du mois battus / égalés : "
         f"{count_month_battu} / {count_month_egale}"
