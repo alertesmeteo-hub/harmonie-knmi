@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "module_version": "1.0.0",
-  "build_id": "sst-france-mur-2km-20260820",
+  "module_version": "1.0.1",
+  "build_id": "sst-france-mur-landmask-v101-20260820",
   "status": "ok",
-  "generated_at": "2026-08-20T14:58:04Z",
+  "generated_at": "2026-08-20T16:32:09Z",
   "analysis_time": "2026-08-19T09:00:00Z",
   "title": "Température de surface de la mer — SST France",
   "source": {
@@ -12,6 +12,7 @@
     "dataset_id": "jplMURSST41",
     "product": "MUR SST Analysis fv04.1",
     "variable": "analysed_sst",
+    "mask_variable": "mask",
     "native_resolution_deg": 0.01,
     "native_resolution_label": "~1 km"
   },
@@ -30,6 +31,11 @@
     "color_scale_min_c": -2.0,
     "color_scale_max_c": 32.0,
     "opacity": 0.9,
+    "land_mask_applied": true,
+    "sea_flags_kept": [
+      1,
+      8
+    ],
     "png": "sst_france.png"
   },
   "stats": {
@@ -39,6 +45,7 @@
   "point_query": {
     "dataset_id": "jplMURSST41",
     "variable": "analysed_sst",
+    "mask_variable": "mask",
     "base_url": "https://coastwatch.pfeg.noaa.gov/erddap/griddap/jplMURSST41",
     "note": "Valeur native 0.01° interrogée au clic."
   }
