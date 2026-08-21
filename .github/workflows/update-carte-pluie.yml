@@ -18,7 +18,7 @@ concurrency:
 jobs:
   generate:
     runs-on: ubuntu-24.04
-    timeout-minutes: 55
+    timeout-minutes: 25
 
     steps:
       - name: Checkout
@@ -51,10 +51,12 @@ jobs:
           METEOFRANCE_OBS_TOKEN: ${{ secrets.METEOFRANCE_OBS_TOKEN }}
           MF_PACKAGE_DELAY: "1.35"
           MF_BUILD_ARCHIVES: "0"
+          MF_BOOTSTRAP_HOURLY: "0"
+          MF_REFRESH_DAILY: "0"
         run: |
           python generer_pluie_meteofrance.py
 
-      - name: Vérifier le JSON v2.3.2
+      - name: Vérifier le JSON v2.3.3
         shell: bash
         run: |
           test -s observations_pluie.json
@@ -69,7 +71,7 @@ jobs:
 
           assert data["status"] == "ok"
           assert data["schema_version"] >= 5
-          assert data["module_version"] == "2.3.2"
+          assert data["module_version"] == "2.3.3"
           assert isinstance(data["stations"], list)
           assert data["stations_total"] > 0
 
@@ -87,7 +89,7 @@ jobs:
           ]
           assert not sapc, f"Stations SAPC encore présentes : {len(sapc)}"
 
-          print("JSON v2.3.2 valide")
+          print("JSON v2.3.3 valide")
           print("Stations :", data["stations_total"])
           print("RR24 :", data.get("stations_rr24"))
           print("RR48 :", data.get("stations_rr48"))
@@ -135,5 +137,5 @@ jobs:
             exit 0
           fi
 
-          git -C "$PUBLISH_DIR" commit -m "Mise à jour carte pluie Météo-France v2.3.2"
+          git -C "$PUBLISH_DIR" commit -m "Mise à jour carte pluie Météo-France v2.3.3"
           git -C "$PUBLISH_DIR" push origin HEAD:observations

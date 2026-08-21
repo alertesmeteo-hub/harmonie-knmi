@@ -1,0 +1,90 @@
+name: Initialiser cache 48h 72h pluie
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: carte-pluie-publish
+  cancel-in-progress: false
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Installer Requests
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests==2.33.0
+
+      - name: Récupérer les caches existants
+        shell: bash
+        run: |
+          git fetch origin observations || true
+          git show origin/observations:cache_pluie_climatologie.json > cache_pluie_climatologie.json 2>/dev/null || true
+          git show origin/observations:cache_pluie_horaire.json > cache_pluie_horaire.json 2>/dev/null || true
+
+      - name: Amorcer précisément 48h et 72h
+        env:
+          METEOFRANCE_PACKAGE_OBS_KEY: ${{ secrets.METEOFRANCE_PACKAGE_OBS_KEY }}
+          METEOFRANCE_OBS_TOKEN: ${{ secrets.METEOFRANCE_OBS_TOKEN }}
+          MF_PACKAGE_DELAY: "1.35"
+          MF_BUILD_ARCHIVES: "0"
+          MF_BOOTSTRAP_HOURLY: "1"
+          MF_REFRESH_DAILY: "0"
+        run: |
+          python generer_pluie_meteofrance.py
+
+      - name: Vérifier profondeur du cache
+        run: |
+          python - <<'PY'
+          import json
+          with open('observations_pluie.json', encoding='utf-8') as f:
+              d=json.load(f)
+          print('Profondeur cache :', d.get('hourly_cache_depth_hours'), 'h')
+          print('Stations RR48 :', d.get('stations_rr48'))
+          print('Stations RR72 :', d.get('stations_rr72'))
+          assert d['module_version']=='2.3.3'
+          assert d['stations_total']>0
+          PY
+
+      - name: Préparer publication
+        run: |
+          mkdir -p /tmp/carte-pluie-publish
+          cp observations_pluie.json cache_pluie_climatologie.json cache_pluie_horaire.json /tmp/carte-pluie-publish/
+
+      - name: Publier sur observations
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          PUBLISH_DIR="/tmp/carte-pluie-observations"
+          rm -rf "$PUBLISH_DIR"
+          git fetch origin observations || true
+          if git ls-remote --exit-code --heads origin observations >/dev/null 2>&1; then
+            git worktree add --force -B observations-publish "$PUBLISH_DIR" origin/observations
+          else
+            mkdir -p "$PUBLISH_DIR"
+            git -C "$PUBLISH_DIR" init
+            git -C "$PUBLISH_DIR" remote add origin "$(git remote get-url origin)"
+            git -C "$PUBLISH_DIR" checkout --orphan observations-publish
+          fi
+          cp /tmp/carte-pluie-publish/* "$PUBLISH_DIR"/
+          git -C "$PUBLISH_DIR" add observations_pluie.json cache_pluie_climatologie.json cache_pluie_horaire.json
+          if git -C "$PUBLISH_DIR" diff --cached --quiet; then exit 0; fi
+          git -C "$PUBLISH_DIR" commit -m "Initialisation cache 48h 72h pluie v2.3.3"
+          git -C "$PUBLISH_DIR" push origin HEAD:observations
