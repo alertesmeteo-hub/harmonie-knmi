@@ -6,7 +6,7 @@ from datetime import timedelta
 from pathlib import Path
 from generer_pluie_meteofrance import iso, parse_iso, utcnow
 
-VERSION="2.3.5"
+VERSION="2.4.1"
 
 def load(path: Path):
     try:

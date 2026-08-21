@@ -3,7 +3,7 @@
 
 """
 Météo Climat Pro — Carte pluie Météo-France
-Version 2.3.5
+Version 2.4.1
 
 Nouveautés v2.3.0
 -----------------
@@ -57,7 +57,7 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 import requests
 
 
-VERSION = "2.3.5"
+VERSION = "2.4.1"
 CACHE_SCHEMA = 5
 
 PACKAGE_BASE = (
@@ -394,7 +394,7 @@ def save_hourly_cache(cache: dict, latest_hour: datetime) -> None:
     keep = {}
     for key, value in (cache.get("hours") or {}).items():
         dt = parse_iso(key)
-        if dt is not None and dt >= cutoff:
+        if dt is not None and cutoff <= dt <= latest_hour + timedelta(hours=1):
             keep[iso(dt)] = value
     cache["schema_version"] = 1
     cache["module_version"] = VERSION
@@ -635,9 +635,21 @@ def load_package_history(
     # Dans le workflow normal on ne télécharge JAMAIS les gros fichiers
     # climatologiques nationaux. Le workflow 48/72 h dédié est matriciel.
     if BOOTSTRAP_HOURLY:
-        print("[INFO] MF_BOOTSTRAP_HOURLY ignoré en v2.3.5 : utiliser le workflow matriciel dédié.")
+        print("[INFO] MF_BOOTSTRAP_HOURLY ignoré en v2.4.1 : utiliser le workflow matriciel dédié.")
 
+    depth_before_save = hourly_cache_depth(hourly_cache, latest_hour)
     save_hourly_cache(hourly_cache, latest_hour)
+    saved_cache = load_hourly_cache()
+    depth_after_save = hourly_cache_depth(saved_cache, latest_hour)
+    print(f"Cache horaire avant sauvegarde : {depth_before_save} h | après : {depth_after_save} h")
+    if depth_before_save >= 48 and depth_after_save < 48:
+        raise RuntimeError(
+            f"Régression cache horaire : {depth_before_save} h avant sauvegarde, "
+            f"{depth_after_save} h après sauvegarde"
+        )
+
+    # Utiliser le cache réellement sauvegardé pour les agrégations RR24/48/72.
+    cache_hours = saved_cache.get("hours") or {}
 
     agg: Dict[str, dict] = defaultdict(lambda: {
         "rr24_sum": 0.0, "rr24_hours": 0,

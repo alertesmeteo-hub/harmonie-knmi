@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Construit une PARTIE du cache horaire 80 h depuis data.gouv/Météo-France.
+"""Construit une PARTIE du cache horaire 80 h depuis Météo-France/data.gouv.fr.
 
-Conçu pour GitHub Actions matrix : un job ne traite qu'un petit groupe de
-Départements afin d'éviter les timeouts/SIGTERM 143.
+v2.4.1 : utilise le nom réellement documenté pour le lot récent des
+deux dernières années : H_XX_latest-YYYY-YYYY.csv.gz, hébergé sur le
+stockage officiel Météo-France. Le catalogue data.gouv.fr sert uniquement
+de repli si l'URL directe n'est pas disponible.
+Le CSV gzip est lu en flux afin d'éviter les gros pics mémoire dans Actions.
 """
 from __future__ import annotations
 
@@ -23,8 +26,9 @@ import requests
 
 from generer_pluie_meteofrance import clean_rain, first, iso, parse_hourly_datetime, station_id
 
-VERSION = "2.3.5"
+VERSION = "2.4.1"
 CATALOG = "https://www.data.gouv.fr/api/1/datasets/donnees-climatologiques-de-base-horaires/"
+BASE_HOR = "https://meteofrance.s3.sbg.io.cloud.ovh.net/data/synchro_ftp/BASE/HOR"
 
 
 def utcnow():
@@ -39,88 +43,135 @@ def normalize_dep(dep: str) -> str:
     return digits.zfill(2) if digits else dep
 
 
-def choose_resource(resources: list[dict], dep: str, year: int) -> Optional[dict]:
-    """Choisit le fichier horaire récent d'un département.
+def direct_recent_urls(dep: str, year: int) -> list[tuple[str, str]]:
+    """URL officielle du fichier récent couvrant les deux dernières années.
 
-    data.gouv ne renseigne pas toujours ``title`` de façon exploitable. Le
-    nom HOR_departement_XX... peut se trouver uniquement dans l'URL du
-    fichier. On inspecte donc titre + URL + identifiant/description et on
-    privilégie le lot contenant l'année courante (fichier des deux dernières
-    années, mis à jour quotidiennement par Météo-France).
+    Le guide data.gouv/Météo-France documente le schéma
+    H_XX_latest-YYYY-YYYY.csv.gz (ex. H_01_latest-2023-2024.csv.gz).
+    """
+    period = f"{year - 1}-{year}"
+    filename = f"H_{dep}_latest-{period}.csv.gz"
+    return [(f"{BASE_HOR}/{filename}", filename)]
+
+
+def choose_resource(resources: list[dict], dep: str, year: int) -> Optional[dict]:
+    """Retrouve le lot récent du département dans le catalogue data.gouv.
+
+    Le titre de ressource est actuellement de forme
+    HOR_departement_XX_periode_YYYY-YYYY, tandis que le fichier cible
+    sous-jacent peut être H_XX_latest-YYYY-YYYY.csv.gz. On accepte donc
+    les deux représentations.
     """
     dep_l = dep.lower()
-    dep_patterns = (
+    period = f"{year - 1}-{year}"
+    exact_tokens = (
+        f"h_{dep_l}_latest-{period}",
+        f"h-{dep_l}-latest-{period}",
+        f"hor_departement_{dep_l}_periode_{period}",
+        f"hor-departement-{dep_l}-periode-{period}",
+    )
+    generic_tokens = (
+        f"h_{dep_l}_latest-",
+        f"h-{dep_l}-latest-",
         f"hor_departement_{dep_l}_periode_",
         f"hor-departement-{dep_l}-periode-",
-        f"hor_departement_{dep_l}",
-        f"hor-departement-{dep_l}",
     )
     candidates = []
     for r in resources:
         title = str(r.get("title") or "")
         url = str(r.get("url") or "")
         description = str(r.get("description") or "")
-        rid = str(r.get("id") or "")
-        fmt = str(r.get("format") or "")
         if not url:
             continue
-        hay = " ".join((title, url, description, rid)).lower()
-        if not any(pat in hay for pat in dep_patterns):
+        hay = " ".join((title, url, description)).lower()
+        if not any(t in hay for t in generic_tokens):
             continue
-
-        # Priorité au fichier récent couvrant l'année courante.
-        score = 100
-        if str(year) in hay:
-            score -= 60
-        if str(year - 1) in hay and str(year) in hay:
-            score -= 20
-        if "periode" in hay or "period" in hay:
-            score -= 5
-        if url.lower().endswith(".gz") or "csv.gz" in hay or "gzip" in fmt.lower():
-            score -= 5
-
-        # Éviter si possible les anciennes décennies volumineuses.
-        old_years = re.findall(r"(?:19|20)\d{2}", hay)
-        if old_years and max(map(int, old_years)) < year - 1:
-            score += 80
-
-        updated = str(
-            r.get("last_modified")
-            or r.get("latest")
-            or r.get("created_at")
-            or ""
-        )
-        size = r.get("filesize") or r.get("file_size") or r.get("size") or 0
-        try:
-            size = int(size)
-        except Exception:
-            size = 0
-        candidates.append((score, -len(updated), size, updated, title or url.rsplit('/', 1)[-1], r))
-
+        exact = any(t in hay for t in exact_tokens)
+        years = [int(x) for x in re.findall(r"(?:19|20)\d{2}", hay)]
+        newest = max(years) if years else 0
+        updated = str(r.get("last_modified") or r.get("latest") or r.get("created_at") or "")
+        candidates.append((0 if exact else 100, -newest, updated, title or url, r))
     if not candidates:
         return None
-
-    # score faible = meilleur. À score égal : ressource la plus récente,
-    # puis fichier le plus petit (généralement le lot 2 ans, non la décennie).
-    candidates.sort(key=lambda x: (x[0], -int(re.sub(r"\D", "", x[3])[:14] or "0"), x[2], x[4]))
-    return candidates[0][-1]
+    candidates.sort(key=lambda x: (x[0], x[1], x[3]))
+    best_score, best_year = candidates[0][0], candidates[0][1]
+    best = [x for x in candidates if x[0] == best_score and x[1] == best_year]
+    best.sort(key=lambda x: x[2], reverse=True)
+    return best[0][-1]
 
 
 def iter_rows_stream(response: requests.Response):
     response.raw.decode_content = False
     raw = response.raw
-    is_gzip = False
     ctype = (response.headers.get("content-type") or "").lower()
     enc = (response.headers.get("content-encoding") or "").lower()
     url = str(response.url).lower()
-    if "gzip" in ctype or enc == "gzip" or url.endswith(".gz"):
-        is_gzip = True
+    is_gzip = "gzip" in ctype or enc == "gzip" or url.endswith(".gz")
     binary = gzip.GzipFile(fileobj=raw) if is_gzip else raw
     text = io.TextIOWrapper(binary, encoding="utf-8-sig", errors="replace", newline="")
-    # Météo-France utilise le point-virgule sur ces fichiers.
     reader = csv.DictReader(text, delimiter=";")
     for row in reader:
-        yield {str(k).strip(): (v.strip() if isinstance(v, str) else v) for k, v in row.items() if k is not None}
+        yield {
+            str(k).strip(): (v.strip() if isinstance(v, str) else v)
+            for k, v in row.items()
+            if k is not None
+        }
+
+
+def load_catalog(session: requests.Session) -> list[dict]:
+    try:
+        r = session.get(CATALOG, timeout=(15, 60))
+        r.raise_for_status()
+        resources = r.json().get("resources") or []
+        print("Ressources catalogue (repli) :", len(resources))
+        return resources
+    except Exception as exc:
+        print("[WARN] catalogue data.gouv indisponible :", exc)
+        return []
+
+
+def consume_url(session, url, label, cutoff, now, hours):
+    """Lit une ressource et injecte ses RR1 des 80 dernières heures."""
+    print("  essai :", label)
+    with session.get(url, timeout=(20, 240), stream=True) as rr:
+        rr.raise_for_status()
+        kept = 0
+        rows_seen = 0
+        min_dt = None
+        max_dt = None
+        file_min_dt = None
+        file_max_dt = None
+        cols_reported = False
+        seen_hours = set()
+        for row in iter_rows_stream(rr):
+            rows_seen += 1
+            if not cols_reported:
+                print("  colonnes :", ", ".join(list(row.keys())[:12]))
+                cols_reported = True
+            dt = parse_hourly_datetime(first(row, ("AAAAMMJJHH", "AAAAMMJJHHMM", "DATE", "date", "validity_time")))
+            if dt is None:
+                continue
+            file_min_dt = dt if file_min_dt is None or dt < file_min_dt else file_min_dt
+            file_max_dt = dt if file_max_dt is None or dt > file_max_dt else file_max_dt
+            if dt < cutoff or dt > now + timedelta(hours=1):
+                continue
+            sid = station_id(row)
+            if not sid:
+                continue
+            rain = clean_rain(first(row, ("RR1", "rr1", "RR", "rr")))
+            if rain is None:
+                continue
+            hdt = dt.replace(minute=0, second=0, microsecond=0)
+            key = iso(hdt)
+            hours.setdefault(key, {})[sid] = round(rain, 3)
+            seen_hours.add(key)
+            kept += 1
+            min_dt = hdt if min_dt is None or hdt < min_dt else min_dt
+            max_dt = hdt if max_dt is None or hdt > max_dt else max_dt
+        print("  lignes lues :", rows_seen, "| RR1 conservées :", kept, "| heures utiles :", len(seen_hours))
+        if file_max_dt is not None:
+            print("  couverture fichier :", iso(file_min_dt), "->", iso(file_max_dt))
+        return True, kept, min_dt, max_dt, len(seen_hours), file_max_dt
 
 
 def main() -> int:
@@ -141,56 +192,75 @@ def main() -> int:
 
     print("Départements :", ", ".join(deps))
     print("Fenêtre conservée :", iso(cutoff), "->", iso(now))
+    print("Mode : catalogue officiel data.gouv en priorité, URL directe Météo-France en secours")
 
-    r = session.get(CATALOG, timeout=(15, 45))
-    r.raise_for_status()
-    resources = r.json().get("resources") or []
-    print("Ressources catalogue :", len(resources))
-
+    # Charger le catalogue une seule fois par lot : il fournit l'URL exacte
+    # actuellement publiée pour chaque département et évite de dépendre
+    # d'une convention de nom de fichier susceptible d'évoluer.
+    resources: Optional[list[dict]] = load_catalog(session)
     hours: dict[str, dict[str, float]] = {}
     total_values = 0
+    successful_departments = 0
 
     for dep in deps:
-        res = choose_resource(resources, dep, now.year)
-        if not res:
-            print(f"[WARN] {dep}: aucune ressource horaire récente trouvée")
-            continue
-        title = str(res.get("title") or "")
-        url = str(res.get("url") or "")
-        label = title or url.rsplit('/', 1)[-1]
-        print(f"[{dep}] ressource: {label}")
-        try:
-            rr = session.get(url, timeout=(20, 180))
-            rr.raise_for_status()
-            # parse_delimited détecte le gzip par sa signature binaire. C'est
-            # plus fiable que de se fier au suffixe de l'URL data.gouv.
-            from generer_pluie_meteofrance import parse_delimited
-            rows = parse_delimited(rr.content)
-            kept = 0
-            min_dt = None
-            max_dt = None
-            for row in rows:
-                dt = parse_hourly_datetime(first(row, ("AAAAMMJJHH", "AAAAMMJJHHMM", "DATE", "date", "validity_time")))
-                if dt is None or dt < cutoff or dt > now + timedelta(hours=1):
+        print(f"[{dep}]")
+        kept = 0
+        min_dt = max_dt = None
+        source_used = None
+        tried_urls = set()
+
+        # 1) catalogue officiel data.gouv : source d'autorité pour l'URL exacte
+        res = choose_resource(resources or [], dep, now.year)
+        catalog_url = str((res or {}).get("url") or "")
+        catalog_label = str((res or {}).get("title") or catalog_url.rsplit("/", 1)[-1])
+        if catalog_url:
+            tried_urls.add(catalog_url)
+            try:
+                ok, k1, dmin1, dmax1, hcount1, file_max1 = consume_url(
+                    session, catalog_url, catalog_label, cutoff, now, hours
+                )
+                if ok and k1:
+                    kept += k1
+                    min_dt = dmin1
+                    max_dt = dmax1
+                    source_used = catalog_label
+                elif ok and file_max1 is not None:
+                    print(f"[WARN] {dep}: ressource catalogue lisible mais aucune RR1 récente; dernière heure {iso(file_max1)}")
+            except Exception as exc:
+                print(f"[WARN] {dep}: ressource catalogue impossible : {exc}")
+        else:
+            print(f"[WARN] {dep}: aucune ressource récente trouvée dans le catalogue")
+
+        # 2) URL directe en secours seulement si le catalogue n'a rien fourni
+        if kept == 0:
+            for candidate_url, candidate_label in direct_recent_urls(dep, now.year):
+                if candidate_url in tried_urls:
                     continue
-                sid = station_id(row)
-                if not sid:
-                    continue
-                rain = clean_rain(first(row, ("RR1", "rr1", "RR", "rr")))
-                if rain is None:
-                    continue
-                key = iso(dt.replace(minute=0, second=0, microsecond=0))
-                hours.setdefault(key, {})[sid] = round(rain, 3)
-                kept += 1
-                min_dt = dt if min_dt is None or dt < min_dt else min_dt
-                max_dt = dt if max_dt is None or dt > max_dt else max_dt
-            total_values += kept
-            if kept:
-                print(f"[{dep}] {kept} valeurs conservées | {iso(min_dt)} -> {iso(max_dt)}")
-            else:
-                print(f"[WARN] {dep}: fichier trouvé mais aucune RR1 dans les 80 dernières heures")
-        except Exception as exc:
-            print(f"[WARN] {dep}: téléchargement/lecture impossible: {exc}")
+                tried_urls.add(candidate_url)
+                try:
+                    ok, k2, dmin2, dmax2, hcount2, file_max2 = consume_url(
+                        session, candidate_url, candidate_label, cutoff, now, hours
+                    )
+                    if ok and k2:
+                        kept += k2
+                        min_dt = dmin2
+                        max_dt = dmax2
+                        source_used = candidate_label
+                        break
+                    if ok and file_max2 is not None:
+                        print(f"[WARN] {dep}: URL directe lisible mais aucune RR1 récente; dernière heure {iso(file_max2)}")
+                except Exception as exc:
+                    print(f"[WARN] {dep}: {candidate_label} impossible : {exc}")
+
+        if source_used:
+            print(f"[{dep}] source retenue : {source_used}")
+
+        total_values += kept
+        if kept:
+            successful_departments += 1
+            print(f"[{dep}] OK : {kept} RR1 | {iso(min_dt)} -> {iso(max_dt)}")
+        else:
+            print(f"[WARN] {dep}: aucune RR1 dans les 80 dernières heures")
 
     out = {
         "schema_version": 1,
@@ -199,8 +269,21 @@ def main() -> int:
         "hours": hours,
     }
     Path(args.output).write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
-    print("Heures :", len(hours), "| valeurs :", total_values, "| fichier :", args.output)
-    return 0 if hours else 3
+    print("Départements avec données :", successful_departments, "/", len(deps))
+    print("Heures distinctes :", len(hours), "| valeurs :", total_values, "| fichier :", args.output)
+
+    # Validation forte : ne jamais publier un lot qui n'apporte pas réellement
+    # assez d'historique pour participer au calcul 48 h.
+    counts = {}
+    for bucket in hours.values():
+        for sid in (bucket or {}):
+            counts[sid] = counts.get(sid, 0) + 1
+    stations44 = sum(v >= 44 for v in counts.values())
+    print("Stations avec >=44 RR1 dans ce lot :", stations44)
+    if len(hours) < 48 or stations44 == 0:
+        print("[ERREUR] lot historique insuffisant : il ne sera pas publié.", file=sys.stderr)
+        return 4
+    return 0
 
 
 if __name__ == "__main__":
