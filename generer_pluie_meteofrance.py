@@ -3,7 +3,7 @@
 
 """
 Météo Climat Pro — Carte pluie Météo-France
-Version 2.3.2
+Version 2.3.3
 
 Nouveautés v2.3.0
 -----------------
@@ -57,7 +57,7 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 import requests
 
 
-VERSION = "2.3.2"
+VERSION = "2.3.3"
 CACHE_SCHEMA = 5
 
 PACKAGE_BASE = (
@@ -121,6 +121,14 @@ EXCLUDE_SAPC = True
 # Les archives historiques (records + normales) sont lourdes à télécharger.
 # Elles sont construites uniquement par le workflow dédié.
 BUILD_ARCHIVES = os.getenv("MF_BUILD_ARCHIVES", "0").strip().lower() in {
+    "1", "true", "yes", "oui", "on"
+}
+
+# Les traitements lourds sont désactivés dans le workflow horaire.
+BOOTSTRAP_HOURLY = os.getenv("MF_BOOTSTRAP_HOURLY", "0").strip().lower() in {
+    "1", "true", "yes", "oui", "on"
+}
+REFRESH_DAILY = os.getenv("MF_REFRESH_DAILY", "0").strip().lower() in {
     "1", "true", "yes", "oui", "on"
 }
 
@@ -603,12 +611,16 @@ def load_package_history(
             vkey = iso(validity.replace(minute=0, second=0, microsecond=0))
             cache_hours.setdefault(vkey, {})[sid] = round(rr1, 3)
 
-    # Si le cache ne contient pas encore 72 h (première installation),
-    # l'amorcer avec les données horaires climatologiques mises à jour
-    # quotidiennement. Cela rend 48/72 h utilisables dès la première mise en route.
+    # L'amorçage 72 h via les gros fichiers climatologiques est volontairement
+    # interdit dans le workflow horaire. Il se fait uniquement via le workflow
+    # dédié avec MF_BOOTSTRAP_HOURLY=1.
     current_station_ids = sorted({sid for bucket in cache_hours.values() for sid in (bucket or {}).keys()})
-    bootstrap_hourly_cache_from_datagouv(hourly_cache, current_station_ids, latest_hour)
-    cache_hours = hourly_cache.setdefault("hours", {})
+    if BOOTSTRAP_HOURLY:
+        bootstrap_hourly_cache_from_datagouv(hourly_cache, current_station_ids, latest_hour)
+        cache_hours = hourly_cache.setdefault("hours", {})
+    else:
+        depth = hourly_cache_depth(hourly_cache, latest_hour)
+        print(f"Mode rapide : amorçage data.gouv désactivé (cache horaire ≈ {depth} h).")
     save_hourly_cache(hourly_cache, latest_hour)
 
     agg: Dict[str, dict] = defaultdict(lambda: {
@@ -1448,7 +1460,13 @@ def main() -> int:
             "Utiliser le workflow dédié pour les initialiser/rafraîchir."
         )
 
-    update_current_month(cache, station_ids, latest_hour)
+    if REFRESH_DAILY:
+        update_current_month(cache, station_ids, latest_hour)
+    else:
+        print(
+            "Mode rapide : téléchargement quotidien mois/saison/année désactivé. "
+            "Le cache quotidien existant est conservé."
+        )
 
     cache["schema_version"] = CACHE_SCHEMA
     cache["module_version"] = VERSION
@@ -1765,6 +1783,9 @@ def main() -> int:
             1 for st in stations if st["rr_daily_record"] is not None
         ),
         "stations_excluded_sapc": len(excluded_sapc_ids),
+        "hourly_cache_depth_hours": hourly_cache_depth(load_hourly_cache(), latest_hour),
+        "hourly_cache_ready_48h": hourly_cache_depth(load_hourly_cache(), latest_hour) >= 48,
+        "hourly_cache_ready_72h": hourly_cache_depth(load_hourly_cache(), latest_hour) >= 72,
 
         "source": {
             "observations": (
