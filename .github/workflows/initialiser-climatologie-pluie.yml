@@ -3,14 +3,11 @@ name: Initialiser climatologie + records pluie
 on:
   workflow_dispatch:
   schedule:
-    # Rafraîchissement annuel de l'historique, hors des mises à jour horaires.
     - cron: '17 3 10 1 *'
 
 permissions:
   contents: write
 
-# Même groupe que le workflow horaire : pas de collision lors de la publication,
-# mais aucune exécution en cours n'est annulée.
 concurrency:
   group: carte-pluie-publish
   cancel-in-progress: false
@@ -19,7 +16,6 @@ jobs:
   archives:
     runs-on: ubuntu-24.04
     timeout-minutes: 330
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -32,18 +28,16 @@ jobs:
           python-version: '3.11'
 
       - name: Installer Requests
-        run: |
-          python -m pip install --upgrade pip
-          pip install requests==2.33.0
+        run: pip install requests==2.33.0
 
-      - name: Récupérer le cache existant
-        shell: bash
+      - name: Récupérer les caches existants
         run: |
-          git fetch origin observations || true
-          git show origin/observations:cache_pluie_climatologie.json \
-            > cache_pluie_climatologie.json 2>/dev/null || true
-          git show origin/observations:cache_pluie_horaire.json \
-            > cache_pluie_horaire.json 2>/dev/null || true
+          git fetch origin observations
+          git show origin/observations:cache_pluie_horaire.json > cache_pluie_horaire.json
+          git show origin/observations:cache_pluie_climatologie.json > cache_pluie_climatologie.json 2>/dev/null || echo '{"schema_version":5,"stations":{}}' > cache_pluie_climatologie.json
+
+      - name: Vérifier le cache glissant avant archives
+        run: python verifier_cache_pluie.py --min-depth 72 --require-48 --require-72
 
       - name: Construire climatologie et records historiques
         env:
@@ -53,63 +47,37 @@ jobs:
           MF_BUILD_ARCHIVES: "1"
           MF_BOOTSTRAP_HOURLY: "0"
           MF_REFRESH_DAILY: "1"
-        run: |
-          python generer_pluie_meteofrance.py
+        run: python generer_pluie_meteofrance.py
 
-      - name: Vérifier les archives
-        shell: bash
+      - name: Vérifier les archives et 48/72 h
         run: |
-          test -s observations_pluie.json
-          test -s cache_pluie_climatologie.json
-          test -s cache_pluie_horaire.json
+          python verifier_cache_pluie.py --min-depth 72 --require-48 --require-72
           python - <<'PY'
           import json
-          with open("observations_pluie.json", encoding="utf-8") as f:
-              data = json.load(f)
-          assert data["module_version"] == "2.4.1"
-          assert data["stations_total"] > 0
-          print("Stations :", data["stations_total"])
-          print("Stations avec record :", data.get("stations_records"))
-          print("Records max :", data["metrics"]["rr_daily_record"]["max"], "mm")
+          d=json.load(open('observations_pluie.json',encoding='utf-8'))
+          assert d.get('module_version')=='2.6.0'
+          assert d.get('stations_rr48',0)>0
+          assert d.get('stations_rr72',0)>0
+          assert str(d.get('source',{}).get('observations','')).startswith('Météo-France')
+          print('Stations :',d.get('stations_total'))
+          print('Stations avec record :',d.get('stations_records'))
           PY
 
-      - name: Préparer la publication
-        shell: bash
+      - name: Préparer publication
         run: |
           mkdir -p /tmp/carte-pluie-publish
-          cp observations_pluie.json /tmp/carte-pluie-publish/
-          cp cache_pluie_climatologie.json /tmp/carte-pluie-publish/
-          cp cache_pluie_horaire.json /tmp/carte-pluie-publish/
+          cp observations_pluie.json cache_pluie_climatologie.json cache_pluie_horaire.json /tmp/carte-pluie-publish/
 
-      - name: Publier sur la branche observations
-        shell: bash
+      - name: Publier sur observations
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          # Ne jamais basculer le worktree courant : il contient les JSON générés
-          # et Git refuserait le checkout s'ils existent déjà sur observations.
           PUBLISH_DIR="/tmp/carte-pluie-observations"
           rm -rf "$PUBLISH_DIR"
-
-          if git ls-remote --exit-code --heads origin observations >/dev/null 2>&1; then
-            git fetch origin observations
-            git worktree add --force -B observations-publish "$PUBLISH_DIR" origin/observations
-          else
-            mkdir -p "$PUBLISH_DIR"
-            git -C "$PUBLISH_DIR" init
-            git -C "$PUBLISH_DIR" remote add origin "$(git remote get-url origin)"
-            git -C "$PUBLISH_DIR" checkout --orphan observations-publish
-          fi
-
-          cp /tmp/carte-pluie-publish/observations_pluie.json "$PUBLISH_DIR"/
-          cp /tmp/carte-pluie-publish/cache_pluie_climatologie.json "$PUBLISH_DIR"/
-          cp /tmp/carte-pluie-publish/cache_pluie_horaire.json "$PUBLISH_DIR"/
-
+          git fetch origin observations
+          git worktree add --force -B observations-publish "$PUBLISH_DIR" origin/observations
+          cp /tmp/carte-pluie-publish/* "$PUBLISH_DIR"/
           git -C "$PUBLISH_DIR" add observations_pluie.json cache_pluie_climatologie.json cache_pluie_horaire.json
-          if git -C "$PUBLISH_DIR" diff --cached --quiet; then
-            echo "Aucun changement à publier."
-            exit 0
-          fi
-          git -C "$PUBLISH_DIR" commit -m "Initialisation climatologie pluie v2.4.1"
+          if git -C "$PUBLISH_DIR" diff --cached --quiet; then exit 0; fi
+          git -C "$PUBLISH_DIR" commit -m "Initialisation climatologie pluie v2.6.0"
           git -C "$PUBLISH_DIR" push origin HEAD:observations

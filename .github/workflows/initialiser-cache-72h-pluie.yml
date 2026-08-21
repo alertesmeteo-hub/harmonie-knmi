@@ -1,4 +1,4 @@
-name: Initialiser cache 48h 72h pluie
+name: Initialiser cache 48h 72h pluie Météo-France
 
 on:
   workflow_dispatch:
@@ -6,17 +6,15 @@ on:
 permissions:
   contents: write
 
-# Même groupe que la publication horaire : aucune écriture concurrente
-# sur la branche observations.
 concurrency:
   group: carte-pluie-publish
   cancel-in-progress: false
 
 jobs:
   build-parts:
-    name: "Cache 72h - lot ${{ matrix.part }}"
+    name: "Cache MF 80h - lot ${{ matrix.part }}"
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 50
     strategy:
       fail-fast: false
       max-parallel: 6
@@ -49,12 +47,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Vérifier cohérence des fichiers v2.4.1
-        shell: bash
+      - name: Vérifier cohérence v2.6.0
         run: |
-          grep -q 'VERSION = "2.4.1"' generer_pluie_meteofrance.py
-          grep -q 'VERSION = "2.4.1"' initialiser_cache_horaire_part.py
-          grep -q 'VERSION="2.4.1"' fusionner_caches_horaires.py
+          grep -q 'VERSION = "2.6.0"' generer_pluie_meteofrance.py
+          grep -q 'VERSION = "2.6.0"' initialiser_cache_horaire_part.py
+          grep -q 'VERSION = "2.6.0"' fusionner_caches_horaires.py
 
       - name: Python
         uses: actions/setup-python@v5
@@ -64,27 +61,26 @@ jobs:
       - name: Installer Requests
         run: pip install requests==2.33.0
 
-      - name: Construire le lot horaire
+      - name: Télécharger les RR1 horaires officiels
         env:
           MF_BOOTSTRAP_DEPARTMENTS: ${{ matrix.deps }}
           MF_BOOTSTRAP_OUTPUT: cache_pluie_horaire_part_${{ matrix.part }}.json
-        run: |
-          python initialiser_cache_horaire_part.py
+        run: python initialiser_cache_horaire_part.py
 
       - name: Publier le lot temporaire
         uses: actions/upload-artifact@v4
         with:
-          name: cache-pluie-part-${{ matrix.part }}
+          name: cache-pluie-mf-part-${{ matrix.part }}
           path: cache_pluie_horaire_part_${{ matrix.part }}.json
           if-no-files-found: error
           retention-days: 1
 
   merge-and-publish:
-    name: Fusionner et publier 48h/72h
+    name: Fusionner puis calculer 48h/72h
     needs: build-parts
-    if: always() && !cancelled()
+    if: ${{ needs.build-parts.result == 'success' }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
@@ -92,13 +88,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Vérifier cohérence des fichiers v2.4.1
-        shell: bash
-        run: |
-          grep -q 'VERSION = "2.4.1"' generer_pluie_meteofrance.py
-          grep -q 'VERSION = "2.4.1"' initialiser_cache_horaire_part.py
-          grep -q 'VERSION="2.4.1"' fusionner_caches_horaires.py
-
       - name: Python
         uses: actions/setup-python@v5
         with:
@@ -107,94 +96,58 @@ jobs:
       - name: Installer Requests
         run: pip install requests==2.33.0
 
-      - name: Récupérer caches existants
-        shell: bash
+      - name: Récupérer les caches déjà publiés
         run: |
           git fetch origin observations || true
-          git show origin/observations:cache_pluie_horaire.json > cache_pluie_horaire.json 2>/dev/null || true
-          git show origin/observations:cache_pluie_climatologie.json > cache_pluie_climatologie.json 2>/dev/null || true
+          git show origin/observations:cache_pluie_horaire.json > cache_pluie_horaire.json 2>/dev/null || echo '{"schema_version":2,"hours":{},"stations_meta":{}}' > cache_pluie_horaire.json
+          git show origin/observations:cache_pluie_climatologie.json > cache_pluie_climatologie.json 2>/dev/null || echo '{"schema_version":5,"stations":{}}' > cache_pluie_climatologie.json
 
-      - name: Télécharger les lots
+      - name: Télécharger les 11 lots
         uses: actions/download-artifact@v4
         with:
-          pattern: cache-pluie-part-*
+          pattern: cache-pluie-mf-part-*
           path: parts
           merge-multiple: true
 
-      - name: Fusionner le cache 80h
-        run: |
-          python fusionner_caches_horaires.py --parts parts --existing cache_pluie_horaire.json --output cache_pluie_horaire.json
+      - name: Fusionner 80 h Météo-France
+        run: python fusionner_caches_horaires.py --parts parts --existing cache_pluie_horaire.json --output cache_pluie_horaire.json
 
-      - name: Contrôler le cache fusionné
-        run: |
-          python - <<'PY'
-          import json
-          from datetime import datetime
-          with open('cache_pluie_horaire.json', encoding='utf-8') as f:
-              d=json.load(f)
-          keys=sorted((d.get('hours') or {}).keys())
-          print('Heures distinctes fusionnées :', len(keys))
-          if keys:
-              print('Début :', keys[0])
-              print('Fin   :', keys[-1])
-          if len(keys) < 48:
-              raise SystemExit('Cache historique insuffisant (<48 h) : vérifier les jobs de lots ci-dessus')
+      - name: Contrôler l'amorçage archive
+        run: python verifier_cache_pluie.py --min-depth 66 --require-48
 
-          counts={}
-          for h,b in (d.get('hours') or {}).items():
-              for sid in (b or {}):
-                  counts[sid]=counts.get(sid,0)+1
-          c44=sum(v>=44 for v in counts.values())
-          c66=sum(v>=66 for v in counts.values())
-          print('Stations avec >=44 valeurs horaires :', c44)
-          print('Stations avec >=66 valeurs horaires :', c66)
-          if c44 == 0:
-              raise SystemExit('Aucune station avec >=44 h : bootstrap 48 h invalide')
-          if c66 == 0:
-              print('[WARN] aucune station >=66 h avant raccord au temps réel ; le générateur doit compléter avec Package Obs')
-          PY
-
-      - name: Générer la carte avec le cache fusionné
+      - name: Raccorder les dernières 24 h Package Observations
         env:
           METEOFRANCE_PACKAGE_OBS_KEY: ${{ secrets.METEOFRANCE_PACKAGE_OBS_KEY }}
           METEOFRANCE_OBS_TOKEN: ${{ secrets.METEOFRANCE_OBS_TOKEN }}
-          MF_PACKAGE_DELAY: "1.30"
+          MF_PACKAGE_DELAY: "1.35"
           MF_BUILD_ARCHIVES: "0"
           MF_BOOTSTRAP_HOURLY: "0"
           MF_REFRESH_DAILY: "0"
-        run: |
-          python generer_pluie_meteofrance.py
+        run: python generer_pluie_meteofrance.py
 
-      - name: Vérifier 48h / 72h
+      - name: Vérification finale 100 % Météo-France
         run: |
+          python verifier_cache_pluie.py --min-depth 72 --require-48 --require-72
           python - <<'PY'
           import json
-          with open('observations_pluie.json', encoding='utf-8') as f:
-              d=json.load(f)
-          print('Version :', d.get('module_version'))
-          print('Profondeur cache :', d.get('hourly_cache_depth_hours'), 'h')
-          print('Stations RR24 :', d.get('stations_rr24'))
-          print('Stations RR48 :', d.get('stations_rr48'))
-          print('Stations RR72 :', d.get('stations_rr72'))
-          assert d.get('module_version') == '2.4.1'
-          assert d.get('stations_total', 0) > 0
-          assert d.get('hourly_cache_depth_hours', 0) >= 48, 'Cache inférieur à 48 h'
-          assert d.get('stations_rr48', 0) > 0, 'Aucune station RR48 disponible'
-          # RR72 peut rester provisoirement incomplet si l'archive Météo-France
-          # du jour n'a pas encore rejoint les dernières 24 h temps réel.
-          if d.get('hourly_cache_depth_hours', 0) >= 66:
-              assert d.get('stations_rr72', 0) > 0, 'Aucune station RR72 malgré >=66 h de cache'
-          else:
-              print('RR72 en constitution : profondeur', d.get('hourly_cache_depth_hours'), 'h')
+          d=json.load(open('observations_pluie.json',encoding='utf-8'))
+          assert d.get('module_version') == '2.6.0'
+          assert d.get('stations_rr24',0) > 0
+          assert d.get('stations_rr48',0) > 0
+          assert d.get('stations_rr72',0) > 0
+          assert str(d.get('source',{}).get('observations','')).startswith('Météo-France')
+          print('RR24 :',d.get('stations_rr24'))
+          print('RR48 :',d.get('stations_rr48'))
+          print('RR72 :',d.get('stations_rr72'))
+          print('Profondeur :',d.get('hourly_cache_depth_hours'),'h')
           PY
 
       - name: Préparer publication
         run: |
           mkdir -p /tmp/carte-pluie-publish
-          cp observations_pluie.json cache_pluie_horaire.json cache_pluie_climatologie.json /tmp/carte-pluie-publish/
+          cp observations_pluie.json cache_pluie_climatologie.json cache_pluie_horaire.json /tmp/carte-pluie-publish/
 
       - name: Publier sur observations
-        shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -211,9 +164,6 @@ jobs:
           fi
           cp /tmp/carte-pluie-publish/* "$PUBLISH_DIR"/
           git -C "$PUBLISH_DIR" add observations_pluie.json cache_pluie_climatologie.json cache_pluie_horaire.json
-          if git -C "$PUBLISH_DIR" diff --cached --quiet; then
-            echo "Aucun changement à publier."
-            exit 0
-          fi
-          git -C "$PUBLISH_DIR" commit -m "Initialisation cache 48h 72h pluie v2.4.1"
+          if git -C "$PUBLISH_DIR" diff --cached --quiet; then exit 0; fi
+          git -C "$PUBLISH_DIR" commit -m "Initialisation RR1 glissants Météo-France v2.6.0"
           git -C "$PUBLISH_DIR" push origin HEAD:observations

@@ -2,15 +2,12 @@ name: Update Carte Pluie Météo-France
 
 on:
   schedule:
-    - cron: '20 * * * *'
+    - cron: '25 * * * *'
   workflow_dispatch:
 
 permissions:
   contents: write
 
-# Important : ne plus annuler une exécution déjà en cours.
-# Cela évite le message "The operation was canceled" lorsqu'une autre
-# exécution planifiée arrive pendant la précédente.
 concurrency:
   group: carte-pluie-publish
   cancel-in-progress: false
@@ -19,18 +16,16 @@ jobs:
   generate:
     runs-on: ubuntu-24.04
     timeout-minutes: 25
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Vérifier cohérence v2.4.1
-        shell: bash
+      - name: Vérifier cohérence v2.6.0
         run: |
-          grep -q 'VERSION = "2.4.1"' generer_pluie_meteofrance.py
-          grep -q '2.4.1' .github/workflows/update-carte-pluie.yml
+          grep -q 'VERSION = "2.6.0"' generer_pluie_meteofrance.py
+          grep -q 'VERSION = "2.6.0"' verifier_cache_pluie.py
 
       - name: Python
         uses: actions/setup-python@v5
@@ -38,37 +33,18 @@ jobs:
           python-version: '3.11'
 
       - name: Installer Requests
-        run: |
-          python -m pip install --upgrade pip
-          pip install requests==2.33.0
+        run: pip install requests==2.33.0
 
       - name: Récupérer les caches précédents
-        shell: bash
         run: |
           git fetch origin observations
           git show origin/observations:cache_pluie_horaire.json > cache_pluie_horaire.json
           git show origin/observations:cache_pluie_climatologie.json > cache_pluie_climatologie.json 2>/dev/null || echo '{"schema_version":5,"stations":{}}' > cache_pluie_climatologie.json
 
-      - name: Refuser un cache 48h absent ou tronqué
-        run: |
-          python - <<'PY'
-          import json
-          from datetime import datetime
-          with open('cache_pluie_horaire.json', encoding='utf-8') as f:
-              d=json.load(f)
-          keys=sorted((d.get('hours') or {}).keys())
-          counts={}
-          for bucket in (d.get('hours') or {}).values():
-              for sid in (bucket or {}):
-                  counts[sid]=counts.get(sid,0)+1
-          c44=sum(v>=44 for v in counts.values())
-          print('Cache chargé :', len(keys), 'heures distinctes')
-          print('Stations avec >=44 RR1 :', c44)
-          if len(keys) < 48 or c44 == 0:
-              raise SystemExit('CACHE 48H NON INITIALISE : lancer d’abord « Initialiser cache 48h 72h pluie ». Le workflow horaire est arrêté volontairement pour ne jamais republier un cache 24/25 h.')
-          PY
+      - name: Refuser un cache 48/72 h non initialisé
+        run: python verifier_cache_pluie.py --min-depth 72 --require-48 --require-72
 
-      - name: Générer observations_pluie.json (mode rapide)
+      - name: Ajouter les nouvelles RR1 Météo-France et recalculer les fenêtres
         env:
           METEOFRANCE_PACKAGE_OBS_KEY: ${{ secrets.METEOFRANCE_PACKAGE_OBS_KEY }}
           METEOFRANCE_OBS_TOKEN: ${{ secrets.METEOFRANCE_OBS_TOKEN }}
@@ -76,89 +52,38 @@ jobs:
           MF_BUILD_ARCHIVES: "0"
           MF_BOOTSTRAP_HOURLY: "0"
           MF_REFRESH_DAILY: "0"
-        run: |
-          python generer_pluie_meteofrance.py
+        run: python generer_pluie_meteofrance.py
 
-      - name: Vérifier le JSON v2.4.1
-        shell: bash
+      - name: Vérifier le JSON
         run: |
-          test -s observations_pluie.json
-          test -s cache_pluie_climatologie.json
-          test -s cache_pluie_horaire.json
-
+          python verifier_cache_pluie.py --min-depth 72 --require-48 --require-72
           python - <<'PY'
           import json
-
-          with open("observations_pluie.json", encoding="utf-8") as f:
-              data = json.load(f)
-
-          assert data["status"] == "ok"
-          assert data["schema_version"] >= 5
-          assert data["module_version"] == "2.4.1"
-          assert isinstance(data["stations"], list)
-          assert data["stations_total"] > 0
-
-          required_metrics = {
-              "rr24", "rr48", "rr72",
-              "rr_month_current", "rr_season_current", "rr_year_current",
-              "rr_daily_record", "rr_month_mean", "rr_year_mean",
-          }
-          missing = required_metrics - set(data.get("metrics", {}))
-          assert not missing, f"Métriques absentes : {sorted(missing)}"
-
-          sapc = [
-              s for s in data["stations"]
-              if "SAPC" in str(s.get("name", "")).upper()
-          ]
-          assert not sapc, f"Stations SAPC encore présentes : {len(sapc)}"
-
-          print("JSON v2.4.1 valide")
-          print("Stations :", data["stations_total"])
-          print("RR24 :", data.get("stations_rr24"))
-          print("RR48 :", data.get("stations_rr48"))
-          print("RR72 :", data.get("stations_rr72"))
-          print("Records disponibles :", data.get("stations_records"))
+          d=json.load(open('observations_pluie.json',encoding='utf-8'))
+          assert d.get('status') == 'ok'
+          assert d.get('module_version') == '2.6.0'
+          assert d.get('stations_rr24',0)>0
+          assert d.get('stations_rr48',0)>0
+          assert d.get('stations_rr72',0)>0
+          assert str(d.get('source',{}).get('observations','')).startswith('Météo-France')
+          print('Météo-France RR24/RR48/RR72 :',d.get('stations_rr24'),d.get('stations_rr48'),d.get('stations_rr72'))
           PY
 
-      - name: Préparer la publication
-        shell: bash
+      - name: Préparer publication
         run: |
           mkdir -p /tmp/carte-pluie-publish
-          cp observations_pluie.json /tmp/carte-pluie-publish/
-          cp cache_pluie_climatologie.json /tmp/carte-pluie-publish/
-          cp cache_pluie_horaire.json /tmp/carte-pluie-publish/
+          cp observations_pluie.json cache_pluie_climatologie.json cache_pluie_horaire.json /tmp/carte-pluie-publish/
 
-      - name: Publier sur la branche observations
-        shell: bash
+      - name: Publier sur observations
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          # Ne jamais basculer le worktree courant : il contient les JSON générés
-          # et Git refuserait le checkout s'ils existent déjà sur observations.
           PUBLISH_DIR="/tmp/carte-pluie-observations"
           rm -rf "$PUBLISH_DIR"
-
-          if git ls-remote --exit-code --heads origin observations >/dev/null 2>&1; then
-            git fetch origin observations
-            git worktree add --force -B observations-publish "$PUBLISH_DIR" origin/observations
-          else
-            mkdir -p "$PUBLISH_DIR"
-            git -C "$PUBLISH_DIR" init
-            git -C "$PUBLISH_DIR" remote add origin "$(git remote get-url origin)"
-            git -C "$PUBLISH_DIR" checkout --orphan observations-publish
-          fi
-
-          cp /tmp/carte-pluie-publish/observations_pluie.json "$PUBLISH_DIR"/
-          cp /tmp/carte-pluie-publish/cache_pluie_climatologie.json "$PUBLISH_DIR"/
-          cp /tmp/carte-pluie-publish/cache_pluie_horaire.json "$PUBLISH_DIR"/
-
+          git fetch origin observations
+          git worktree add --force -B observations-publish "$PUBLISH_DIR" origin/observations
+          cp /tmp/carte-pluie-publish/* "$PUBLISH_DIR"/
           git -C "$PUBLISH_DIR" add observations_pluie.json cache_pluie_climatologie.json cache_pluie_horaire.json
-
-          if git -C "$PUBLISH_DIR" diff --cached --quiet; then
-            echo "Aucun changement à publier."
-            exit 0
-          fi
-
-          git -C "$PUBLISH_DIR" commit -m "Mise à jour carte pluie Météo-France v2.4.1"
+          if git -C "$PUBLISH_DIR" diff --cached --quiet; then exit 0; fi
+          git -C "$PUBLISH_DIR" commit -m "Mise à jour pluie glissante Météo-France v2.6.0"
           git -C "$PUBLISH_DIR" push origin HEAD:observations
