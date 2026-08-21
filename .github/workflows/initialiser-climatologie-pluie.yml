@@ -81,21 +81,28 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
+          # Ne jamais basculer le worktree courant : il contient les JSON générés
+          # et Git refuserait le checkout s'ils existent déjà sur observations.
+          PUBLISH_DIR="/tmp/carte-pluie-observations"
+          rm -rf "$PUBLISH_DIR"
+
           if git ls-remote --exit-code --heads origin observations >/dev/null 2>&1; then
             git fetch origin observations
-            git switch -C observations origin/observations
+            git worktree add --force -B observations-publish "$PUBLISH_DIR" origin/observations
           else
-            git switch --orphan observations
-            git rm -rf . || true
+            mkdir -p "$PUBLISH_DIR"
+            git -C "$PUBLISH_DIR" init
+            git -C "$PUBLISH_DIR" remote add origin "$(git remote get-url origin)"
+            git -C "$PUBLISH_DIR" checkout --orphan observations-publish
           fi
 
-          cp /tmp/carte-pluie-publish/observations_pluie.json .
-          cp /tmp/carte-pluie-publish/cache_pluie_climatologie.json .
+          cp /tmp/carte-pluie-publish/observations_pluie.json "$PUBLISH_DIR"/
+          cp /tmp/carte-pluie-publish/cache_pluie_climatologie.json "$PUBLISH_DIR"/
 
-          git add observations_pluie.json cache_pluie_climatologie.json
-          if git diff --cached --quiet; then
+          git -C "$PUBLISH_DIR" add observations_pluie.json cache_pluie_climatologie.json
+          if git -C "$PUBLISH_DIR" diff --cached --quiet; then
             echo "Aucun changement à publier."
             exit 0
           fi
-          git commit -m "Initialisation climatologie pluie v2.3.1"
-          git push origin observations
+          git -C "$PUBLISH_DIR" commit -m "Initialisation climatologie pluie v2.3.1"
+          git -C "$PUBLISH_DIR" push origin HEAD:observations
