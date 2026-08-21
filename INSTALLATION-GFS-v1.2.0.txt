@@ -1,0 +1,85 @@
+ALERTES-METEO.COM — GFS FRANCE / EUROPE — v1.2.0
+=================================================
+
+OBJECTIF
+-------
+Ajouter au module WordPress [am_carte_pression] un onglet GFS avec :
+- Pression au niveau de la mer + isobares
+- Température à 2 m
+- Précipitations
+- Vent moyen à 10 m + direction
+- Rafales
+- France / Europe
+- Échéances jusqu'à +168 h
+
+SOURCE
+------
+NOAA / NCEP NOMADS — GFS 0,25°.
+Le workflow ne télécharge que : PRMSL, TMP 2 m, APCP, UGRD/VGRD 10 m et GUST.
+La zone est limitée à l'Europe : 25°W–45°E / 34–72°N.
+La grille native 0,25° est rééchantillonnée à 0,50° pour les JSON web.
+
+FICHIERS À COPIER DANS LE DÉPÔT GitHub
+--------------------------------------
+À la racine :
+- requirements-gfs.txt
+
+Dans scripts/ :
+- update_gfs_france_europe.py
+
+Dans .github/workflows/ :
+- update-gfs-france-europe.yml
+
+MISE EN ROUTE
+-------------
+1. Copier les 3 fichiers dans alertesmeteo-hub/harmonie-knmi sur la branche principale.
+2. Commit + push.
+3. GitHub > Actions > "Update GFS France Europe v1.2.0".
+4. Cliquer "Run workflow" une première fois.
+5. Vérifier la branche observations :
+   - gfs/index.json
+   - gfs/gfs_f000.json
+   - gfs/gfs_f003.json
+   - etc.
+
+Le workflow s'exécute ensuite à 05:15, 11:15, 17:15 et 23:15 UTC afin de récupérer
+les nouveaux runs 00/06/12/18 UTC lorsqu'ils sont disponibles.
+
+WORDPRESS
+---------
+Installer ensuite : meteo-carte-pression-isobares-v1.2.0.zip
+
+Shortcode normal :
+[am_carte_pression]
+
+Ou ouverture directe sur GFS Europe :
+[am_carte_pression mode="gfs" zone="europe"]
+
+Ou ouverture directe sur une variable :
+[am_carte_pression mode="gfs" zone="europe" variable="temperature"]
+[am_carte_pression mode="gfs" zone="europe" variable="pluie"]
+[am_carte_pression mode="gfs" zone="europe" variable="vent"]
+
+ÉCHÉANCES PUBLIÉES
+------------------
++000, +003, +006, +009, +012, +018, +024, +030, +036, +042, +048,
++060, +072, +084, +096, +120, +144 et +168 h.
+
+PLUIE — IMPORTANT
+-----------------
+Le champ APCP du GFS est une accumulation définie par le GRIB. Le générateur lit
+GRIB_stepRange et le module affiche explicitement la période (ex. 0–3 h, 3–6 h,
+etc.) au lieu de présenter toutes les valeurs comme un faux cumul depuis le run.
+
+VENT
+----
+Le vent moyen est calculé à partir de UGRD/VGRD à 10 m puis converti en km/h.
+La direction météorologique est calculée et affichée par une flèche.
+Les rafales GUST sont converties en km/h et indiquées dans les infobulles ainsi que
+dans la synthèse de la carte Vent.
+
+ISOBARES
+--------
+En mode GFS, les isobares utilisent directement le champ PRMSL continu du modèle.
+Elles restent disponibles par-dessus Température, Pluie et Vent, avec choix 2/4/5 hPa.
+Elles sont donc plus régulières que les isobares reconstruites uniquement depuis les stations.
