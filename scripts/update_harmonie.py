@@ -45,7 +45,7 @@ LOGGER = logging.getLogger("harmonie")
 API_BASE = "https://api.dataplatform.knmi.nl/open-data/v1"
 DATASET_NAME = "harmonie_arome_cy43_p3"
 DATASET_VERSION = "1.0"
-PIPELINE_VERSION = "1.1.0"
+PIPELINE_VERSION = "1.3.1"
 
 # Clé anonyme publiée par le KNMI, valable jusqu'au 1er août 2027. Une clé
 # personnelle placée dans le secret GitHub KNMI_API_KEY la remplace aussitôt.
@@ -58,7 +58,16 @@ PUBLIC_ANONYMOUS_KEY = (
 MAX_ARCHIVE_BYTES = 8_000_000_000
 DOWNLOAD_CHUNK_BYTES = 4 * 1024 * 1024
 MAX_API_ATTEMPTS = 9
-RETRYABLE_HTTP_STATUS = {429, 500, 502, 503, 504}
+MAX_DOWNLOAD_ATTEMPTS = 4
+RETRYABLE_HTTP_STATUS = {408, 429, 500, 502, 503, 504}
+
+
+class KNMIError(RuntimeError):
+    """Erreur explicite provenant de l'API KNMI."""
+
+
+class KNMIRateLimitError(KNMIError):
+    """Quota / limitation temporaire KNMI (HTTP 429)."""
 
 MEMBER_RE = re.compile(
     r"HA43_[A-Z0-9]+_(?P<run>\d{12})_(?P<lead>\d{5})_GB(?:\.[A-Za-z0-9]+)?$",
@@ -86,43 +95,25 @@ class ParameterSpec:
 PARAMETERS = (
     ParameterSpec("pressure_pa", 1, 103, 0, 0),
     ParameterSpec("surface_pressure_pa", 1, 105, 0, 0),
-    ParameterSpec("geopotential_500_raw", 6, 100, 500, 0),
-    ParameterSpec("geopotential_850_raw", 6, 100, 850, 0),
-    ParameterSpec("surface_temperature_k", 11, 105, 0, 0),
+    ParameterSpec("surface_geopotential_m2s2", 6, 105, 0, 0),
     ParameterSpec("temperature_k", 11, 105, 2, 0),
-    ParameterSpec("temperature_500_k", 11, 100, 500, 0),
-    ParameterSpec("temperature_850_k", 11, 100, 850, 0),
+    ParameterSpec("surface_temperature_k", 11, 105, 0, 0),
     ParameterSpec("dewpoint_k", 17, 105, 2, 0),
     ParameterSpec("visibility_m", 20, 105, 0, 0),
     ParameterSpec("wind_u_ms", 33, 105, 10, 0),
     ParameterSpec("wind_v_ms", 34, 105, 10, 0),
-    ParameterSpec("wind_u_300_ms", 33, 100, 300, 0),
-    ParameterSpec("wind_v_300_ms", 34, 100, 300, 0),
-    ParameterSpec("wind_u_500_ms", 33, 100, 500, 0),
-    ParameterSpec("wind_v_500_ms", 34, 100, 500, 0),
-    ParameterSpec("wind_u_850_ms", 33, 100, 850, 0),
-    ParameterSpec("wind_v_850_ms", 34, 100, 850, 0),
     ParameterSpec("humidity_pct", 52, 105, 2, 0),
-    ParameterSpec("humidity_500_pct", 52, 100, 500, 0),
-    ParameterSpec("humidity_850_pct", 52, 100, 850, 0),
     ParameterSpec("precipitation_raw_mm", 61, 105, 0, 4),
-    ParameterSpec("snow_water_equivalent_mm", 65, 105, 0, 0),
-    ParameterSpec("snow_depth_m", 66, 105, 0, 0),
-    ParameterSpec("mixed_layer_depth_m", 67, 105, 0, 0),
     ParameterSpec("cloud_pct", 71, 105, 0, 0),
     ParameterSpec("cloud_low_pct", 73, 105, 0, 0),
     ParameterSpec("cloud_mid_pct", 74, 105, 0, 0),
     ParameterSpec("cloud_high_pct", 75, 105, 0, 0),
-    ParameterSpec("net_shortwave_jm2", 111, 105, 0, 4),
-    ParameterSpec("net_longwave_jm2", 112, 105, 0, 4),
-    ParameterSpec("global_radiation_jm2", 117, 105, 0, 4),
-    ParameterSpec("sensible_heat_jm2", 122, 105, 0, 4),
-    ParameterSpec("latent_heat_jm2", 132, 105, 0, 4),
+    ParameterSpec("snow_water_equivalent_mm", 65, 105, 0, 0),
+    ParameterSpec("snow_depth_m", 66, 105, 0, 0),
+    ParameterSpec("snowfall_raw_mm", 184, 105, 0, 4),
+    ParameterSpec("graupel_raw_mm", 201, 105, 0, 4),
     ParameterSpec("gust_u_ms", 162, 105, 10, 2),
     ParameterSpec("gust_v_ms", 163, 105, 10, 2),
-    ParameterSpec("snow_raw_mm", 184, 105, 0, 4),
-    ParameterSpec("cloud_base_m", 186, 200, 0, 0),
-    ParameterSpec("graupel_raw_mm", 201, 105, 0, 4),
 )
 
 
@@ -138,6 +129,13 @@ def parse_args() -> argparse.Namespace:
         "--force",
         action="store_true",
         help="Retraite une archive déjà mentionnée dans le JSON existant.",
+    )
+    parser.add_argument(
+        "--cache-dir",
+        help=(
+            "Répertoire persistant des archives KNMI. Par défaut : "
+            "<dossier du JSON>/.harmonie-cache"
+        ),
     )
     return parser.parse_args()
 
@@ -230,10 +228,22 @@ def request_json(
         break
 
     if response is None:
-        raise RuntimeError("Aucune réponse reçue de l'API KNMI")
+        raise KNMIError("Aucune réponse reçue de l'API KNMI")
     if response.headers.get("X-KNMI-Deprecation"):
         LOGGER.warning("KNMI : %s", response.headers["X-KNMI-Deprecation"])
-    response.raise_for_status()
+    if response.status_code == 429:
+        delay = retry_delay_seconds(response, MAX_API_ATTEMPTS)
+        raise KNMIRateLimitError(
+            "Quota KNMI temporairement atteint (HTTP 429) après "
+            f"{MAX_API_ATTEMPTS} tentatives ; prochaine fenêtre estimée dans "
+            f"environ {delay} s."
+        )
+    try:
+        response.raise_for_status()
+    except requests.HTTPError as exc:
+        raise KNMIError(
+            f"Réponse HTTP KNMI {response.status_code} pour {response.url}"
+        ) from exc
     payload = response.json()
     if not isinstance(payload, dict):
         raise RuntimeError("Réponse JSON KNMI inattendue")
@@ -319,43 +329,149 @@ def temporary_download_url(
     return url
 
 
+def archive_is_valid(path: Path, expected_size: int | None = None) -> bool:
+    """Valide rapidement une archive déjà présente dans le cache."""
+
+    try:
+        size = path.stat().st_size
+    except OSError:
+        return False
+    if size <= 0 or size > MAX_ARCHIVE_BYTES:
+        return False
+    if expected_size is not None and size != expected_size:
+        return False
+    try:
+        with tarfile.open(path, mode="r:*") as tar:
+            first = next((m for m in tar if m.isfile()), None)
+            return first is not None
+    except (OSError, tarfile.TarError):
+        return False
+
+
+def latest_cached_archive(cache_dir: Path) -> Path | None:
+    """Retourne la plus récente archive HARMONIE locale utilisable."""
+
+    candidates = sorted(
+        cache_dir.glob("*.tar"),
+        key=lambda path: path.stat().st_mtime if path.exists() else 0.0,
+        reverse=True,
+    )
+    for candidate in candidates:
+        if archive_is_valid(candidate):
+            return candidate
+    return None
+
+
+def prune_archive_cache(cache_dir: Path, keep: Path) -> None:
+    """Conserve une seule grosse archive afin de ne pas remplir le disque."""
+
+    for candidate in cache_dir.glob("*.tar"):
+        if candidate.resolve() == keep.resolve():
+            continue
+        try:
+            candidate.unlink()
+            LOGGER.info("Ancienne archive de cache supprimée : %s", candidate.name)
+        except OSError as exc:
+            LOGGER.warning("Impossible de supprimer %s : %s", candidate, exc)
+
+
 def download_archive(url: str, target: Path, expected_size: int | None) -> None:
+    """Télécharge l'archive de manière atomique, avec reprises sur erreurs transitoires."""
+
     if expected_size and expected_size > MAX_ARCHIVE_BYTES:
         raise RuntimeError(
             f"Archive trop volumineuse ({expected_size / 1_000_000_000:.1f} Go)"
         )
 
-    total = 0
-    with requests.get(
-        url,
-        stream=True,
-        timeout=(30, 300),
-        headers={"User-Agent": "alertesmeteo-hub/harmonie-knmi"},
-    ) as response:
-        response.raise_for_status()
-        announced = int(response.headers.get("Content-Length") or 0)
-        if announced > MAX_ARCHIVE_BYTES:
-            raise RuntimeError(
-                f"Archive annoncée trop volumineuse ({announced / 1_000_000_000:.1f} Go)"
-            )
-        with target.open("wb") as handle:
-            for chunk in response.iter_content(chunk_size=DOWNLOAD_CHUNK_BYTES):
-                if not chunk:
-                    continue
-                total += len(chunk)
-                if total > MAX_ARCHIVE_BYTES:
-                    raise RuntimeError("Limite de sécurité de téléchargement dépassée")
-                handle.write(chunk)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    partial = target.with_name(target.name + ".part")
+    last_error: Exception | None = None
 
-    if total == 0:
-        raise RuntimeError("L'archive HARMONIE téléchargée est vide")
-    if expected_size and total != expected_size:
-        LOGGER.warning(
-            "Taille reçue différente du catalogue : %s au lieu de %s octets",
-            total,
-            expected_size,
-        )
-    LOGGER.info("Archive téléchargée : %.1f Mo", total / 1_000_000)
+    for attempt in range(1, MAX_DOWNLOAD_ATTEMPTS + 1):
+        total = 0
+        try:
+            partial.unlink(missing_ok=True)
+            with requests.get(
+                url,
+                stream=True,
+                timeout=(30, 300),
+                headers={"User-Agent": "alertesmeteo-hub/harmonie-knmi"},
+            ) as response:
+                if (
+                    response.status_code in RETRYABLE_HTTP_STATUS
+                    and attempt < MAX_DOWNLOAD_ATTEMPTS
+                ):
+                    delay = retry_delay_seconds(response, attempt)
+                    LOGGER.warning(
+                        "Téléchargement KNMI : HTTP %s. Nouvelle tentative %s/%s "
+                        "dans %s s.",
+                        response.status_code,
+                        attempt + 1,
+                        MAX_DOWNLOAD_ATTEMPTS,
+                        delay,
+                    )
+                    time.sleep(delay)
+                    continue
+                response.raise_for_status()
+                announced = int(response.headers.get("Content-Length") or 0)
+                if announced > MAX_ARCHIVE_BYTES:
+                    raise RuntimeError(
+                        "Archive annoncée trop volumineuse "
+                        f"({announced / 1_000_000_000:.1f} Go)"
+                    )
+                with partial.open("wb") as handle:
+                    for chunk in response.iter_content(
+                        chunk_size=DOWNLOAD_CHUNK_BYTES
+                    ):
+                        if not chunk:
+                            continue
+                        total += len(chunk)
+                        if total > MAX_ARCHIVE_BYTES:
+                            raise RuntimeError(
+                                "Limite de sécurité de téléchargement dépassée"
+                            )
+                        handle.write(chunk)
+
+            if total == 0:
+                raise RuntimeError("L'archive HARMONIE téléchargée est vide")
+            if expected_size is not None and total != expected_size:
+                raise RuntimeError(
+                    "Téléchargement incomplet : "
+                    f"{total} octets reçus au lieu de {expected_size}"
+                )
+            os.replace(partial, target)
+            LOGGER.info("Archive téléchargée : %.1f Mo", total / 1_000_000)
+            return
+        except (requests.ConnectionError, requests.Timeout, requests.HTTPError, OSError) as exc:
+            last_error = exc
+            partial.unlink(missing_ok=True)
+            if attempt >= MAX_DOWNLOAD_ATTEMPTS:
+                break
+            delay = retry_delay_seconds(None, attempt)
+            LOGGER.warning(
+                "Téléchargement KNMI interrompu (%s). Nouvelle tentative %s/%s "
+                "dans %s s.",
+                exc,
+                attempt + 1,
+                MAX_DOWNLOAD_ATTEMPTS,
+                delay,
+            )
+            time.sleep(delay)
+
+    raise RuntimeError(
+        f"Impossible de télécharger l'archive KNMI après {MAX_DOWNLOAD_ATTEMPTS} tentatives"
+    ) from last_error
+
+
+def existing_output_is_usable(path: Path) -> bool:
+    """Vrai si le JSON déjà publié peut être conservé sans le remplacer."""
+
+    try:
+        with path.open("r", encoding="utf-8") as handle:
+            payload = json.load(handle)
+        return payload.get("status") == "ok" and bool(payload.get("locations"))
+    except (OSError, ValueError, TypeError, AttributeError):
+        return False
 
 
 def already_processed(output: Path, source_filename: str) -> bool:
@@ -968,10 +1084,10 @@ def build_output(
                     ),
                     0,
                 ),
-                "wind_speed_kmh": round_or_none(wind_speed, 0),
+                "wind_speed_kmh": int(math.ceil(wind_speed)) if wind_speed is not None and math.isfinite(wind_speed) else None,
                 "wind_direction_deg": round_or_none(wind_direction, 0),
                 "wind_direction": compass_direction(wind_direction),
-                "wind_gust_kmh": round_or_none(gust_speed, 0),
+                "wind_gust_kmh": int(math.ceil(gust_speed)) if gust_speed is not None and math.isfinite(gust_speed) else None,
                 "pressure_hpa": round_or_none(
                     pressure_pa / 100.0 if pressure_pa is not None else None,
                     0,
@@ -1053,6 +1169,11 @@ def main() -> int:
     args = parse_args()
     config_path = Path(args.config).resolve()
     output_path = Path(args.output).resolve()
+    cache_dir = (
+        Path(args.cache_dir).resolve()
+        if args.cache_dir
+        else output_path.parent / ".harmonie-cache"
+    )
     locations, forecast_hours = load_config(config_path)
 
     api_key = os.environ.get("KNMI_API_KEY", "").strip()
@@ -1063,19 +1184,44 @@ def main() -> int:
             "KNMI_API_KEY pour la production à long terme."
         )
 
-    with tempfile.TemporaryDirectory(prefix="harmonie-knmi-") as temporary_directory:
-        if args.archive:
-            archive_path = Path(args.archive).resolve()
-            if not archive_path.is_file():
-                raise FileNotFoundError(archive_path)
+    if args.archive:
+        archive_path = Path(args.archive).resolve()
+        if not archive_path.is_file():
+            raise FileNotFoundError(archive_path)
+        source = {
+            "filename": archive_path.name,
+            "size": archive_path.stat().st_size,
+            "created": None,
+        }
+    else:
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        session = api_session(api_key)
+        try:
+            source = latest_archive_metadata(session)
+        except KNMIRateLimitError as exc:
+            if existing_output_is_usable(output_path):
+                LOGGER.warning(
+                    "%s Conservation du JSON HARMONIE déjà publié ; "
+                    "les données ne sont PAS déclarées indisponibles.",
+                    exc,
+                )
+                return 0
+            cached = latest_cached_archive(cache_dir)
+            if cached is None:
+                raise
+            LOGGER.warning(
+                "%s Aucun JSON exploitable ; utilisation de l'archive locale %s.",
+                exc,
+                cached.name,
+            )
+            archive_path = cached
             source = {
-                "filename": archive_path.name,
-                "size": archive_path.stat().st_size,
+                "filename": cached.name,
+                "size": cached.stat().st_size,
                 "created": None,
+                "cache_fallback": True,
             }
         else:
-            session = api_session(api_key)
-            source = latest_archive_metadata(session)
             source_filename = str(source.get("filename", ""))
             if not source_filename:
                 raise RuntimeError("Nom de l'archive KNMI absent")
@@ -1088,33 +1234,47 @@ def main() -> int:
                 LOGGER.info("Cette archive est déjà publiée ; aucune modification.")
                 return 0
 
-            archive_path = Path(temporary_directory) / source_filename
-            url = temporary_download_url(session, source_filename)
-            expected_size = source.get("size")
-            download_archive(
-                url,
-                archive_path,
-                int(expected_size) if expected_size is not None else None,
+            expected_size_raw = source.get("size")
+            expected_size = (
+                int(expected_size_raw)
+                if expected_size_raw is not None
+                else None
             )
+            archive_path = cache_dir / source_filename
+            if archive_is_valid(archive_path, expected_size):
+                LOGGER.info(
+                    "Archive déjà présente dans le cache : %s",
+                    archive_path,
+                )
+            else:
+                archive_path.unlink(missing_ok=True)
+                url = temporary_download_url(session, source_filename)
+                download_archive(url, archive_path, expected_size)
+                if not archive_is_valid(archive_path, expected_size):
+                    archive_path.unlink(missing_ok=True)
+                    raise RuntimeError(
+                        "L'archive KNMI téléchargée n'est pas exploitable"
+                    )
+                prune_archive_cache(cache_dir, archive_path)
 
-        steps, resolver = decode_archive(
-            archive_path,
-            locations,
-            forecast_hours,
-        )
-        output = build_output(
-            steps,
-            resolver,
-            locations,
-            forecast_hours,
-            source,
-        )
-        write_json_atomic(output_path, output)
-        LOGGER.info(
-            "JSON écrit : %s (%s villes)",
-            output_path,
-            len(output["locations"]),
-        )
+    steps, resolver = decode_archive(
+        archive_path,
+        locations,
+        forecast_hours,
+    )
+    output = build_output(
+        steps,
+        resolver,
+        locations,
+        forecast_hours,
+        source,
+    )
+    write_json_atomic(output_path, output)
+    LOGGER.info(
+        "JSON écrit : %s (%s villes)",
+        output_path,
+        len(output["locations"]),
+    )
     return 0
 
 
