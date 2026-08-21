@@ -23,7 +23,7 @@ from scipy.spatial import cKDTree
 
 
 MAP_SCHEMA_VERSION = 5
-MODULE_VERSION = "3.4.1"
+MODULE_VERSION = "3.4.0"
 DEFAULT_BOUNDS = {
     "south": 38.0,
     "west": -12.0,
