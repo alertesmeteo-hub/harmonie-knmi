@@ -42,6 +42,8 @@ jobs:
           git fetch origin observations || true
           git show origin/observations:cache_pluie_climatologie.json \
             > cache_pluie_climatologie.json 2>/dev/null || true
+          git show origin/observations:cache_pluie_horaire.json \
+            > cache_pluie_horaire.json 2>/dev/null || true
 
       - name: Construire climatologie et records historiques
         env:
@@ -57,11 +59,12 @@ jobs:
         run: |
           test -s observations_pluie.json
           test -s cache_pluie_climatologie.json
+          test -s cache_pluie_horaire.json
           python - <<'PY'
           import json
           with open("observations_pluie.json", encoding="utf-8") as f:
               data = json.load(f)
-          assert data["module_version"] == "2.3.1"
+          assert data["module_version"] == "2.3.2"
           assert data["stations_total"] > 0
           print("Stations :", data["stations_total"])
           print("Stations avec record :", data.get("stations_records"))
@@ -74,6 +77,7 @@ jobs:
           mkdir -p /tmp/carte-pluie-publish
           cp observations_pluie.json /tmp/carte-pluie-publish/
           cp cache_pluie_climatologie.json /tmp/carte-pluie-publish/
+          cp cache_pluie_horaire.json /tmp/carte-pluie-publish/
 
       - name: Publier sur la branche observations
         shell: bash
@@ -98,11 +102,12 @@ jobs:
 
           cp /tmp/carte-pluie-publish/observations_pluie.json "$PUBLISH_DIR"/
           cp /tmp/carte-pluie-publish/cache_pluie_climatologie.json "$PUBLISH_DIR"/
+          cp /tmp/carte-pluie-publish/cache_pluie_horaire.json "$PUBLISH_DIR"/
 
-          git -C "$PUBLISH_DIR" add observations_pluie.json cache_pluie_climatologie.json
+          git -C "$PUBLISH_DIR" add observations_pluie.json cache_pluie_climatologie.json cache_pluie_horaire.json
           if git -C "$PUBLISH_DIR" diff --cached --quiet; then
             echo "Aucun changement à publier."
             exit 0
           fi
-          git -C "$PUBLISH_DIR" commit -m "Initialisation climatologie pluie v2.3.1"
+          git -C "$PUBLISH_DIR" commit -m "Initialisation climatologie pluie v2.3.2"
           git -C "$PUBLISH_DIR" push origin HEAD:observations
