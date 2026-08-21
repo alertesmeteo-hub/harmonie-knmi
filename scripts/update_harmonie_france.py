@@ -17,6 +17,7 @@ import shutil
 import sys
 import tarfile
 import tempfile
+from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -32,11 +33,11 @@ from eccodes import (
 )
 
 import update_harmonie as base
-from harmonie_maps import HarmonieMapRenderer
+from harmonie_maps import DEFAULT_BOUNDS, HarmonieMapRenderer
 
 
 LOGGER = logging.getLogger("harmonie.france")
-NATIONAL_PIPELINE_VERSION = "3.0.0"
+NATIONAL_PIPELINE_VERSION = "3.1.0"
 DEFAULT_CURRENT_METADATA_URL = (
     "https://raw.githubusercontent.com/alertesmeteo-hub/"
     "harmonie-knmi/data/index.json"
@@ -100,6 +101,7 @@ class NationalCatalog:
     model_indexes: list[int]
     point_latitudes: np.ndarray
     point_longitudes: np.ndarray
+    point_departments: list[str]
     departments: dict[str, DepartmentData]
 
 
@@ -152,12 +154,22 @@ def load_catalog(path: Path) -> NationalCatalog:
     model_indexes = [int(point[0]) for point in raw_points]
     point_latitudes = np.asarray([float(point[1]) for point in raw_points])
     point_longitudes = np.asarray([float(point[2]) for point in raw_points])
+    department_votes: dict[int, Counter[str]] = defaultdict(Counter)
 
     communes_by_department: dict[str, list[list[Any]]] = {}
     for commune in raw_communes:
         if not isinstance(commune, list) or len(commune) < 8:
             raise RuntimeError("Entrée communale invalide dans le catalogue")
-        communes_by_department.setdefault(str(commune[2]), []).append(commune)
+        department_code = str(commune[2])
+        communes_by_department.setdefault(department_code, []).append(commune)
+        department_votes[int(commune[7])][department_code] += 1
+
+    point_departments = [
+        department_votes[point_id].most_common(1)[0][0]
+        if department_votes[point_id]
+        else ""
+        for point_id in range(len(raw_points))
+    ]
 
     departments: dict[str, DepartmentData] = {}
     for department_code, communes in sorted(communes_by_department.items()):
@@ -208,6 +220,7 @@ def load_catalog(path: Path) -> NationalCatalog:
         model_indexes=model_indexes,
         point_latitudes=point_latitudes,
         point_longitudes=point_longitudes,
+        point_departments=point_departments,
         departments=departments,
     )
 
@@ -285,6 +298,57 @@ class NationalGrid:
         return rotations
 
 
+class MapSourceGrid:
+    """Sélectionne la grille HARMONIE native sur l'Europe de l'Ouest."""
+
+    def __init__(self, validator: NationalGrid):
+        self.validator = validator
+        self.model_indexes: np.ndarray | None = None
+        self.latitudes: np.ndarray | None = None
+        self.longitudes: np.ndarray | None = None
+
+    def prepare(self, gid: int) -> None:
+        if self.model_indexes is not None:
+            return
+        self.validator.validate(gid)
+        latitudes = np.asarray(codes_get_double_array(gid, "latitudes"))
+        longitudes = np.asarray(codes_get_double_array(gid, "longitudes"))
+        longitudes = (longitudes + 180.0) % 360.0 - 180.0
+        bounds = DEFAULT_BOUNDS
+        selected = (
+            np.isfinite(latitudes)
+            & np.isfinite(longitudes)
+            & (latitudes >= float(bounds["south"]) - 0.5)
+            & (latitudes <= float(bounds["north"]) + 0.5)
+            & (longitudes >= float(bounds["west"]) - 0.5)
+            & (longitudes <= float(bounds["east"]) + 0.5)
+        )
+        indexes = np.flatnonzero(selected)
+        if len(indexes) < 20_000:
+            raise RuntimeError(
+                "La grille HARMONIE Europe de l'Ouest est anormalement petite"
+            )
+        self.model_indexes = indexes.astype(np.int64, copy=False)
+        self.latitudes = latitudes[indexes].astype(np.float64, copy=False)
+        self.longitudes = longitudes[indexes].astype(np.float64, copy=False)
+        LOGGER.info(
+            "Grille cartographique native : %s points HARMONIE",
+            len(indexes),
+        )
+
+    @property
+    def point_count(self) -> int:
+        return 0 if self.model_indexes is None else len(self.model_indexes)
+
+    def extract(self, gid: int) -> np.ndarray:
+        self.prepare(gid)
+        assert self.model_indexes is not None
+        full_values = np.asarray(codes_get_double_array(gid, "values"))
+        values = full_values[self.model_indexes].astype(np.float64, copy=False)
+        values[~np.isfinite(values) | (np.abs(values) > 1.0e20)] = np.nan
+        return values
+
+
 def empty_values(point_count: int) -> np.ndarray:
     return np.full(point_count, np.nan, dtype=np.float64)
 
@@ -292,6 +356,7 @@ def empty_values(point_count: int) -> np.ndarray:
 def parse_grib_file(
     path: Path,
     grid: NationalGrid,
+    map_grid: MapSourceGrid,
     lead_hint: int,
     run_hint: datetime | None,
 ) -> dict[str, Any]:
@@ -303,6 +368,7 @@ def parse_grib_file(
         "precip_start_step": None,
         "precip_end_step": None,
         "values": {},
+        "map_values": {},
         "rotations": None,
     }
     with path.open("rb") as handle:
@@ -323,6 +389,7 @@ def parse_grib_file(
                         gid, "validityDate", "validityTime"
                     )
                 step["values"][name] = grid.extract(gid)
+                step["map_values"][name] = map_grid.extract(gid)
                 if name == "precipitation_raw_mm":
                     step["precip_start_step"] = base.safe_get_long(gid, "startStep")
                     step["precip_end_step"] = base.safe_get_long(gid, "endStep")
@@ -339,6 +406,7 @@ def parse_grib_file(
         raise RuntimeError(f"Échéance temporelle absente de {path.name}")
     for name in REQUIRED_PARAMETERS:
         step["values"].setdefault(name, empty_values(point_count))
+        step["map_values"].setdefault(name, empty_values(map_grid.point_count))
     if step["rotations"] is None:
         step["rotations"] = np.zeros(point_count)
     return step
@@ -525,13 +593,11 @@ def decode_national_archive(
     }
 
     grid = NationalGrid(catalog)
-    map_renderer = HarmonieMapRenderer(
-        catalog.point_latitudes,
-        catalog.point_longitudes,
-        result_directory / "maps",
-    )
+    map_grid = MapSourceGrid(grid)
+    map_renderer: HarmonieMapRenderer | None = None
     previous_cumulative: np.ndarray | None = None
-    precipitation_total = np.zeros(len(catalog.model_indexes), dtype=np.float64)
+    map_previous_cumulative: np.ndarray | None = None
+    map_precipitation_total: np.ndarray | None = None
     model_run: datetime | None = None
     temporary_grib = working_directory / "current.grib"
 
@@ -553,21 +619,54 @@ def decode_national_archive(
                     len(members),
                     lead,
                 )
-                step = parse_grib_file(temporary_grib, grid, lead, run)
+                step = parse_grib_file(temporary_grib, grid, map_grid, lead, run)
                 if model_run is None:
                     model_run = step.get("run_time")
                 transformed, previous_cumulative = transform_step(
                     step, previous_cumulative
                 )
-                precipitation_total += np.nan_to_num(
-                    transformed["precipitation_mm"],
+                map_step = {
+                    "values": step["map_values"],
+                    "rotations": np.zeros(map_grid.point_count),
+                    "precip_start_step": step.get("precip_start_step"),
+                    "precip_end_step": step.get("precip_end_step"),
+                }
+                map_transformed, map_previous_cumulative = transform_step(
+                    map_step,
+                    map_previous_cumulative,
+                )
+                if map_precipitation_total is None:
+                    map_precipitation_total = np.zeros(
+                        map_grid.point_count,
+                        dtype=np.float64,
+                    )
+                map_precipitation_total += np.nan_to_num(
+                    map_transformed["precipitation_mm"],
                     nan=0.0,
                     posinf=0.0,
                     neginf=0.0,
                 )
-                map_fields = dict(transformed)
-                map_fields["precipitation_total_mm"] = precipitation_total.copy()
+                map_fields = dict(map_transformed)
+                map_fields["precipitation_total_mm"] = (
+                    map_precipitation_total.copy()
+                )
                 valid_time: datetime = step["valid_time"]
+                if map_renderer is None:
+                    assert map_grid.latitudes is not None
+                    assert map_grid.longitudes is not None
+                    map_renderer = HarmonieMapRenderer(
+                        map_grid.latitudes,
+                        map_grid.longitudes,
+                        result_directory / "maps",
+                        france_latitudes=catalog.point_latitudes,
+                        france_longitudes=catalog.point_longitudes,
+                        france_departments=catalog.point_departments,
+                        boundary_directory=(
+                            Path(__file__).resolve().parents[1]
+                            / "config"
+                            / "natural-earth"
+                        ),
+                    )
                 map_renderer.render_step(
                     lead_hour=lead,
                     valid_time=valid_time,
@@ -617,6 +716,8 @@ def decode_national_archive(
         ),
         "license": "CC BY 4.0",
     }
+    if map_renderer is None:
+        raise RuntimeError("Aucune carte HARMONIE n'a été produite")
     map_manifest = map_renderer.write_manifest(
         generated_at=generated_at,
         run_time=model["run_time"],
@@ -711,6 +812,7 @@ def decode_national_archive(
         },
         "maps": {
             "status": "ok",
+            "module_version": map_manifest["module_version"],
             "manifest": "maps/index.json",
             "layers": len(map_manifest["layers"]),
             "steps": len(map_manifest["steps"]),

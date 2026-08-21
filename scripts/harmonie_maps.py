@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Génère des cartes WebP légères à partir des points HARMONIE France.
+"""Produit des cartes WebP depuis la grille native HARMONIE Europe.
 
-Le rendu est volontairement produit côté GitHub Actions. WordPress ne reçoit
-ainsi qu'une image par paramètre et par échéance, au lieu de plusieurs millions
-de valeurs brutes. La grille d'affichage suit la projection Web Mercator afin
-que les cartes restent correctement positionnées dans le lecteur interactif.
+Les champs ne sont jamais reconstruits depuis les communes. Les points natifs
+du GRIB sont reprojetés sur une image Web Mercator couvrant l'Europe de l'Ouest,
+puis les côtes, frontières nationales et limites départementales françaises
+sont ajoutées dans une surcouche indépendante.
 """
 
 from __future__ import annotations
@@ -14,19 +14,21 @@ import math
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Sequence
 
 import numpy as np
-from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
+import shapefile
+from PIL import Image, ImageDraw
 from scipy.spatial import cKDTree
 
 
-MAP_SCHEMA_VERSION = 1
+MAP_SCHEMA_VERSION = 2
+MODULE_VERSION = "3.1.0"
 DEFAULT_BOUNDS = {
-    "south": 41.0,
-    "west": -5.8,
-    "north": 51.6,
-    "east": 10.1,
+    "south": 38.0,
+    "west": -12.0,
+    "north": 57.0,
+    "east": 18.0,
 }
 
 
@@ -39,7 +41,38 @@ class LayerSpec:
     stops: tuple[tuple[float, str], ...]
     decimals: int = 0
     transparent_below: float | None = None
-    opacity: int = 224
+    opacity: int = 244
+    discrete: bool = False
+
+
+PRECIPITATION_STOPS = (
+    (0.1, "#f5f5f7"),
+    (1, "#c9e6ff"),
+    (2, "#7fbbff"),
+    (3, "#438fff"),
+    (5, "#1bd0ef"),
+    (7, "#00b8bd"),
+    (10, "#00ca76"),
+    (15, "#32e300"),
+    (20, "#86ed00"),
+    (25, "#d2ef00"),
+    (30, "#fff000"),
+    (40, "#ffd000"),
+    (50, "#ff9900"),
+    (60, "#ff6500"),
+    (70, "#ff2e00"),
+    (80, "#ef0054"),
+    (90, "#d000a7"),
+    (100, "#a000e8"),
+    (125, "#6900dc"),
+    (150, "#4b00b4"),
+    (175, "#291078"),
+    (200, "#661070"),
+    (250, "#a548bd"),
+    (300, "#d487e1"),
+    (400, "#f0c8f2"),
+    (500, "#ffffff"),
+)
 
 
 LAYER_SPECS = (
@@ -49,14 +82,18 @@ LAYER_SPECS = (
         "°C",
         "temperature_c",
         (
-            (-20, "#5b2a86"),
-            (-10, "#3158b7"),
-            (0, "#4db7e5"),
-            (10, "#50c878"),
-            (20, "#f2dc4d"),
-            (30, "#f28e2b"),
-            (35, "#d83b32"),
-            (40, "#9d174d"),
+            (-25, "#482173"),
+            (-15, "#303fa5"),
+            (-5, "#3478c5"),
+            (0, "#55b7dd"),
+            (5, "#53c6a8"),
+            (10, "#70cf66"),
+            (15, "#cbd83f"),
+            (20, "#f2d43d"),
+            (25, "#f2a331"),
+            (30, "#ea652b"),
+            (35, "#d93435"),
+            (40, "#a71f57"),
             (45, "#5b1037"),
         ),
         decimals=1,
@@ -66,42 +103,22 @@ LAYER_SPECS = (
         "Précipitations sur 1 h",
         "mm",
         "precipitation_mm",
-        (
-            (0.1, "#b8f1ff"),
-            (0.5, "#66d6ff"),
-            (1, "#3b9eea"),
-            (2, "#2d6ecf"),
-            (5, "#3fb950"),
-            (10, "#f1d648"),
-            (20, "#f08a24"),
-            (40, "#d9363e"),
-            (70, "#8b1a68"),
-        ),
+        tuple(stop for stop in PRECIPITATION_STOPS if stop[0] <= 100),
         decimals=1,
-        transparent_below=0.1,
-        opacity=238,
+        transparent_below=0.03,
+        opacity=255,
+        discrete=True,
     ),
     LayerSpec(
         "pluie_cumul",
-        "Précipitations cumulées depuis le run",
+        "Précipitations totales",
         "mm",
         "precipitation_total_mm",
-        (
-            (0.1, "#d8f7ff"),
-            (1, "#78d9fa"),
-            (3, "#3f9ee8"),
-            (5, "#2e6fc5"),
-            (10, "#38b76a"),
-            (20, "#b8d84c"),
-            (30, "#f2d347"),
-            (50, "#f08b2b"),
-            (80, "#d73a43"),
-            (120, "#922a78"),
-            (200, "#54204f"),
-        ),
+        PRECIPITATION_STOPS,
         decimals=1,
-        transparent_below=0.1,
-        opacity=238,
+        transparent_below=0.03,
+        opacity=255,
+        discrete=True,
     ),
     LayerSpec(
         "vent",
@@ -109,15 +126,15 @@ LAYER_SPECS = (
         "km/h",
         "wind_speed_kmh",
         (
-            (0, "#e8f5e9"),
-            (10, "#9bd68f"),
-            (20, "#55bd78"),
-            (30, "#36a6a1"),
-            (40, "#347ac1"),
-            (50, "#6257b5"),
-            (60, "#a43d91"),
-            (80, "#d63b56"),
-            (100, "#7e1636"),
+            (0, "#eef7ea"),
+            (10, "#a7db8d"),
+            (20, "#5cc27d"),
+            (30, "#38aaa5"),
+            (40, "#347cc3"),
+            (50, "#6558b8"),
+            (60, "#a43e94"),
+            (80, "#d63c57"),
+            (100, "#7e1736"),
         ),
     ),
     LayerSpec(
@@ -158,12 +175,12 @@ LAYER_SPECS = (
         "%",
         "cloud_cover_pct",
         (
-            (0, "#d8f1ff"),
-            (20, "#c4e5ef"),
-            (40, "#aebfcc"),
-            (60, "#8999a7"),
-            (80, "#65717c"),
-            (100, "#39434c"),
+            (0, "#dceef6"),
+            (20, "#c8dce5"),
+            (40, "#abbac5"),
+            (60, "#8997a4"),
+            (80, "#626e79"),
+            (100, "#343d46"),
         ),
     ),
     LayerSpec(
@@ -199,25 +216,11 @@ LAYER_SPECS = (
 )
 
 
-MAJOR_CITIES = (
-    ("Lille", 50.6292, 3.0573),
-    ("Paris", 48.8566, 2.3522),
-    ("Strasbourg", 48.5734, 7.7521),
-    ("Brest", 48.3904, -4.4861),
-    ("Nantes", 47.2184, -1.5536),
-    ("Bordeaux", 44.8378, -0.5792),
-    ("Toulouse", 43.6047, 1.4442),
-    ("Lyon", 45.7640, 4.8357),
-    ("Clermont-Fd", 45.7772, 3.0870),
-    ("Marseille", 43.2965, 5.3698),
-    ("Nice", 43.7102, 7.2620),
-    ("Ajaccio", 41.9192, 8.7386),
-)
-
-
 def _hex_to_rgb(value: str) -> np.ndarray:
-    value = value.lstrip("#")
-    return np.asarray(tuple(int(value[index : index + 2], 16) for index in (0, 2, 4)))
+    clean = value.lstrip("#")
+    return np.asarray(
+        tuple(int(clean[index : index + 2], 16) for index in (0, 2, 4))
+    )
 
 
 def _mercator(latitude: np.ndarray | float) -> np.ndarray | float:
@@ -229,25 +232,8 @@ def _inverse_mercator(value: np.ndarray) -> np.ndarray:
     return np.degrees(2.0 * np.arctan(np.exp(value)) - np.pi / 2.0)
 
 
-def _font(size: int, *, bold: bool = False) -> ImageFont.ImageFont:
-    candidates = (
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
-        if bold
-        else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-        "/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf"
-        if bold
-        else "/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf",
-    )
-    for path in candidates:
-        try:
-            return ImageFont.truetype(path, size=size)
-        except OSError:
-            continue
-    return ImageFont.load_default()
-
-
 class HarmonieMapRenderer:
-    """Rend les champs horaires HARMONIE en superpositions WebP."""
+    """Rend les champs HARMONIE natifs et les frontières cartographiques."""
 
     def __init__(
         self,
@@ -255,24 +241,44 @@ class HarmonieMapRenderer:
         longitudes: np.ndarray,
         output_directory: Path,
         *,
-        width: int = 960,
-        height: int = 720,
+        width: int = 1100,
+        height: int = 820,
         bounds: dict[str, float] | None = None,
-        mask_radius_degrees: float = 0.18,
+        source_max_distance: float = 0.22,
+        france_latitudes: np.ndarray | None = None,
+        france_longitudes: np.ndarray | None = None,
+        france_departments: Sequence[str] | None = None,
+        boundary_directory: Path | None = None,
     ) -> None:
         self.latitudes = np.asarray(latitudes, dtype=np.float64)
         self.longitudes = np.asarray(longitudes, dtype=np.float64)
         if self.latitudes.shape != self.longitudes.shape or self.latitudes.ndim != 1:
             raise ValueError("Coordonnées cartographiques invalides")
         if len(self.latitudes) < 4:
-            raise ValueError("Au moins quatre points sont nécessaires")
+            raise ValueError("Au moins quatre points HARMONIE sont nécessaires")
 
         self.output_directory = Path(output_directory)
         self.output_directory.mkdir(parents=True, exist_ok=True)
         self.width = int(width)
         self.height = int(height)
         self.bounds = dict(bounds or DEFAULT_BOUNDS)
-        self.mask_radius_degrees = float(mask_radius_degrees)
+        self.source_max_distance = float(source_max_distance)
+        self.boundary_directory = (
+            Path(boundary_directory) if boundary_directory is not None else None
+        )
+        self.france_latitudes = (
+            np.asarray(france_latitudes, dtype=np.float64)
+            if france_latitudes is not None
+            else None
+        )
+        self.france_longitudes = (
+            np.asarray(france_longitudes, dtype=np.float64)
+            if france_longitudes is not None
+            else None
+        )
+        self.france_departments = (
+            list(france_departments) if france_departments is not None else None
+        )
         self.steps: list[dict[str, Any]] = []
 
         self._prepare_interpolation()
@@ -287,15 +293,17 @@ class HarmonieMapRenderer:
         grid_latitudes = _inverse_mercator(mercator_rows)
         grid_longitudes = np.linspace(west, east, self.width)
         longitude_grid, latitude_grid = np.meshgrid(grid_longitudes, grid_latitudes)
+        self._target_latitudes = latitude_grid
+        self._target_longitudes = longitude_grid
 
         latitude_midpoint = (south + north) / 2.0
-        longitude_scale = math.cos(math.radians(latitude_midpoint))
+        self._longitude_scale = math.cos(math.radians(latitude_midpoint))
         source = np.column_stack(
-            (self.longitudes * longitude_scale, self.latitudes)
+            (self.longitudes * self._longitude_scale, self.latitudes)
         )
         target = np.column_stack(
             (
-                longitude_grid.ravel() * longitude_scale,
+                longitude_grid.ravel() * self._longitude_scale,
                 latitude_grid.ravel(),
             )
         )
@@ -308,18 +316,19 @@ class HarmonieMapRenderer:
         if neighbour_count == 1:
             distances = distances[:, None]
             indexes = indexes[:, None]
-        weights = 1.0 / np.maximum(distances, 1.0e-4) ** 2
         self._indexes = indexes.astype(np.int32, copy=False)
-        self._weights = weights.astype(np.float32, copy=False)
-        self._land_mask = (
+        self._weights = (
+            1.0 / np.maximum(distances, 1.0e-4) ** 2
+        ).astype(np.float32, copy=False)
+        self._coverage_mask = (
             distances[:, 0].reshape(self.height, self.width)
-            <= self.mask_radius_degrees
+            <= self.source_max_distance
         )
 
     def _interpolate(self, values: np.ndarray) -> np.ndarray:
         source = np.asarray(values, dtype=np.float64)
         if source.shape != self.latitudes.shape:
-            raise ValueError("Le champ ne correspond pas au catalogue national")
+            raise ValueError("Le champ ne correspond pas à la grille HARMONIE native")
         selected = source[self._indexes]
         finite = np.isfinite(selected)
         weights = self._weights * finite
@@ -342,29 +351,27 @@ class HarmonieMapRenderer:
         upper = np.searchsorted(stop_values, clipped, side="right")
         upper = np.clip(upper, 1, len(stop_values) - 1)
         lower = upper - 1
-        low_values = stop_values[lower]
-        high_values = stop_values[upper]
-        fraction = np.divide(
-            clipped - low_values,
-            high_values - low_values,
-            out=np.zeros_like(clipped),
-            where=(high_values != low_values),
-        )
-        rgb = (
-            stop_colours[lower] * (1.0 - fraction[..., None])
-            + stop_colours[upper] * fraction[..., None]
-        ).astype(np.uint8)
+        if spec.discrete:
+            rgb = stop_colours[lower].astype(np.uint8)
+        else:
+            low_values = stop_values[lower]
+            high_values = stop_values[upper]
+            fraction = np.divide(
+                clipped - low_values,
+                high_values - low_values,
+                out=np.zeros_like(clipped),
+                where=(high_values != low_values),
+            )
+            rgb = (
+                stop_colours[lower] * (1.0 - fraction[..., None])
+                + stop_colours[upper] * fraction[..., None]
+            ).astype(np.uint8)
         alpha = np.full(field.shape, spec.opacity, dtype=np.uint8)
-        valid = self._land_mask & finite_field
+        valid = self._coverage_mask & finite_field
         if spec.transparent_below is not None:
             valid &= field >= spec.transparent_below
         alpha[~valid] = 0
-        rgba = np.dstack((rgb, alpha))
-        image = Image.fromarray(rgba, mode="RGBA")
-        image = image.filter(ImageFilter.GaussianBlur(radius=0.75))
-        smoothed = np.asarray(image).copy()
-        smoothed[..., 3] = alpha
-        return Image.fromarray(smoothed, mode="RGBA")
+        return Image.fromarray(np.dstack((rgb, alpha)), mode="RGBA")
 
     def _pixel(self, latitude: float, longitude: float) -> tuple[int, int]:
         west = float(self.bounds["west"])
@@ -376,51 +383,114 @@ class HarmonieMapRenderer:
         y *= self.height - 1
         return int(round(x)), int(round(y))
 
-    def _write_static_maps(self) -> None:
-        mask = Image.fromarray((self._land_mask * 255).astype(np.uint8), mode="L")
-        sea = Image.new("RGB", (self.width, self.height), "#dceef5")
-        sea_draw = ImageDraw.Draw(sea)
-        grid_colour = "#bdd7e2"
-        for longitude in range(-5, 11, 2):
-            x, _ = self._pixel(46.0, float(longitude))
-            sea_draw.line((x, 0, x, self.height), fill=grid_colour, width=1)
-        for latitude in range(42, 52, 2):
-            _, y = self._pixel(float(latitude), 2.0)
-            sea_draw.line((0, y, self.width, y), fill=grid_colour, width=1)
-        land = Image.new("RGB", (self.width, self.height), "#f5f2e9")
-        base = Image.composite(land, sea, mask)
-        expanded = mask.filter(ImageFilter.MaxFilter(5))
-        contracted = mask.filter(ImageFilter.MinFilter(5))
-        edge = ImageChops.difference(expanded, contracted)
-        border = Image.new("RGB", (self.width, self.height), "#476472")
-        base.paste(border, mask=edge)
-        base.save(
-            self.output_directory / "fond.webp",
-            "WEBP",
-            quality=84,
-            method=4,
-        )
+    def _draw_shapefile(
+        self,
+        draw: ImageDraw.ImageDraw,
+        path: Path,
+        *,
+        colour: str,
+        width: int,
+    ) -> None:
+        if not path.is_file():
+            return
+        reader = shapefile.Reader(str(path))
+        south = float(self.bounds["south"]) - 1
+        north = float(self.bounds["north"]) + 1
+        west = float(self.bounds["west"]) - 1
+        east = float(self.bounds["east"]) + 1
+        for shape in reader.iterShapes():
+            parts = list(shape.parts) + [len(shape.points)]
+            for start, end in zip(parts, parts[1:]):
+                segment: list[tuple[int, int]] = []
+                for longitude, latitude in shape.points[start:end]:
+                    if west <= longitude <= east and south <= latitude <= north:
+                        segment.append(self._pixel(latitude, longitude))
+                    elif len(segment) >= 2:
+                        draw.line(segment, fill=colour, width=width, joint="curve")
+                        segment = []
+                    else:
+                        segment = []
+                if len(segment) >= 2:
+                    draw.line(segment, fill=colour, width=width, joint="curve")
 
-        labels = Image.new("RGBA", (self.width, self.height), (0, 0, 0, 0))
-        draw = ImageDraw.Draw(labels)
-        font = _font(max(11, self.width // 80), bold=True)
-        for name, latitude, longitude in MAJOR_CITIES:
-            x, y = self._pixel(latitude, longitude)
-            if not (0 <= x < self.width and 0 <= y < self.height):
-                continue
-            draw.ellipse((x - 3, y - 3, x + 3, y + 3), fill="#102f44", outline="white")
-            draw.text(
-                (x + 6, y - 7),
-                name,
-                font=font,
-                fill="#102f44",
-                stroke_width=3,
-                stroke_fill="white",
+    def _department_overlay(self) -> Image.Image:
+        overlay = Image.new("RGBA", (self.width, self.height), (0, 0, 0, 0))
+        if (
+            self.france_latitudes is None
+            or self.france_longitudes is None
+            or self.france_departments is None
+            or len(self.france_departments) != len(self.france_latitudes)
+        ):
+            return overlay
+
+        source = np.column_stack(
+            (
+                self.france_longitudes * self._longitude_scale,
+                self.france_latitudes,
             )
-        labels.save(
-            self.output_directory / "villes.webp",
+        )
+        target = np.column_stack(
+            (
+                self._target_longitudes.ravel() * self._longitude_scale,
+                self._target_latitudes.ravel(),
+            )
+        )
+        distances, indexes = cKDTree(source).query(target, k=1, workers=-1)
+        codes = {
+            code: index + 1
+            for index, code in enumerate(sorted(set(self.france_departments)))
+        }
+        encoded = np.asarray(
+            [codes.get(code, 0) for code in self.france_departments]
+        )
+        departments = encoded[indexes].reshape(self.height, self.width)
+        france = distances.reshape(self.height, self.width) <= 0.18
+
+        edges = np.zeros_like(france)
+        horizontal = (
+            france[:, 1:]
+            & france[:, :-1]
+            & (departments[:, 1:] != departments[:, :-1])
+        )
+        vertical = (
+            france[1:, :]
+            & france[:-1, :]
+            & (departments[1:, :] != departments[:-1, :])
+        )
+        edges[:, 1:] |= horizontal
+        edges[1:, :] |= vertical
+        department_alpha = Image.fromarray(
+            (edges * 150).astype(np.uint8), mode="L"
+        )
+        department_lines = Image.new("RGBA", overlay.size, (12, 12, 16, 0))
+        department_lines.putalpha(department_alpha)
+        overlay.alpha_composite(department_lines)
+        return overlay
+
+    def _write_static_maps(self) -> None:
+        base = Image.new("RGB", (self.width, self.height), "#a5a6b0")
+        base.save(self.output_directory / "fond.webp", "WEBP", quality=86, method=4)
+
+        borders = Image.new("RGBA", (self.width, self.height), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(borders)
+        if self.boundary_directory is not None:
+            self._draw_shapefile(
+                draw,
+                self.boundary_directory / "ne_50m_admin_0_boundary_lines_land.shp",
+                colour="#111116",
+                width=2,
+            )
+            self._draw_shapefile(
+                draw,
+                self.boundary_directory / "ne_50m_coastline.shp",
+                colour="#050507",
+                width=3,
+            )
+        borders.alpha_composite(self._department_overlay())
+        borders.save(
+            self.output_directory / "frontieres.webp",
             "WEBP",
-            quality=90,
+            lossless=True,
             method=4,
         )
 
@@ -440,7 +510,7 @@ class HarmonieMapRenderer:
             destination_directory.mkdir(parents=True, exist_ok=True)
             destination = destination_directory / f"{lead_hour:03d}.webp"
             image = self._image_from_field(self._interpolate(values), spec)
-            image.save(destination, "WEBP", quality=80, method=4)
+            image.save(destination, "WEBP", quality=84, method=4)
             files[spec.key] = f"maps/{spec.key}/{destination.name}"
 
         self.steps.append(
@@ -463,6 +533,7 @@ class HarmonieMapRenderer:
                 "unit": spec.unit,
                 "decimals": spec.decimals,
                 "transparent_below": spec.transparent_below,
+                "discrete": spec.discrete,
                 "stops": [
                     {"value": value, "color": colour}
                     for value, colour in spec.stops
@@ -473,6 +544,7 @@ class HarmonieMapRenderer:
         manifest = {
             "schema_version": MAP_SCHEMA_VERSION,
             "status": "ok",
+            "module_version": MODULE_VERSION,
             "generated_at": generated_at,
             "run_time": run_time,
             "projection": "EPSG:3857",
@@ -480,7 +552,7 @@ class HarmonieMapRenderer:
             "width": self.width,
             "height": self.height,
             "background": "maps/fond.webp",
-            "labels": "maps/villes.webp",
+            "overlay": "maps/frontieres.webp",
             "layers": layers,
             "steps": self.steps,
         }
