@@ -6,6 +6,7 @@ import tempfile
 import unittest
 from datetime import datetime, timezone
 from pathlib import Path
+from unittest.mock import patch
 
 import numpy as np
 
@@ -14,10 +15,82 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from arome_maps import AromeMapRenderer  # noqa: E402
-from update_arome_france import grid_index, load_catalog, transform_step  # noqa: E402
+from update_arome_france import (  # noqa: E402
+    IncompleteRunError,
+    Resource,
+    choose_resources,
+    grid_index,
+    load_catalog,
+    transform_step,
+    wait_for_complete_remote_run,
+)
 
 
 class AromePipelineTests(unittest.TestCase):
+    @staticmethod
+    def resource(group: str, lead: int, run: str) -> Resource:
+        return Resource(
+            group=group,
+            lead=lead,
+            run_text=run,
+            title=f"arome__001__{group}__{lead:02d}H__{run}.grib2",
+            url="https://example.invalid/arome.grib2",
+            size=1,
+        )
+
+    def test_resource_selection_never_mixes_runs(self) -> None:
+        run_a = "2026-08-21T06:00:00Z"
+        run_b = "2026-08-21T09:00:00Z"
+        resources = [
+            *(self.resource("SP1", lead, run_b) for lead in range(3)),
+            *(self.resource("SP2", lead, run_a) for lead in range(3)),
+            self.resource("SP3", 0, run_a),
+        ]
+        with self.assertRaisesRegex(
+            IncompleteRunError, "Catalogue AROME en cours de synchronisation"
+        ):
+            choose_resources(resources, 2)
+
+    def test_resource_selection_uses_latest_complete_run(self) -> None:
+        older = "2026-08-21T06:00:00Z"
+        latest = "2026-08-21T09:00:00Z"
+        resources = []
+        for run in (older, latest):
+            resources.extend(
+                self.resource(group, lead, run)
+                for group in ("SP1", "SP2")
+                for lead in range(3)
+            )
+            resources.append(self.resource("SP3", 0, run))
+        selected, run_time = choose_resources(resources, 2)
+        self.assertEqual(run_time, datetime(2026, 8, 21, 9, tzinfo=timezone.utc))
+        self.assertEqual(selected["SP1", 2].run_text, latest)
+        self.assertEqual(selected["SP3", 0].run_text, latest)
+
+    def test_catalog_retry_accepts_run_after_transient_replacement(self) -> None:
+        old = "2026-08-21T06:00:00Z"
+        new = "2026-08-21T09:00:00Z"
+        mixed = [
+            *(self.resource("SP1", lead, new) for lead in range(2)),
+            *(self.resource("SP2", lead, old) for lead in range(2)),
+            self.resource("SP3", 0, old),
+        ]
+        complete = [
+            *(
+                self.resource(group, lead, new)
+                for group in ("SP1", "SP2")
+                for lead in range(2)
+            ),
+            self.resource("SP3", 0, new),
+        ]
+        with patch(
+            "update_arome_france.api_resources", side_effect=(mixed, complete)
+        ) as mocked_api:
+            selection = wait_for_complete_remote_run(object(), 1, 2, 0)
+        self.assertIsNotNone(selection)
+        self.assertEqual(mocked_api.call_count, 2)
+        self.assertEqual(selection[1], datetime(2026, 8, 21, 9, tzinfo=timezone.utc))
+
     def test_catalog_is_remapped_to_arome_grid(self) -> None:
         catalog = load_catalog(ROOT / "config" / "communes-france.json")
         self.assertEqual(catalog.commune_count, 34746)

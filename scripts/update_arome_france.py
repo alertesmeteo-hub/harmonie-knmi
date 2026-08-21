@@ -39,7 +39,7 @@ from arome_maps import DEFAULT_BOUNDS, AromeMapRenderer
 
 
 LOGGER = logging.getLogger("arome.france")
-PIPELINE_VERSION = "1.0.0"
+PIPELINE_VERSION = "1.0.1"
 DATASET_API = (
     "https://www.data.gouv.fr/api/1/datasets/"
     "paquets-arome-resolution-0-01deg/"
@@ -183,6 +183,10 @@ class Resource:
     local_path: Path | None = None
 
 
+class IncompleteRunError(RuntimeError):
+    """Le catalogue distant ne contient pas encore un run AROME cohérent."""
+
+
 @dataclass
 class DepartmentData:
     code: str
@@ -228,6 +232,21 @@ def parse_args() -> argparse.Namespace:
         "--current-metadata-url",
         default=DEFAULT_CURRENT_METADATA_URL,
         help="index.json actuellement publié, pour éviter un run identique",
+    )
+    parser.add_argument(
+        "--catalog-attempts",
+        type=int,
+        default=4,
+        help=(
+            "Nombre de lectures du catalogue data.gouv.fr lorsqu'un run est "
+            "en cours de remplacement (défaut : 4)"
+        ),
+    )
+    parser.add_argument(
+        "--catalog-retry-seconds",
+        type=int,
+        default=60,
+        help="Attente entre deux lectures du catalogue incomplet (défaut : 60 s)",
     )
     parser.add_argument(
         "--force",
@@ -387,7 +406,12 @@ def load_catalog(path: Path) -> NationalCatalog:
 
 
 def api_resources(session: requests.Session) -> list[Resource]:
-    response = session.get(DATASET_API, timeout=(15, 90))
+    response = session.get(
+        DATASET_API,
+        params={"_": int(time.time())},
+        headers={"Cache-Control": "no-cache"},
+        timeout=(15, 90),
+    )
     response.raise_for_status()
     payload = response.json()
     resources: list[Resource] = []
@@ -436,6 +460,7 @@ def local_resources(directory: Path) -> list[Resource]:
 def choose_resources(
     resources: Iterable[Resource], forecast_hours: int
 ) -> tuple[dict[tuple[str, int], Resource], datetime | None]:
+    resources = list(resources)
     grouped: dict[str, dict[tuple[str, int], Resource]] = defaultdict(dict)
     for resource in resources:
         grouped[resource.run_text or "local"][resource.group, resource.lead] = resource
@@ -445,6 +470,7 @@ def choose_resources(
         for group in ("SP1", "SP2")
         for lead in range(forecast_hours + 1)
     }
+    required.add(("SP3", 0))
     candidates: list[tuple[datetime, str, dict[tuple[str, int], Resource]]] = []
     for run_text, selection in grouped.items():
         if not required.issubset(selection):
@@ -452,15 +478,62 @@ def choose_resources(
         parsed = parse_run_text(None if run_text == "local" else run_text)
         candidates.append((parsed or datetime.min.replace(tzinfo=timezone.utc), run_text, selection))
     if not candidates:
-        available = Counter(resource.group for resource in resources)
-        raise RuntimeError(
-            "Run AROME incomplet pour les échéances demandées "
-            f"(ressources observées : {dict(available)})"
+        inventories: list[str] = []
+        for run_text in sorted(grouped):
+            counts = Counter(group for group, _lead in grouped[run_text])
+            inventories.append(
+                f"{run_text}: "
+                + ", ".join(
+                    f"{group}={counts.get(group, 0)}"
+                    for group in ("HP1", "SP1", "SP2", "SP3")
+                )
+            )
+        raise IncompleteRunError(
+            "Catalogue AROME en cours de synchronisation : aucun run unique ne "
+            f"contient SP1/SP2 de +00 h à +{forecast_hours:02d} h et SP3 +00 h "
+            f"(par run : {'; '.join(inventories) or 'aucune ressource'})"
         )
     _date, run_text, selection = max(candidates, key=lambda item: item[0])
-    if ("SP3", 0) not in selection:
-        raise RuntimeError("Le fichier SP3 +00 h contenant l'altitude est absent")
     return selection, parse_run_text(None if run_text == "local" else run_text)
+
+
+def wait_for_complete_remote_run(
+    session: requests.Session,
+    forecast_hours: int,
+    attempts: int,
+    retry_seconds: int,
+) -> tuple[dict[tuple[str, int], Resource], datetime | None] | None:
+    """Attend la fin du remplacement SP1/SP2/SP3 effectué par data.gouv.fr.
+
+    Météo-France remplace parfois les quatre familles l'une après l'autre. Dans
+    cette courte fenêtre, chaque famille compte bien 52 fichiers, mais leurs
+    horodatages de run diffèrent et elles ne doivent surtout pas être mélangées.
+    """
+
+    last_error: IncompleteRunError | None = None
+    for attempt in range(1, attempts + 1):
+        discovered = api_resources(session)
+        try:
+            return choose_resources(discovered, forecast_hours)
+        except IncompleteRunError as exc:
+            last_error = exc
+            if attempt < attempts:
+                LOGGER.warning(
+                    "%s. Nouvelle vérification dans %s s (%s/%s).",
+                    exc,
+                    retry_seconds,
+                    attempt,
+                    attempts,
+                )
+                if retry_seconds:
+                    time.sleep(retry_seconds)
+
+    LOGGER.warning(
+        "%s. Aucune donnée ne sera écrasée ; le prochain passage du workflow "
+        "réessaiera automatiquement. Aucune clé API Météo-France n'est requise.",
+        last_error,
+    )
+    return None
 
 
 def already_published(url: str, run_time: datetime | None) -> bool:
@@ -1304,15 +1377,27 @@ def main() -> int:
     )
     if not 1 <= args.forecast_hours <= 51:
         raise ValueError("forecast-hours doit être compris entre 1 et 51")
+    if not 1 <= args.catalog_attempts <= 20:
+        raise ValueError("catalog-attempts doit être compris entre 1 et 20")
+    if not 0 <= args.catalog_retry_seconds <= 600:
+        raise ValueError("catalog-retry-seconds doit être compris entre 0 et 600")
 
     catalog = load_catalog(Path(args.catalog))
     session = requests.Session()
     session.headers.update({"User-Agent": USER_AGENT})
     if args.resource_directory:
         discovered = local_resources(Path(args.resource_directory))
+        resources, run_hint = choose_resources(discovered, args.forecast_hours)
     else:
-        discovered = api_resources(session)
-    resources, run_hint = choose_resources(discovered, args.forecast_hours)
+        selection = wait_for_complete_remote_run(
+            session,
+            args.forecast_hours,
+            args.catalog_attempts,
+            args.catalog_retry_seconds,
+        )
+        if selection is None:
+            return 0
+        resources, run_hint = selection
     LOGGER.info("Run AROME sélectionné : %s", iso_utc(run_hint) or "GRIB local")
     if not args.force and not args.resource_directory and already_published(
         args.current_metadata_url, run_hint
