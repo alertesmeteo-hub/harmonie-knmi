@@ -51,7 +51,14 @@ class HarmonieMapRendererTest(unittest.TestCase):
                 output,
                 width=240,
                 height=180,
-                mask_radius_degrees=1.5,
+                source_max_distance=2.0,
+                france_latitudes=latitudes,
+                france_longitudes=longitudes,
+                france_departments=[
+                    "OUEST" if longitude < 2 else "EST"
+                    for longitude in longitudes
+                ],
+                boundary_directory=ROOT / "config" / "natural-earth",
             )
             valid_time = datetime(2026, 8, 21, 12, tzinfo=timezone.utc)
             renderer.render_step(lead_hour=6, valid_time=valid_time, fields=fields)
@@ -63,7 +70,7 @@ class HarmonieMapRendererTest(unittest.TestCase):
             self.assertEqual(len(manifest["layers"]), len(LAYER_SPECS))
             self.assertEqual(manifest["steps"][0]["lead_hour"], 6)
             self.assertTrue((output / "fond.webp").is_file())
-            self.assertTrue((output / "villes.webp").is_file())
+            self.assertTrue((output / "frontieres.webp").is_file())
             self.assertTrue((output / "temperature" / "006.webp").is_file())
             self.assertTrue((output / "pluie_1h" / "006.webp").is_file())
 
@@ -73,6 +80,8 @@ class HarmonieMapRendererTest(unittest.TestCase):
             with (output / "index.json").open("r", encoding="utf-8") as handle:
                 saved = json.load(handle)
             self.assertEqual(saved["projection"], "EPSG:3857")
+            self.assertEqual(saved["module_version"], "3.1.0")
+            self.assertEqual(saved["overlay"], "maps/frontieres.webp")
             self.assertEqual(saved["steps"][0]["valid_time"], "2026-08-21T12:00:00Z")
 
 
