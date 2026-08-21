@@ -80,7 +80,7 @@ class HarmonieMapRendererTest(unittest.TestCase):
             with (output / "index.json").open("r", encoding="utf-8") as handle:
                 saved = json.load(handle)
             self.assertEqual(saved["projection"], "EPSG:3857")
-            self.assertEqual(saved["module_version"], "3.1.0")
+            self.assertEqual(saved["module_version"], "3.1.1")
             self.assertEqual(saved["overlay"], "maps/frontieres.webp")
             self.assertEqual(saved["steps"][0]["valid_time"], "2026-08-21T12:00:00Z")
 
