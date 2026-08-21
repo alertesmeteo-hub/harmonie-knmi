@@ -32,15 +32,26 @@ class HarmonieMapRendererTest(unittest.TestCase):
         point_count = len(latitudes)
         fields = {
             "temperature_c": np.linspace(-5, 35, point_count),
+            "wind_chill_c": np.linspace(-12, 20, point_count),
+            "dewpoint_c": np.linspace(-10, 24, point_count),
+            "humidex": np.linspace(-5, 45, point_count),
             "precipitation_mm": np.linspace(0, 12, point_count),
             "precipitation_total_mm": np.linspace(0, 40, point_count),
             "wind_speed_kmh": np.linspace(0, 70, point_count),
             "wind_gust_kmh": np.linspace(10, 110, point_count),
             "pressure_hpa": np.linspace(985, 1030, point_count),
             "cloud_cover_pct": np.linspace(0, 100, point_count),
+            "cloud_low_pct": np.linspace(0, 80, point_count),
+            "cloud_mid_pct": np.linspace(10, 90, point_count),
+            "cloud_high_pct": np.linspace(20, 100, point_count),
             "humidity_pct": np.linspace(20, 100, point_count),
             "visibility_km": np.linspace(0.5, 40, point_count),
         }
+        for spec in LAYER_SPECS:
+            fields.setdefault(
+                spec.field,
+                np.linspace(spec.stops[0][0], spec.stops[-1][0], point_count),
+            )
         fields["temperature_c"][0] = np.nan
 
         with tempfile.TemporaryDirectory(prefix="harmonie-map-test-") as temporary:
@@ -70,7 +81,7 @@ class HarmonieMapRendererTest(unittest.TestCase):
             self.assertEqual(len(manifest["layers"]), len(LAYER_SPECS))
             self.assertEqual(manifest["steps"][0]["lead_hour"], 6)
             self.assertTrue((output / "fond.webp").is_file())
-            self.assertTrue((output / "frontieres.webp").is_file())
+            self.assertTrue((output / "frontieres.svg").is_file())
             self.assertTrue((output / "temperature" / "006.webp").is_file())
             self.assertTrue((output / "pluie_1h" / "006.webp").is_file())
 
@@ -80,9 +91,14 @@ class HarmonieMapRendererTest(unittest.TestCase):
             with (output / "index.json").open("r", encoding="utf-8") as handle:
                 saved = json.load(handle)
             self.assertEqual(saved["projection"], "EPSG:3857")
-            self.assertEqual(saved["module_version"], "3.1.1")
-            self.assertEqual(saved["overlay"], "maps/frontieres.webp")
+            self.assertEqual(saved["schema_version"], 3)
+            self.assertEqual(saved["module_version"], "3.2.0")
+            self.assertEqual(saved["overlay"], "maps/frontieres.svg")
+            self.assertEqual(saved["layers"]["rafales"]["group"], "Vent")
             self.assertEqual(saved["steps"][0]["valid_time"], "2026-08-21T12:00:00Z")
+
+            overlay = (output / "frontieres.svg").read_text(encoding="utf-8")
+            self.assertIn('vector-effect="non-scaling-stroke"', overlay)
 
 
 if __name__ == "__main__":
