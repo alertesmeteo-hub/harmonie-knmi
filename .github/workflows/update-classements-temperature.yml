@@ -1,4 +1,4 @@
-name: Update Classements Températures
+name: Update Classements Observations Météo-France
 
 on:
   schedule:
@@ -20,19 +20,19 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Python
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Installer Requests
+      - name: Installer dépendances
         run: |
           python -m pip install --upgrade pip
-          pip install requests==2.33.0
+          pip install requests==2.33.0 "pypdf>=5.0,<7"
 
       - name: Récupérer cache 72 h
         shell: bash
@@ -40,6 +40,10 @@ jobs:
           git fetch origin observations || true
           git show origin/observations:cache_classements_temperature_72h.json \
             > cache_classements_temperature_72h.json 2>/dev/null || true
+          git show origin/observations:cache_qualite_sites_mf.json \
+            > cache_qualite_sites_mf.json 2>/dev/null || true
+          git show origin/observations:cache_normales_records_mf.json \
+            > cache_normales_records_mf.json 2>/dev/null || true
 
           if [ -s cache_classements_temperature_72h.json ]; then
             echo "Cache 72 h récupéré."
@@ -48,11 +52,17 @@ jobs:
             rm -f cache_classements_temperature_72h.json
           fi
 
+      - name: Tester le générateur
+        run: |
+          python tests/test_generateur_observations.py
+
       - name: Générer les classements températures
         env:
           METEOFRANCE_PACKAGE_OBS_KEY: ${{ secrets.METEOFRANCE_PACKAGE_OBS_KEY }}
           METEOFRANCE_OBS_TOKEN: ${{ secrets.METEOFRANCE_OBS_TOKEN }}
           MF_PACKAGE_DELAY: "1.15"
+          MF_METADATA_BATCH_SIZE: "60"
+          MF_METADATA_DELAY: "0.10"
         run: |
           python generer_classements_temperature.py
 
@@ -70,9 +80,9 @@ jobs:
               data = json.load(f)
 
           assert data["status"] == "ok"
-          assert data["schema_version"] >= 1
-          assert data["module_version"] == "1.0.0"
-          assert data["build_id"] == "classements-temperature-9-tableaux-20260820"
+          assert data["schema_version"] >= 2
+          assert data["module_version"] == "1.1.0"
+          assert data["build_id"] == "classements-observations-mf-complet-20260821"
           assert data["latest_observation_at"]
           assert isinstance(data.get("hourly"), list)
           assert len(data["hourly"]) > 0, "Aucun classement horaire"
@@ -129,10 +139,16 @@ jobs:
             /tmp/classements-temperature-publish/classements_temperature.json
           cp cache_classements_temperature_72h.json \
             /tmp/classements-temperature-publish/cache_classements_temperature_72h.json
+          cp cache_qualite_sites_mf.json \
+            /tmp/classements-temperature-publish/cache_qualite_sites_mf.json
+          cp cache_normales_records_mf.json \
+            /tmp/classements-temperature-publish/cache_normales_records_mf.json
 
           # Évite le blocage git switch par des fichiers non suivis.
           rm -f classements_temperature.json
           rm -f cache_classements_temperature_72h.json
+          rm -f cache_qualite_sites_mf.json
+          rm -f cache_normales_records_mf.json
 
       - name: Publier branche observations
         shell: bash
@@ -152,13 +168,24 @@ jobs:
 
           cp /tmp/classements-temperature-publish/classements_temperature.json .
           cp /tmp/classements-temperature-publish/cache_classements_temperature_72h.json .
+          cp /tmp/classements-temperature-publish/cache_qualite_sites_mf.json .
+          cp /tmp/classements-temperature-publish/cache_normales_records_mf.json .
 
-          git add classements_temperature.json cache_classements_temperature_72h.json
+          git add \
+            classements_temperature.json \
+            cache_classements_temperature_72h.json \
+            cache_qualite_sites_mf.json \
+            cache_normales_records_mf.json
 
           if git diff --cached --quiet; then
             echo "Aucun changement."
             exit 0
           fi
 
-          git commit -m "Classements températures v1.0.0"
-          git push origin observations
+          git commit -m "Classements observations Météo-France v1.1.0"
+          if ! git push origin observations; then
+            echo "Push concurrent détecté, nouvel essai..."
+            git fetch origin observations
+            git rebase origin/observations
+            git push origin observations
+          fi
