@@ -6,7 +6,7 @@ from datetime import timedelta
 from pathlib import Path
 from generer_pluie_meteofrance import iso, parse_iso, utcnow
 
-VERSION="2.3.4"
+VERSION="2.3.5"
 
 def load(path: Path):
     try:
@@ -44,7 +44,13 @@ def main():
         'hours':dict(sorted(keep.items())),
     }
     Path(args.output).write_text(json.dumps(out,ensure_ascii=False,separators=(',',':')),encoding='utf-8')
-    print('Cache fusionné :', len(keep), 'heures |', sum(len(v) for v in keep.values()), 'valeurs')
+    
+    ordered=sorted((parse_iso(k), k) for k in keep if parse_iso(k) is not None)
+    if ordered:
+        print('Heure la plus ancienne :', iso(ordered[0][0]))
+        print('Heure la plus récente  :', iso(ordered[-1][0]))
+    print('Cache fusionné :', len(keep), 'heures distinctes |', sum(len(v) for v in keep.values()), 'valeurs')
+
     if len(keep) < 66:
         print('[WARN] profondeur globale < 66 h ; certaines stations 72 h peuvent rester incomplètes')
     return 0 if keep else 2

@@ -3,7 +3,7 @@
 
 """
 Météo Climat Pro — Carte pluie Météo-France
-Version 2.3.4
+Version 2.3.5
 
 Nouveautés v2.3.0
 -----------------
@@ -57,7 +57,7 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 import requests
 
 
-VERSION = "2.3.4"
+VERSION = "2.3.5"
 CACHE_SCHEMA = 5
 
 PACKAGE_BASE = (
@@ -635,7 +635,7 @@ def load_package_history(
     # Dans le workflow normal on ne télécharge JAMAIS les gros fichiers
     # climatologiques nationaux. Le workflow 48/72 h dédié est matriciel.
     if BOOTSTRAP_HOURLY:
-        print("[INFO] MF_BOOTSTRAP_HOURLY ignoré en v2.3.4 : utiliser le workflow matriciel dédié.")
+        print("[INFO] MF_BOOTSTRAP_HOURLY ignoré en v2.3.5 : utiliser le workflow matriciel dédié.")
 
     save_hourly_cache(hourly_cache, latest_hour)
 
