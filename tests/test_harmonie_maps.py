@@ -93,7 +93,7 @@ class HarmonieMapRendererTest(unittest.TestCase):
                 saved = json.load(handle)
             self.assertEqual(saved["projection"], "EPSG:3857")
             self.assertEqual(saved["schema_version"], 5)
-            self.assertEqual(saved["module_version"], "3.4.1")
+            self.assertEqual(saved["module_version"], "3.4.0")
             self.assertEqual(saved["overlay"], "maps/frontieres.svg")
             self.assertEqual(saved["places"], "maps/communes.json")
             self.assertEqual(saved["layers"]["rafales"]["group"], "Vent")
