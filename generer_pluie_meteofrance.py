@@ -3,27 +3,31 @@
 
 """
 Météo Climat Pro — Carte pluie Météo-France
-Version 2.2.0
+Version 2.3.0
 
-Corrections v2.2.0
-------------------
+Nouveautés v2.3.0
+-----------------
+- Ajout des cumuls glissants 48 h et 72 h.
+- Ajout du cumul de la saison météorologique en cours.
+- Ajout du cumul de l'année en cours.
+- Ajout du record quotidien de précipitations et de sa date.
+- Conservation du mois en cours et des normales 1991-2020.
 - Exclusion des stations dont le nom contient le marqueur SAPC.
-- Le cumul du mois en cours n'est plus complété s'il existe un trou entre
-  les données quotidiennes et les observations horaires.
-- Le script tente de reconstituer les jours manquants avec l'historique
-  disponible du Package Observations V2.
-- Le cache "mois en cours" est rafraîchi plus souvent quand les données
-  quotidiennes sont en retard.
-- Ajout d'indicateurs de fraîcheur dans le JSON.
+- Assemblage prudent des données quotidiennes et horaires sans créer de trou.
 
 Produit :
   observations_pluie.json
 
 Vues :
-  - rr24              : cumul des 24 dernières heures à partir de RR1
-  - rr_month_current  : cumul du mois en cours
-  - rr_month_mean     : cumul moyen du mois sur 1991-2020
-  - rr_year_mean      : cumul annuel moyen sur 1991-2020
+  - rr24               : cumul des 24 dernières heures à partir de RR1
+  - rr48               : cumul des 48 dernières heures à partir de RR1
+  - rr72               : cumul des 72 dernières heures à partir de RR1
+  - rr_month_current   : cumul du mois en cours
+  - rr_season_current  : cumul de la saison météorologique en cours
+  - rr_year_current    : cumul de l'année en cours
+  - rr_daily_record    : record quotidien de précipitations par station
+  - rr_month_mean      : cumul moyen du mois sur 1991-2020
+  - rr_year_mean       : cumul annuel moyen sur 1991-2020
 
 Secrets GitHub :
   METEOFRANCE_PACKAGE_OBS_KEY
@@ -52,8 +56,8 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 import requests
 
 
-VERSION = "2.2.0"
-CACHE_SCHEMA = 4
+VERSION = "2.3.0"
+CACHE_SCHEMA = 5
 
 PACKAGE_BASE = (
     "https://public-api.meteofrance.fr/public/"
@@ -84,18 +88,20 @@ NORMAL_END = 2020
 HTTP_TIMEOUT = 90
 
 # L'API autorise 50 appels/minute. Le script temporise les appels historiques.
-PACKAGE_REQUEST_DELAY = float(os.getenv("MF_PACKAGE_DELAY", "1.25"))
+PACKAGE_REQUEST_DELAY = float(os.getenv("MF_PACKAGE_DELAY", "1.35"))
 
 # Recherche du dernier paquet disponible.
 PACKAGE_RETRIES_HOURS = 4
 
 # Pour RR24 : on accepte 22 valeurs horaires minimum sur 24.
 RR24_MIN_VALID_HOURS = 22
+RR48_MIN_VALID_HOURS = 44
+RR72_MIN_VALID_HOURS = 66
 
 # Historique demandé au Package Obs pour essayer de combler J-1/J-2.
 # Le script arrête rapidement si les heures les plus anciennes ne sont
 # plus disponibles.
-PACKAGE_HISTORY_HOURS = 48
+PACKAGE_HISTORY_HOURS = 72
 PACKAGE_STOP_AFTER_OLD_MISSING = 4
 
 # Un jour reconstitué avec RR1 est considéré exploitable avec au moins 22 h.
@@ -103,6 +109,7 @@ FULL_DAY_MIN_VALID_HOURS = 22
 
 # Rafraîchissement du cumul mensuel contrôlé.
 CURRENT_MONTH_REFRESH_HOURS = 2
+RECORDS_REFRESH_DAYS = 180
 
 # Exclusion demandée.
 EXCLUDE_SAPC = True
@@ -339,6 +346,10 @@ def load_package_history(
         lambda: {
             "rr24_sum": 0.0,
             "rr24_hours": 0,
+            "rr48_sum": 0.0,
+            "rr48_hours": 0,
+            "rr72_sum": 0.0,
+            "rr72_hours": 0,
             "today_sum": 0.0,
             "today_hours": 0,
             "latest_date": None,
@@ -416,10 +427,16 @@ def load_package_history(
             item["day_sums"][day_key] += rr1
             item["day_hours"][day_key] += 1
 
-            # RR24 = seulement les 24 paquets les plus récents.
+            # Cumuls glissants à partir des paquets horaires les plus récents.
             if offset < 24:
                 item["rr24_sum"] += rr1
                 item["rr24_hours"] += 1
+            if offset < 48:
+                item["rr48_sum"] += rr1
+                item["rr48_hours"] += 1
+            if offset < 72:
+                item["rr72_sum"] += rr1
+                item["rr72_hours"] += 1
 
             if validity.date() == latest_day:
                 item["today_sum"] += rr1
@@ -529,6 +546,13 @@ def current_daily_url(dep: str, now: datetime) -> str:
     )
 
 
+def historic_daily_url(dep: str, now: datetime) -> str:
+    return (
+        f"{MF_S3_QUOT}/"
+        f"Q_{dep}_previous-1950-{now.year - 2}_RR-T-Vent.csv.gz"
+    )
+
+
 def historic_monthly_url(dep: str, now: datetime) -> str:
     return (
         f"{MF_S3_MENS}/"
@@ -555,6 +579,38 @@ def download_climate_rows(url: str) -> Optional[List[dict]]:
     except Exception as exc:
         print(f"[WARN] CSV illisible {url}: {exc}")
         return None
+
+
+# ---------------------------------------------------------------------
+# Périodes calendaires / saisons météorologiques
+# ---------------------------------------------------------------------
+
+def current_season_info(day: date) -> dict:
+    if day.month in (12, 1, 2):
+        start_year = day.year if day.month == 12 else day.year - 1
+        end_year = start_year + 1
+        return {
+            "id": f"hiver-{start_year}-{end_year}",
+            "label": f"Hiver {start_year}-{end_year}",
+            "start": date(start_year, 12, 1),
+        }
+    if day.month in (3, 4, 5):
+        return {
+            "id": f"printemps-{day.year}",
+            "label": f"Printemps {day.year}",
+            "start": date(day.year, 3, 1),
+        }
+    if day.month in (6, 7, 8):
+        return {
+            "id": f"ete-{day.year}",
+            "label": f"Été {day.year}",
+            "start": date(day.year, 6, 1),
+        }
+    return {
+        "id": f"automne-{day.year}",
+        "label": f"Automne {day.year}",
+        "start": date(day.year, 9, 1),
+    }
 
 
 # ---------------------------------------------------------------------
@@ -597,106 +653,226 @@ def hours_since(dt: Optional[datetime]) -> float:
 # Mois en cours : base quotidienne
 # ---------------------------------------------------------------------
 
-def update_current_month(
+def update_daily_records(
     cache: dict,
     station_ids: List[str],
     now: datetime,
 ) -> None:
+    """Construit le record quotidien absolu à partir des archives QUOT.
 
-    month_id = f"{now.year:04d}-{now.month:02d}"
+    Le gros historique (1950 -> année-2) est mis en cache et n'est rafraîchi
+    que périodiquement. Les deux dernières années sont ensuite comparées lors
+    de chaque mise à jour des cumuls courants.
+    """
 
-    previous_day_key = yyyymmdd(now.date() - timedelta(days=1))
-
-    # Si le dernier calcul était en retard, on retente au workflow suivant.
-    last_global_through = str(cache.get("current_month_global_through") or "")
-    lagging = bool(
-        last_global_through
-        and last_global_through < previous_day_key
+    stations_cache = cache.setdefault("stations", {})
+    known = sum(
+        1
+        for sid in station_ids
+        if stations_cache.get(sid, {}).get("record_archive_checked") is True
     )
+    coverage = known / max(1, len(station_ids))
 
     stale = (
-        cache.get("current_month_id") != month_id
-        or cache.get("current_month_logic_version") != 2
-        or lagging
-        or hours_since(
-            cache_datetime(cache, "current_month_generated_at")
-        ) >= CURRENT_MONTH_REFRESH_HOURS
+        hours_since(cache_datetime(cache, "records_generated_at"))
+        >= 24 * RECORDS_REFRESH_DAYS
+        or cache.get("records_archive_end_year") != now.year - 2
+        or coverage < 0.80
     )
 
     if not stale:
-        print("Cache du mois en cours encore valide.")
+        print("Cache des records quotidiens encore valide.")
         return
 
-    print("Actualisation des données quotidiennes du mois en cours...")
+    print("Calcul des records quotidiens historiques...")
 
     by_dep: Dict[str, set] = defaultdict(set)
     for sid in station_ids:
         for dep in department_candidates(sid):
             by_dep[dep].add(sid)
 
-    totals: Dict[str, float] = defaultdict(float)
-    last_day: Dict[str, str] = {}
-    seen_days = set()
-    prefix = f"{now.year:04d}{now.month:02d}"
+    maxima: Dict[str, float] = {}
+    max_dates: Dict[str, str] = {}
+    seen = set()
 
     for dep, dep_stations in sorted(by_dep.items()):
-        url = current_daily_url(dep, now)
+        url = historic_daily_url(dep, now)
         rows = download_climate_rows(url)
-
         if rows is None:
             continue
 
-        print(f"Quotidien {dep}: {len(rows)} lignes")
+        print(f"Historique quotidien {dep}: {len(rows)} lignes")
 
         for row in rows:
             sid = station_id(row)
             if sid not in dep_stations:
                 continue
 
-            day = parse_yyyymmdd(
-                first(row, ("AAAAMMJJ", "DATE", "date"))
-            )
-            if day is None:
+            day = parse_yyyymmdd(first(row, ("AAAAMMJJ", "DATE", "date")))
+            rr = clean_rain(first(row, ("RR", "rr", "PRECIP", "PRECIPITATION")))
+            if day is None or rr is None:
+                continue
+
+            key = (sid, yyyymmdd(day))
+            if key in seen:
+                continue
+            seen.add(key)
+
+            old = maxima.get(sid)
+            if old is None or rr > old:
+                maxima[sid] = rr
+                max_dates[sid] = yyyymmdd(day)
+
+    for sid in station_ids:
+        entry = stations_cache.setdefault(sid, {})
+        entry["record_daily_archive"] = (
+            round(maxima[sid], 1) if sid in maxima else None
+        )
+        entry["record_daily_archive_date"] = max_dates.get(sid)
+        entry["record_archive_checked"] = True
+
+    cache["records_generated_at"] = iso(utcnow())
+    cache["records_archive_end_year"] = now.year - 2
+
+
+def update_current_month(
+    cache: dict,
+    station_ids: List[str],
+    now: datetime,
+) -> None:
+    """Met à jour mois, saison, année et les records des deux dernières années."""
+
+    month_id = f"{now.year:04d}-{now.month:02d}"
+    season = current_season_info(now.date())
+    previous_day_key = yyyymmdd(now.date() - timedelta(days=1))
+
+    last_global_through = str(cache.get("current_month_global_through") or "")
+    lagging = bool(last_global_through and last_global_through < previous_day_key)
+
+    stale = (
+        cache.get("current_month_id") != month_id
+        or cache.get("current_season_id") != season["id"]
+        or cache.get("current_year_id") != now.year
+        or cache.get("current_month_logic_version") != 3
+        or lagging
+        or hours_since(cache_datetime(cache, "current_month_generated_at"))
+        >= CURRENT_MONTH_REFRESH_HOURS
+    )
+
+    if not stale:
+        print("Cache des cumuls courants encore valide.")
+        return
+
+    print("Actualisation des données quotidiennes mois/saison/année...")
+
+    by_dep: Dict[str, set] = defaultdict(set)
+    for sid in station_ids:
+        for dep in department_candidates(sid):
+            by_dep[dep].add(sid)
+
+    month_totals: Dict[str, float] = defaultdict(float)
+    year_totals: Dict[str, float] = defaultdict(float)
+    season_totals: Dict[str, float] = defaultdict(float)
+
+    month_last: Dict[str, str] = {}
+    year_last: Dict[str, str] = {}
+    season_last: Dict[str, str] = {}
+
+    recent_record: Dict[str, float] = {}
+    recent_record_date: Dict[str, str] = {}
+    seen_days = set()
+
+    for dep, dep_stations in sorted(by_dep.items()):
+        url = current_daily_url(dep, now)
+        rows = download_climate_rows(url)
+        if rows is None:
+            continue
+
+        print(f"Quotidien récent {dep}: {len(rows)} lignes")
+
+        for row in rows:
+            sid = station_id(row)
+            if sid not in dep_stations:
+                continue
+
+            day = parse_yyyymmdd(first(row, ("AAAAMMJJ", "DATE", "date")))
+            rr = clean_rain(first(row, ("RR", "rr", "PRECIP", "PRECIPITATION")))
+            if day is None or rr is None or day > now.date():
                 continue
 
             day_key = yyyymmdd(day)
-            if not day_key.startswith(prefix):
-                continue
-
-            rr = clean_rain(
-                first(
-                    row,
-                    ("RR", "rr", "PRECIP", "PRECIPITATION"),
-                )
-            )
-            if rr is None:
-                continue
-
             dedup = (sid, day_key)
             if dedup in seen_days:
                 continue
             seen_days.add(dedup)
 
-            totals[sid] += rr
+            # Record récent (les fichiers latest couvrent les deux dernières années).
+            if sid not in recent_record or rr > recent_record[sid]:
+                recent_record[sid] = rr
+                recent_record_date[sid] = day_key
 
-            if day_key > last_day.get(sid, ""):
-                last_day[sid] = day_key
+            if day.year == now.year:
+                year_totals[sid] += rr
+                if day_key > year_last.get(sid, ""):
+                    year_last[sid] = day_key
+
+            if season["start"] <= day <= now.date():
+                season_totals[sid] += rr
+                if day_key > season_last.get(sid, ""):
+                    season_last[sid] = day_key
+
+            if day.year == now.year and day.month == now.month:
+                month_totals[sid] += rr
+                if day_key > month_last.get(sid, ""):
+                    month_last[sid] = day_key
 
     stations_cache = cache.setdefault("stations", {})
 
     for sid in station_ids:
         entry = stations_cache.setdefault(sid, {})
-        entry["month_daily_total"] = (
-            round(totals[sid], 1) if sid in totals else None
-        )
-        entry["month_daily_through"] = last_day.get(sid)
 
-    valid_through = [d for d in last_day.values() if d]
-    cache["current_month_global_through"] = (
-        max(valid_through) if valid_through else None
-    )
+        entry["month_daily_total"] = (
+            round(month_totals[sid], 1) if sid in month_totals else None
+        )
+        entry["month_daily_through"] = month_last.get(sid)
+
+        entry["season_daily_total"] = (
+            round(season_totals[sid], 1) if sid in season_totals else None
+        )
+        entry["season_daily_through"] = season_last.get(sid)
+        entry["season_id"] = season["id"]
+
+        entry["year_daily_total"] = (
+            round(year_totals[sid], 1) if sid in year_totals else None
+        )
+        entry["year_daily_through"] = year_last.get(sid)
+        entry["year_id"] = now.year
+
+        archive_value = fnum(entry.get("record_daily_archive"))
+        archive_date = entry.get("record_daily_archive_date")
+        recent_value = fnum(recent_record.get(sid))
+        recent_date = recent_record_date.get(sid)
+
+        if archive_value is None and recent_value is None:
+            entry["record_daily"] = None
+            entry["record_daily_date"] = None
+        elif archive_value is None or (
+            recent_value is not None and recent_value > archive_value
+        ):
+            entry["record_daily"] = round(recent_value, 1)
+            entry["record_daily_date"] = recent_date
+        else:
+            entry["record_daily"] = round(archive_value, 1)
+            entry["record_daily_date"] = archive_date
+
+    valid_through = [d for d in month_last.values() if d]
+    cache["current_month_global_through"] = max(valid_through) if valid_through else None
     cache["current_month_id"] = month_id
-    cache["current_month_logic_version"] = 2
+    cache["current_season_id"] = season["id"]
+    cache["current_season_label"] = season["label"]
+    cache["current_season_start"] = yyyymmdd(season["start"])
+    cache["current_year_id"] = now.year
+    cache["current_month_logic_version"] = 3
     cache["current_month_generated_at"] = iso(utcnow())
 
 
@@ -954,6 +1130,74 @@ MONTHS_FR = (
 )
 
 
+
+def cached_period_total_live(
+    cache_entry: dict,
+    hourly: dict,
+    latest_hour: datetime,
+    total_key: str,
+    through_key: str,
+    period_start: date,
+) -> Tuple[Optional[float], Optional[str], bool, str]:
+    """Assemble un cumul quotidien avec les dernières heures sans créer de trou."""
+
+    latest_day = latest_hour.date()
+    latest_day_key = yyyymmdd(latest_day)
+    daily_total = fnum(cache_entry.get(total_key))
+    daily_through = parse_yyyymmdd(cache_entry.get(through_key))
+    day_sums = hourly.get("day_sums") or {}
+    day_hours = hourly.get("day_hours") or {}
+    today_sum = fnum(hourly.get("today_sum"))
+    today_hours = int(hourly.get("today_hours") or 0)
+
+    if daily_total is not None and daily_through == latest_day:
+        return round(daily_total, 1), latest_day_key, True, "quotidien_controle"
+
+    if daily_total is None or daily_through is None:
+        # Reconstruction possible seulement si tout le début de période est
+        # encore contenu dans les 72 h de paquets chargés.
+        if (latest_day - period_start).days > 2:
+            return None, None, False, "base_quotidienne_absente"
+
+        total = 0.0
+        cursor = period_start
+        while cursor < latest_day:
+            key = yyyymmdd(cursor)
+            hours = int(day_hours.get(key) or 0)
+            value = fnum(day_sums.get(key))
+            if value is None or hours < FULL_DAY_MIN_VALID_HOURS:
+                return None, None, False, "base_quotidienne_absente"
+            total += value
+            cursor += timedelta(days=1)
+
+        if today_sum is not None and today_hours > 0:
+            total += today_sum
+            return round(total, 1), latest_day_key, True, "paquets_horaires_uniquement"
+
+        return None, None, False, "base_quotidienne_absente"
+
+    total = float(daily_total)
+    through = daily_through
+    cursor = daily_through + timedelta(days=1)
+
+    while cursor < latest_day:
+        key = yyyymmdd(cursor)
+        hours = int(day_hours.get(key) or 0)
+        value = fnum(day_sums.get(key))
+        if value is None or hours < FULL_DAY_MIN_VALID_HOURS:
+            return round(total, 1), yyyymmdd(through), False, "quotidien_en_attente"
+        total += value
+        through = cursor
+        cursor += timedelta(days=1)
+
+    if cursor == latest_day:
+        if today_sum is not None and today_hours > 0:
+            total += today_sum
+            return round(total, 1), latest_day_key, True, "quotidien_plus_paquets_horaires"
+        return round(total, 1), yyyymmdd(through), False, "quotidien_sans_observation_du_jour"
+
+    return round(total, 1), yyyymmdd(through), False, "quotidien_en_attente"
+
 def main() -> int:
     print(f"=== Carte pluie Météo-France v{VERSION} ===")
 
@@ -989,6 +1233,7 @@ def main() -> int:
     # 3. Cache climatologique
     cache = load_cache()
 
+    update_daily_records(cache, station_ids, latest_hour)
     update_current_month(cache, station_ids, latest_hour)
     update_normals(cache, station_ids, latest_hour)
 
@@ -1008,6 +1253,8 @@ def main() -> int:
     # 4. Stations finales
     month_key = str(latest_hour.month)
     latest_day_key = yyyymmdd(latest_hour.date())
+    season = current_season_info(latest_hour.date())
+    year_start = date(latest_hour.year, 1, 1)
 
     stations = []
 
@@ -1017,9 +1264,22 @@ def main() -> int:
         clim = cache.get("stations", {}).get(sid, {})
 
         valid_hours = int(h.get("rr24_hours") or 0)
+        valid_hours48 = int(h.get("rr48_hours") or 0)
+        valid_hours72 = int(h.get("rr72_hours") or 0)
+
         rr24 = (
             round(float(h.get("rr24_sum") or 0.0), 1)
             if valid_hours >= RR24_MIN_VALID_HOURS
+            else None
+        )
+        rr48 = (
+            round(float(h.get("rr48_sum") or 0.0), 1)
+            if valid_hours48 >= RR48_MIN_VALID_HOURS
+            else None
+        )
+        rr72 = (
+            round(float(h.get("rr72_sum") or 0.0), 1)
+            if valid_hours72 >= RR72_MIN_VALID_HOURS
             else None
         )
 
@@ -1034,6 +1294,37 @@ def main() -> int:
             latest_hour,
         )
 
+        (
+            rr_season_current,
+            season_through,
+            season_complete,
+            season_method,
+        ) = cached_period_total_live(
+            clim,
+            h,
+            latest_hour,
+            "season_daily_total",
+            "season_daily_through",
+            season["start"],
+        )
+
+        (
+            rr_year_current,
+            year_through,
+            year_complete,
+            year_method,
+        ) = cached_period_total_live(
+            clim,
+            h,
+            latest_hour,
+            "year_daily_total",
+            "year_daily_through",
+            year_start,
+        )
+
+        rr_daily_record = fnum(clim.get("record_daily"))
+        rr_daily_record_date = clim.get("record_daily_date")
+
         month_norms = clim.get("normal_months") or {}
         rr_month_mean = fnum(month_norms.get(month_key))
         rr_year_mean = fnum(clim.get("normal_year"))
@@ -1047,6 +1338,12 @@ def main() -> int:
             "rr24": rr24,
             "rr24_hours": valid_hours,
             "rr24_complete": valid_hours == 24,
+            "rr48": rr48,
+            "rr48_hours": valid_hours48,
+            "rr48_complete": valid_hours48 == 48,
+            "rr72": rr72,
+            "rr72_hours": valid_hours72,
+            "rr72_complete": valid_hours72 == 72,
 
             "rr_month_current": (
                 round(rr_month_current, 1)
@@ -1056,6 +1353,31 @@ def main() -> int:
             "rr_month_current_through": month_through,
             "rr_month_current_complete": bool(month_complete),
             "rr_month_current_method": month_method,
+
+            "rr_season_current": (
+                round(rr_season_current, 1)
+                if rr_season_current is not None
+                else None
+            ),
+            "rr_season_current_through": season_through,
+            "rr_season_current_complete": bool(season_complete),
+            "rr_season_current_method": season_method,
+
+            "rr_year_current": (
+                round(rr_year_current, 1)
+                if rr_year_current is not None
+                else None
+            ),
+            "rr_year_current_through": year_through,
+            "rr_year_current_complete": bool(year_complete),
+            "rr_year_current_method": year_method,
+
+            "rr_daily_record": (
+                round(rr_daily_record, 1)
+                if rr_daily_record is not None
+                else None
+            ),
+            "rr_daily_record_date": rr_daily_record_date,
 
             "rr_month_mean": (
                 round(rr_month_mean, 1)
@@ -1119,7 +1441,7 @@ def main() -> int:
     )
 
     output = {
-        "schema_version": 4,
+        "schema_version": 5,
         "module_version": VERSION,
         "status": "ok",
         "generated_at": iso(utcnow()),
@@ -1139,6 +1461,19 @@ def main() -> int:
             "stations_stale": stale_month_stations,
         },
 
+        "current_season": {
+            "id": season["id"],
+            "label": season["label"],
+            "start": yyyymmdd(season["start"]),
+            "latest_day": latest_day_key,
+        },
+
+        "current_year": {
+            "year": latest_hour.year,
+            "start": yyyymmdd(year_start),
+            "latest_day": latest_day_key,
+        },
+
         "metrics": {
             "rr24": {
                 "label": "24 h",
@@ -1147,6 +1482,20 @@ def main() -> int:
                 ),
                 "max": max_field("rr24"),
             },
+            "rr48": {
+                "label": "48 h",
+                "long_label": (
+                    "Cumuls de précipitations sur les 48 dernières heures"
+                ),
+                "max": max_field("rr48"),
+            },
+            "rr72": {
+                "label": "72 h",
+                "long_label": (
+                    "Cumuls de précipitations sur les 72 dernières heures"
+                ),
+                "max": max_field("rr72"),
+            },
             "rr_month_current": {
                 "label": "Mois en cours",
                 "long_label": (
@@ -1154,6 +1503,21 @@ def main() -> int:
                     f"{MONTHS_FR[latest_hour.month - 1]}"
                 ),
                 "max": max_field("rr_month_current"),
+            },
+            "rr_season_current": {
+                "label": "Saison en cours",
+                "long_label": f"Cumul de la saison en cours - {season['label']}",
+                "max": max_field("rr_season_current"),
+            },
+            "rr_year_current": {
+                "label": "Année en cours",
+                "long_label": f"Cumul depuis le 1er janvier {latest_hour.year}",
+                "max": max_field("rr_year_current"),
+            },
+            "rr_daily_record": {
+                "label": "Records",
+                "long_label": "Record quotidien de précipitations par station",
+                "max": max_field("rr_daily_record"),
             },
             "rr_month_mean": {
                 "label": "Moy. du mois",
@@ -1176,6 +1540,15 @@ def main() -> int:
         "stations_rr24": sum(
             1 for st in stations if st["rr24"] is not None
         ),
+        "stations_rr48": sum(
+            1 for st in stations if st["rr48"] is not None
+        ),
+        "stations_rr72": sum(
+            1 for st in stations if st["rr72"] is not None
+        ),
+        "stations_records": sum(
+            1 for st in stations if st["rr_daily_record"] is not None
+        ),
         "stations_excluded_sapc": len(excluded_sapc_ids),
 
         "source": {
@@ -1185,9 +1558,23 @@ def main() -> int:
             "rr24_method": (
                 "Somme de RR1 sur les 24 paquets horaires les plus récents"
             ),
+            "rr48_method": (
+                "Somme de RR1 sur les 48 paquets horaires les plus récents"
+            ),
+            "rr72_method": (
+                "Somme de RR1 sur les 72 paquets horaires les plus récents"
+            ),
             "current_month": (
                 "Données climatologiques quotidiennes Météo-France, "
                 "complétées uniquement si la continuité horaire est vérifiée"
+            ),
+            "current_season_year": (
+                "Météo-France - données climatologiques quotidiennes, "
+                "complétées par les observations horaires du jour"
+            ),
+            "records": (
+                "Météo-France - archives climatologiques quotidiennes depuis 1950 "
+                "ou depuis l'ouverture de la station, selon disponibilité"
             ),
             "normals": (
                 "Météo-France - données climatologiques mensuelles"
@@ -1214,12 +1601,25 @@ def main() -> int:
     print(f"Stations : {len(stations)}")
     print(f"SAPC exclues : {len(excluded_sapc_ids)}")
     print(f"Stations RR24 exploitables : {output['stations_rr24']}")
+    print(f"Stations RR48 exploitables : {output['stations_rr48']}")
+    print(f"Stations RR72 exploitables : {output['stations_rr72']}")
+    print(f"Stations avec record : {output['stations_records']}")
     print(f"Stations mois à jour : {live_month_stations}")
     print(f"Stations mois en attente : {stale_month_stations}")
     print(f"Cumul 24 h maximal : {output['metrics']['rr24']['max']} mm")
+    print(f"Cumul 48 h maximal : {output['metrics']['rr48']['max']} mm")
+    print(f"Cumul 72 h maximal : {output['metrics']['rr72']['max']} mm")
     print(
         f"Cumul mois maximal : "
         f"{output['metrics']['rr_month_current']['max']} mm"
+    )
+    print(
+        f"Cumul saison maximal : "
+        f"{output['metrics']['rr_season_current']['max']} mm"
+    )
+    print(
+        f"Cumul année maximal : "
+        f"{output['metrics']['rr_year_current']['max']} mm"
     )
 
     return 0
