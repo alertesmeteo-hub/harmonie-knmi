@@ -152,7 +152,7 @@ elements.labels = new Canvas('labels');
 const app = new Element('section');
 app.dataset = {
     baseUrl: 'https://example.test/data', variable: 'temperature',
-    timezone: 'Europe/Paris', moduleVersion: '3.5.0', animation: '1'
+    timezone: 'Europe/Paris', moduleVersion: '1.0.0', animation: '1'
 };
 app.querySelector = selector => {
     const match = selector.match(/^\[data-hkm-([^\]]+)\]$/);
@@ -289,7 +289,7 @@ const context = {
     clearTimeout, setInterval, clearInterval, setImmediate
 };
 
-const scriptPath = path.resolve(__dirname, '../wordpress/harmonie-knmi-widget/assets/harmonie-map.js');
+const scriptPath = path.resolve(__dirname, '../wordpress/arome-meteofrance-france/assets/arome-map.js');
 vm.runInNewContext(fs.readFileSync(scriptPath, 'utf8'), context, { filename: scriptPath });
 
 (async () => {
@@ -315,6 +315,14 @@ vm.runInNewContext(fs.readFileSync(scriptPath, 'utf8'), context, { filename: scr
     assert.equal(elements['probe-label'].textContent, 'Température à 2 m');
     elements.viewport.dispatch('pointerleave', { pointerId: 0, pointerType: 'mouse' });
     assert.equal(elements.probe.hidden, true);
+
+    app.dispatch('hkm:focus-location', {
+        detail: { latitude: 42.699, longitude: 2.9045, scale: 32 }
+    });
+    await new Promise(resolve => setTimeout(resolve, 20));
+    assert.equal(elements['zoom-level'].textContent, '3200 %');
+    elements.reset.click();
+    await new Promise(resolve => setTimeout(resolve, 20));
 
     elements['zoom-in'].click();
     await new Promise(resolve => setTimeout(resolve, 20));

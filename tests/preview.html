@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Aperçu AROME v1.0.0</title>
+  <link rel="stylesheet" href="../wordpress/arome-meteofrance-france/assets/arome-meteo.css">
+  <link rel="stylesheet" href="../wordpress/arome-meteofrance-france/assets/arome-map.css">
+  <style>body{margin:0;padding:18px;background:#eef3f7;font-family:Inter,"Segoe UI",Arial,sans-serif}.preview{max-width:1480px;margin:auto}</style>
+</head>
+<body>
+<main class="preview">
+<section class="hkw-card hkw-national" data-hkw-app data-base-url="../build/test-arome" data-default-code="66136" data-default-department="66" data-default-name="Perpignan" data-hours="48" data-timezone="Europe/Paris" data-title-prefix="Prévisions AROME" data-selector="1">
+  <header class="hkw-header">
+    <div><p class="hkw-kicker">MODÈLE HAUTE RÉSOLUTION • FRANCE MÉTROPOLITAINE</p><h2 data-hkw-title>Prévisions AROME — Perpignan</h2><p class="hkw-city-altitude" data-hkw-altitude>Altitude de Perpignan : chargement…</p><p class="hkw-meta" data-hkw-meta>Chargement du dernier run AROME…</p></div>
+    <div class="hkw-badge">AROME<br><strong>1,3 km</strong></div>
+  </header>
+  <div class="hkw-toolbar">
+    <div class="hkw-search"><label for="preview-city">Choisissez votre commune</label><div class="hkw-search-control"><span class="hkw-search-icon">⌕</span><input id="preview-city" class="hkw-city-input" type="search" value="Perpignan" placeholder="Nom de commune ou code postal" role="combobox" aria-expanded="false" aria-controls="preview-results" aria-describedby="preview-status"></div><button type="button" class="hkw-locate-button" data-hkw-locate>📍 Détecter ma ville</button><div id="preview-results" class="hkw-search-results" role="listbox" hidden></div><p id="preview-status" class="hkw-search-status" role="status">Saisissez au moins deux lettres ou un code postal.</p></div>
+    <div class="hkw-coverage"><strong>34 746 communes</strong><span>Métropole et Corse</span></div>
+  </div>
+  <p class="hkw-stale" data-hkw-stale hidden>Attention : la dernière mise à jour disponible a plus de 8 heures.</p>
+  <div class="hkw-tabs" role="tablist">
+    <button type="button" class="hkw-tab hkw-tab-map is-active" data-hkw-tab="map" aria-selected="true">🗺️ Cartes météo</button>
+    <button type="button" class="hkw-tab" data-hkw-tab="general" aria-selected="false">🌤️ Prévisions générales</button>
+    <button type="button" class="hkw-tab hkw-tab-storm" data-hkw-tab="storms" aria-selected="false">⛈️ Prévisions orages</button>
+    <button type="button" class="hkw-tab hkw-tab-snow" data-hkw-tab="snow" aria-selected="false">❄️ Risque de neige</button>
+  </div>
+  <div class="hkw-panel hkw-map-panel" data-hkw-panel="map">
+    <section class="hkw-card hkm-card" data-hkm-app data-base-url="../build/test-arome" data-variable="temperature" data-timezone="Europe/Paris" data-animation="1" data-module-version="1.0.0" style="--hkm-height:760px">
+      <header class="hkw-header hkm-header"><div><p class="hkw-kicker">MODÈLE HAUTE RÉSOLUTION • ÉCHÉANCES HORAIRES</p><h2>Cartes AROME France — résolution 1,3 km</h2><p class="hkw-meta" data-hkm-run>Chargement du dernier run AROME…</p></div><div class="hkw-badge">AROME<br><strong>1,3 km</strong></div></header>
+      <div class="hkm-toolbar"><div class="hkm-field hkm-layer-picker"><span>Paramètre</span><button type="button" class="hkm-layer-trigger" data-hkm-menu-toggle aria-expanded="false"><span data-hkm-current-layer>Température à 2 m</span><span class="hkm-layer-chevron">⌄</span></button></div><div class="hkm-time-controls"><button type="button" data-hkm-previous>◀</button><button type="button" data-hkm-play>▶</button><button type="button" data-hkm-next>▶</button></div><div class="hkm-validity"><span>Prévision valable</span><strong data-hkm-validity>—</strong><small data-hkm-lead>—</small></div></div>
+      <div class="hkm-layer-menu" data-hkm-layer-menu hidden><div class="hkm-layer-menu-head"><div><strong>Choisir une carte AROME</strong><small>Uniquement les paramètres disponibles dans la production Météo-France</small></div><button type="button" data-hkm-menu-close>×</button></div><div class="hkm-layer-grid" data-hkm-layer-grid></div></div>
+      <p class="hkw-stale" data-hkm-stale hidden>Production ancienne.</p>
+      <div class="hkm-viewport" data-hkm-viewport>
+        <div class="hkm-scene" data-hkm-scene><canvas class="hkm-weather-canvas" data-hkm-weather></canvas><canvas class="hkm-vector-canvas" data-hkm-vectors></canvas></div><canvas class="hkm-label-canvas" data-hkm-labels></canvas>
+        <div class="hkm-probe" data-hkm-probe hidden><strong data-hkm-probe-value>—</strong><span data-hkm-probe-label>Valeur AROME</span></div>
+        <div class="hkm-map-titlebar"><strong data-hkm-map-title>Carte AROME</strong><span data-hkm-map-run>Run AROME —</span></div><div class="hkm-map-date" data-hkm-map-date>Échéance —</div>
+        <div class="hkm-map-buttons"><span class="hkm-zoom-level" data-hkm-zoom-level>100 %</span><button type="button" data-hkm-zoom-in>+</button><button type="button" data-hkm-zoom-out>−</button><button type="button" data-hkm-reset>⌂</button><button type="button" data-hkm-fullscreen>⛶</button></div>
+        <div class="hkm-legend" data-hkm-legend></div><a class="hkm-map-brand" href="https://www.alertes-meteo.com/">www.alertes-meteo.com • Module v1.0.0</a><div class="hkm-loading" data-hkm-loading>Chargement de la carte…</div><div class="hkm-error" data-hkm-error hidden></div>
+      </div>
+      <div class="hkm-timeline"><input data-hkm-slider type="range" min="0" max="0" value="0"><div class="hkm-timeline-labels"><span>Run</span><span>Échéance maximale</span></div></div>
+      <footer class="hkw-footer"><span data-hkm-generated>Mise à jour…</span></footer>
+    </section>
+  </div>
+  <div class="hkw-panel" data-hkw-panel="general" hidden>
+    <div class="hkw-table-wrap hkw-general-wrap"><table class="hkw-table"><thead><tr><th>Date</th><th>Heure</th><th>Temps</th><th>T°</th><th>Hum.</th><th>Pluie</th><th>Nuages</th><th>Vent</th><th>Rafales</th><th>Pression</th></tr></thead><tbody data-hkw-body-general><tr><td colspan="10" class="hkw-loading">Chargement…</td></tr></tbody></table></div>
+    <section class="hkw-charts"><article class="hkw-chart-card"><h3 data-hkw-chart-title-temperature>Températures</h3><div class="hkw-chart" data-hkw-chart-temperature></div></article><article class="hkw-chart-card"><h3 data-hkw-chart-title-pressure>Pression</h3><div class="hkw-chart" data-hkw-chart-pressure></div></article><article class="hkw-chart-card"><h3 data-hkw-chart-title-rain>Précipitations</h3><p data-hkw-rain-total></p><div class="hkw-chart" data-hkw-chart-rain></div></article><article class="hkw-chart-card"><h3 data-hkw-chart-title-wind>Vent</h3><div class="hkw-chart" data-hkw-chart-wind></div></article></section>
+  </div>
+  <div class="hkw-panel" data-hkw-panel="storms" hidden><p class="hkw-storm-summary" data-hkw-storm-summary>Chargement…</p><div class="hkw-top-scroll" data-hkw-top-scroll="storms" hidden><div></div></div><div class="hkw-table-wrap hkw-storm-wrap" data-hkw-scroll-wrap="storms"><table class="hkw-table hkw-storm-table"><thead><tr><th>Date</th><th>Heure</th><th>Risque</th><th>MUCAPE</th><th>LCL</th><th>Foudre</th><th>Grêle</th><th>Pluie conv.</th><th>Graupel</th><th>Pluie 1h</th><th>Rafales</th><th>Type</th><th>Détails</th></tr></thead><tbody data-hkw-body-storms><tr><td colspan="13">Chargement…</td></tr></tbody></table></div></div>
+  <div class="hkw-panel" data-hkw-panel="snow" hidden><p class="hkw-snow-summary" data-hkw-snow-summary>Chargement…</p><div class="hkw-top-scroll" data-hkw-top-scroll="snow" hidden><div></div></div><div class="hkw-table-wrap hkw-snow-wrap" data-hkw-scroll-wrap="snow"><table class="hkw-table hkw-snow-table"><thead><tr><th>Date</th><th>Heure</th><th>Risque</th><th>Phase</th><th>Neige 1h</th><th>Neige 3h</th><th>Neige 6h</th><th>Tenue</th><th>Pression</th><th>Hum.</th><th>Vent</th><th>Cumul</th><th>Détails</th></tr></thead><tbody data-hkw-body-snow><tr><td colspan="13">Chargement…</td></tr></tbody></table></div></div>
+  <footer class="hkw-footer"><span data-hkw-generated>Mise à jour…</span><span><a href="https://www.alertes-meteo.com/">www.alertes-meteo.com</a></span><span class="hkw-plugin-version">Module AROME v1.0.0</span></footer>
+</section>
+</main>
+<script src="../wordpress/arome-meteofrance-france/assets/arome-meteo.js"></script>
+<script src="../wordpress/arome-meteofrance-france/assets/arome-map.js"></script>
+</body>
+</html>

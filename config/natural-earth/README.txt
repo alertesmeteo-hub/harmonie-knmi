@@ -8,5 +8,5 @@ Source : https://www.naturalearthdata.com/
 Licence : domaine public
 
 Ces tracés servent uniquement à dessiner les côtes et frontières nationales
-sur les cartes HARMONIE. Les limites départementales françaises sont calculées
+sur les cartes AROME. Les limites départementales françaises sont calculées
 localement à partir du catalogue communal déjà présent dans ce dépôt.
