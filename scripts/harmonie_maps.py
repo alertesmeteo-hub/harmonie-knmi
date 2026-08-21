@@ -22,8 +22,8 @@ from PIL import Image
 from scipy.spatial import cKDTree
 
 
-MAP_SCHEMA_VERSION = 3
-MODULE_VERSION = "3.2.0"
+MAP_SCHEMA_VERSION = 4
+MODULE_VERSION = "3.3.0"
 DEFAULT_BOUNDS = {
     "south": 38.0,
     "west": -12.0,
@@ -684,8 +684,8 @@ class HarmonieMapRenderer:
         longitudes: np.ndarray,
         output_directory: Path,
         *,
-        width: int = 1650,
-        height: int = 1230,
+        width: int = 2200,
+        height: int = 1640,
         bounds: dict[str, float] | None = None,
         source_max_distance: float = 0.22,
         france_latitudes: np.ndarray | None = None,
@@ -987,6 +987,7 @@ class HarmonieMapRenderer:
         *,
         generated_at: str,
         run_time: str | None,
+        places_path: str | None = None,
     ) -> dict[str, Any]:
         layers = {
             spec.key: {
@@ -1019,6 +1020,8 @@ class HarmonieMapRenderer:
             "layers": layers,
             "steps": self.steps,
         }
+        if places_path:
+            manifest["places"] = places_path
         destination = self.output_directory / "index.json"
         with destination.open("w", encoding="utf-8") as handle:
             json.dump(manifest, handle, ensure_ascii=False, separators=(",", ":"))

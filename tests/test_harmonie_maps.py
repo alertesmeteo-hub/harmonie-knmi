@@ -76,6 +76,7 @@ class HarmonieMapRendererTest(unittest.TestCase):
             manifest = renderer.write_manifest(
                 generated_at="2026-08-21T06:00:00Z",
                 run_time="2026-08-21T06:00:00Z",
+                places_path="maps/communes.json",
             )
 
             self.assertEqual(len(manifest["layers"]), len(LAYER_SPECS))
@@ -91,9 +92,10 @@ class HarmonieMapRendererTest(unittest.TestCase):
             with (output / "index.json").open("r", encoding="utf-8") as handle:
                 saved = json.load(handle)
             self.assertEqual(saved["projection"], "EPSG:3857")
-            self.assertEqual(saved["schema_version"], 3)
-            self.assertEqual(saved["module_version"], "3.2.0")
+            self.assertEqual(saved["schema_version"], 4)
+            self.assertEqual(saved["module_version"], "3.3.0")
             self.assertEqual(saved["overlay"], "maps/frontieres.svg")
+            self.assertEqual(saved["places"], "maps/communes.json")
             self.assertEqual(saved["layers"]["rafales"]["group"], "Vent")
             self.assertEqual(saved["steps"][0]["valid_time"], "2026-08-21T12:00:00Z")
 

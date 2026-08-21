@@ -37,7 +37,7 @@ from harmonie_maps import DEFAULT_BOUNDS, HarmonieMapRenderer
 
 
 LOGGER = logging.getLogger("harmonie.france")
-NATIONAL_PIPELINE_VERSION = "3.2.0"
+NATIONAL_PIPELINE_VERSION = "3.3.0"
 DEFAULT_CURRENT_METADATA_URL = (
     "https://raw.githubusercontent.com/alertesmeteo-hub/"
     "harmonie-knmi/data/index.json"
@@ -252,6 +252,38 @@ def load_catalog(path: Path) -> NationalCatalog:
         point_departments=point_departments,
         departments=departments,
     )
+
+
+def write_map_places(catalog: NationalCatalog, destination: Path) -> int:
+    """Publie les communes utilisées par la couche de libellés du zoom."""
+
+    places = [
+        [
+            str(commune[1]),
+            int(commune[3]),
+            round(float(commune[4]), 5),
+            round(float(commune[5]), 5),
+        ]
+        for department in catalog.departments.values()
+        for commune in department.communes
+        if int(commune[3]) > 0
+    ]
+    places.sort(key=lambda place: (-place[1], place[0]))
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with destination.open("w", encoding="utf-8") as handle:
+        json.dump(
+            {
+                "schema_version": 1,
+                "columns": ["name", "population", "latitude", "longitude"],
+                "count": len(places),
+                "places": places,
+            },
+            handle,
+            ensure_ascii=False,
+            separators=(",", ":"),
+        )
+        handle.write("\n")
+    return len(places)
 
 
 class NationalGrid:
@@ -837,9 +869,13 @@ def decode_national_archive(
     }
     if map_renderer is None:
         raise RuntimeError("Aucune carte HARMONIE n'a été produite")
+    places_path = result_directory / "maps" / "communes.json"
+    places_count = write_map_places(catalog, places_path)
+    LOGGER.info("Couche cartographique : %s communes publiées", places_count)
     map_manifest = map_renderer.write_manifest(
         generated_at=generated_at,
         run_time=model["run_time"],
+        places_path="maps/communes.json",
     )
 
     departments_directory = result_directory / "departements"
