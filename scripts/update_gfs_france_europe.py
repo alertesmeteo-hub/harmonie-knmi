@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 Alertes-Meteo.com — GFS France / Europe
-Version 1.2.0
+Version 1.2.1
 
 Télécharge via le filtre NOMADS uniquement les champs GFS 0,25° utiles à la carte :
 - PRMSL : pression au niveau moyen de la mer
@@ -33,7 +33,7 @@ from urllib.parse import urlencode
 import numpy as np
 import requests
 
-VERSION = "1.2.0"
+VERSION = "1.2.1"
 BUILD_ID = "gfs-france-europe-pression-temperature-pluie-vent-20260821"
 NOMADS_FILTER = "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25.pl"
 LEFT, RIGHT, BOTTOM, TOP = -25.0, 45.0, 34.0, 72.0
