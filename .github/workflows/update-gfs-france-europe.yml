@@ -1,4 +1,4 @@
-name: Update GFS France Europe v1.2.1
+name: Update GFS France Europe v1.3.2
 
 on:
   workflow_dispatch:
@@ -10,13 +10,13 @@ permissions:
   contents: write
 
 concurrency:
-  group: gfs-france-europe-v121
+  group: gfs-france-europe-v132
   cancel-in-progress: true
 
 jobs:
   generate:
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    timeout-minutes: 55
 
     steps:
       - name: Checkout
@@ -50,12 +50,16 @@ jobs:
           from pathlib import Path
           d = json.loads(Path('build/gfs/index.json').read_text(encoding='utf-8'))
           assert d['status'] == 'ok'
-          assert d['module_version'] in {'1.2.0','1.2.1'}
-          assert len(d['frames']) >= 6, 'Trop peu d’échéances GFS produites'
+          assert d['module_version'] == '1.3.2'
+          assert len(d['frames']) >= 50, 'Trop peu d’échéances GFS J+15 produites'
           required = {'pressure_hpa','temperature_2m_c','precipitation_mm','wind_speed_kmh','wind_direction_deg','gust_kmh'}
           assert required.issubset(set(d['variables']))
           first = Path('build/gfs') / d['frames'][0]['file']
           assert first.is_file() and first.stat().st_size > 1000
+          assert 'extrema_15d' in d and d['extrema_15d']['by_area']['france']['pressure_hpa']['min'] is not None
+          assert d['extrema_15d']['by_area']['france']['pressure_hpa']['max'] is not None
+          assert 'risks' in d and len(d['risks']['by_area']['france']) == 15
+          assert len(d['risks']['by_area']['europe']) == 15
           frame = json.loads(first.read_text(encoding='utf-8'))
           assert frame['fields']['pressure_hpa']
           assert frame['grid']['latitudes'] and frame['grid']['longitudes']
@@ -97,7 +101,7 @@ jobs:
             exit 0
           fi
 
-          git commit -m "Update GFS France Europe v1.2.1"
+          git commit -m "Update GFS France Europe v1.3.2"
           if ! git push origin observations; then
             echo "Push concurrent détecté, nouvel essai..."
             git fetch origin observations
