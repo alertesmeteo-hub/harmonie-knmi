@@ -1,24 +1,24 @@
-name: Update Carte Pluie Météo-France
+name: Initialiser climatologie + records pluie
 
 on:
-  schedule:
-    - cron: '20 * * * *'
   workflow_dispatch:
+  schedule:
+    # Rafraîchissement annuel de l'historique, hors des mises à jour horaires.
+    - cron: '17 3 10 1 *'
 
 permissions:
   contents: write
 
-# Important : ne plus annuler une exécution déjà en cours.
-# Cela évite le message "The operation was canceled" lorsqu'une autre
-# exécution planifiée arrive pendant la précédente.
+# Même groupe que le workflow horaire : pas de collision lors de la publication,
+# mais aucune exécution en cours n'est annulée.
 concurrency:
   group: carte-pluie-publish
   cancel-in-progress: false
 
 jobs:
-  generate:
+  archives:
     runs-on: ubuntu-24.04
-    timeout-minutes: 55
+    timeout-minutes: 330
 
     steps:
       - name: Checkout
@@ -36,60 +36,36 @@ jobs:
           python -m pip install --upgrade pip
           pip install requests==2.33.0
 
-      - name: Récupérer le cache climatologique précédent
+      - name: Récupérer le cache existant
         shell: bash
         run: |
           git fetch origin observations || true
           git show origin/observations:cache_pluie_climatologie.json \
             > cache_pluie_climatologie.json 2>/dev/null || true
 
-      - name: Générer observations_pluie.json (mode rapide)
+      - name: Construire climatologie et records historiques
         env:
           METEOFRANCE_PACKAGE_OBS_KEY: ${{ secrets.METEOFRANCE_PACKAGE_OBS_KEY }}
           METEOFRANCE_OBS_TOKEN: ${{ secrets.METEOFRANCE_OBS_TOKEN }}
           MF_PACKAGE_DELAY: "1.35"
-          MF_BUILD_ARCHIVES: "0"
+          MF_BUILD_ARCHIVES: "1"
         run: |
           python generer_pluie_meteofrance.py
 
-      - name: Vérifier le JSON v2.3.1
+      - name: Vérifier les archives
         shell: bash
         run: |
           test -s observations_pluie.json
           test -s cache_pluie_climatologie.json
-
           python - <<'PY'
           import json
-
           with open("observations_pluie.json", encoding="utf-8") as f:
               data = json.load(f)
-
-          assert data["status"] == "ok"
-          assert data["schema_version"] >= 5
           assert data["module_version"] == "2.3.1"
-          assert isinstance(data["stations"], list)
           assert data["stations_total"] > 0
-
-          required_metrics = {
-              "rr24", "rr48", "rr72",
-              "rr_month_current", "rr_season_current", "rr_year_current",
-              "rr_daily_record", "rr_month_mean", "rr_year_mean",
-          }
-          missing = required_metrics - set(data.get("metrics", {}))
-          assert not missing, f"Métriques absentes : {sorted(missing)}"
-
-          sapc = [
-              s for s in data["stations"]
-              if "SAPC" in str(s.get("name", "")).upper()
-          ]
-          assert not sapc, f"Stations SAPC encore présentes : {len(sapc)}"
-
-          print("JSON v2.3.1 valide")
           print("Stations :", data["stations_total"])
-          print("RR24 :", data.get("stations_rr24"))
-          print("RR48 :", data.get("stations_rr48"))
-          print("RR72 :", data.get("stations_rr72"))
-          print("Records disponibles :", data.get("stations_records"))
+          print("Stations avec record :", data.get("stations_records"))
+          print("Records max :", data["metrics"]["rr_daily_record"]["max"], "mm")
           PY
 
       - name: Préparer la publication
@@ -117,11 +93,9 @@ jobs:
           cp /tmp/carte-pluie-publish/cache_pluie_climatologie.json .
 
           git add observations_pluie.json cache_pluie_climatologie.json
-
           if git diff --cached --quiet; then
             echo "Aucun changement à publier."
             exit 0
           fi
-
-          git commit -m "Mise à jour carte pluie Météo-France v2.3.1"
+          git commit -m "Initialisation climatologie pluie v2.3.1"
           git push origin observations
