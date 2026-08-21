@@ -1,0 +1,106 @@
+name: Update GFS France Europe v1.2.0
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Après disponibilité habituelle des runs 00/06/12/18 UTC.
+    - cron: '15 5,11,17,23 * * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gfs-france-europe-v120
+  cancel-in-progress: true
+
+jobs:
+  generate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+
+      - name: Installer dépendances GFS
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-gfs.txt
+
+      - name: Tester le générateur sans réseau
+        run: python scripts/update_gfs_france_europe.py --self-test
+
+      - name: Générer les cartes GFS
+        run: python scripts/update_gfs_france_europe.py --output-dir build/gfs
+
+      - name: Contrôler les sorties
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s build/gfs/index.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          d = json.loads(Path('build/gfs/index.json').read_text(encoding='utf-8'))
+          assert d['status'] == 'ok'
+          assert d['module_version'] == '1.2.0'
+          assert len(d['frames']) >= 6, 'Trop peu d’échéances GFS produites'
+          required = {'pressure_hpa','temperature_2m_c','precipitation_mm','wind_speed_kmh','wind_direction_deg','gust_kmh'}
+          assert required.issubset(set(d['variables']))
+          first = Path('build/gfs') / d['frames'][0]['file']
+          assert first.is_file() and first.stat().st_size > 1000
+          frame = json.loads(first.read_text(encoding='utf-8'))
+          assert frame['fields']['pressure_hpa']
+          assert frame['grid']['latitudes'] and frame['grid']['longitudes']
+          print('Run GFS :', d['run_utc'])
+          print('Échéances :', len(d['frames']))
+          print('Premier JSON :', first, first.stat().st_size, 'octets')
+          PY
+
+      - name: Préparer publication
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/gfs-publish
+          mkdir -p /tmp/gfs-publish
+          cp -a build/gfs/. /tmp/gfs-publish/
+
+      - name: Publier sur la branche observations
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if git ls-remote --exit-code --heads origin observations >/dev/null 2>&1; then
+            git fetch origin observations
+            git switch -C observations origin/observations
+          else
+            git switch --orphan observations
+            git rm -rf . || true
+          fi
+
+          rm -rf gfs
+          mkdir -p gfs
+          cp -a /tmp/gfs-publish/. gfs/
+          git add gfs
+
+          if git diff --cached --quiet; then
+            echo "Aucun changement GFS."
+            exit 0
+          fi
+
+          git commit -m "Update GFS France Europe v1.2.0"
+          if ! git push origin observations; then
+            echo "Push concurrent détecté, nouvel essai..."
+            git fetch origin observations
+            git rebase origin/observations
+            git push origin observations
+          fi
