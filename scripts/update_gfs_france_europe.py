@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 Alertes-Meteo.com — GFS France / Europe
-Version 1.2.1
+Version 1.3.2
 
 Télécharge via le filtre NOMADS uniquement les champs GFS 0,25° utiles à la carte :
 - PRMSL : pression au niveau moyen de la mer
@@ -11,8 +11,10 @@ Télécharge via le filtre NOMADS uniquement les champs GFS 0,25° utiles à la 
 - UGRD/VGRD : vent 10 m
 - GUST : rafales
 
-La zone téléchargée couvre l'Europe (25°W–45°E, 34–72°N), puis la grille est
-rééchantillonnée à 0,5° pour produire des JSON web légers.
+La zone téléchargée couvre toute l'Europe et ses marges synoptiques (35°W–50°E,
+30–75°N), puis la grille est rééchantillonnée à 0,5° pour produire des JSON web légers.
+La production va jusqu'à +360 h (15 jours) par pas de 6 h et calcule un indice
+quotidien de risque de tempête et de fortes pluies pour la France et l'Europe.
 """
 from __future__ import annotations
 
@@ -20,6 +22,7 @@ import argparse
 import json
 import math
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -33,15 +36,39 @@ from urllib.parse import urlencode
 import numpy as np
 import requests
 
-VERSION = "1.2.1"
-BUILD_ID = "gfs-france-europe-pression-temperature-pluie-vent-20260821"
+VERSION = "1.3.2"
+BUILD_ID = "gfs-france-europe-15j-risques-extremes-20260821"
 NOMADS_FILTER = "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25.pl"
-LEFT, RIGHT, BOTTOM, TOP = -25.0, 45.0, 34.0, 72.0
+LEFT, RIGHT, BOTTOM, TOP = -35.0, 50.0, 30.0, 75.0
 DOWNSAMPLE = 2  # 0,25° -> 0,50°
-FORECAST_HOURS = [0, 3, 6, 9, 12, 18, 24, 30, 36, 42, 48, 60, 72, 84, 96, 120, 144, 168]
+FORECAST_HOURS = list(range(0, 361, 6))
 HTTP_TIMEOUT = (20, 120)
 SESSION = requests.Session()
 SESSION.headers.update({"User-Agent": f"alertes-meteo-gfs/{VERSION} (+https://alertes-meteo.com/)"})
+
+AREA_BOUNDS = {
+    "france": {"west": -6.0, "east": 11.0, "south": 41.0, "north": 52.0},
+    "europe": {"west": LEFT, "east": RIGHT, "south": BOTTOM, "north": TOP},
+}
+RISK_THRESHOLDS = {
+    "storm_gust_kmh": {"moderate": 70.0, "high": 90.0},
+    "heavy_rain_24h_mm": {"moderate": 20.0, "high": 40.0},
+}
+
+EXTREMA_FIELDS = (
+    "pressure_hpa",
+    "temperature_2m_c",
+    "precipitation_mm",
+    "wind_speed_kmh",
+    "gust_kmh",
+)
+EXTREMA_DECIMALS = {
+    "pressure_hpa": 1,
+    "temperature_2m_c": 1,
+    "precipitation_mm": 1,
+    "wind_speed_kmh": 0,
+    "gust_kmh": 0,
+}
 
 
 @dataclass(frozen=True)
@@ -336,6 +363,8 @@ def parse_frame(path: Path, run: Run, fhr: int, source_url: str) -> dict[str, An
             "longitudes": [round(float(x), 2) for x in lon],
         },
         "precipitation_period_label": precip_period_label(precip_da, fhr),
+        "precipitation_step_range": attr_text(precip_da, "GRIB_stepRange") if precip_da is not None else "",
+        "precipitation_step_type": attr_text(precip_da, "GRIB_stepType") if precip_da is not None else "",
         "fields": {
             "pressure_hpa": round_matrix(pressure, 1),
             "temperature_2m_c": round_matrix(temp, 1),
@@ -346,6 +375,213 @@ def parse_frame(path: Path, run: Run, fhr: int, source_url: str) -> dict[str, An
         },
     }
 
+
+
+def parse_step_range(value: str, fhr: int) -> tuple[int, int]:
+    text = str(value or "").strip()
+    match = re.search(r"(\d+)\s*[-:]\s*(\d+)", text)
+    if match:
+        return int(match.group(1)), int(match.group(2))
+    nums = [int(x) for x in re.findall(r"\d+", text)]
+    if len(nums) >= 2:
+        return nums[0], nums[-1]
+    if len(nums) == 1:
+        end = nums[0]
+        return max(0, end - 6), end
+    return max(0, fhr - 6), fhr
+
+
+def area_slice(lat: np.ndarray, lon: np.ndarray, area: str) -> tuple[np.ndarray, np.ndarray]:
+    bounds = AREA_BOUNDS[area]
+    lat_idx = np.flatnonzero((lat >= bounds["south"]) & (lat <= bounds["north"]))
+    lon_idx = np.flatnonzero((lon >= bounds["west"]) & (lon <= bounds["east"]))
+    return lat_idx, lon_idx
+
+
+def matrix_from_payload(payload: dict[str, Any], field: str) -> np.ndarray | None:
+    values = payload.get("fields", {}).get(field)
+    if not isinstance(values, list) or not values:
+        return None
+    try:
+        arr = np.asarray([[np.nan if v is None else float(v) for v in row] for row in values], dtype=float)
+    except Exception:
+        return None
+    return arr if arr.ndim == 2 else None
+
+
+def init_extrema_state() -> dict[str, Any]:
+    return {
+        area: {field: {"min": None, "max": None} for field in EXTREMA_FIELDS}
+        for area in AREA_BOUNDS
+    }
+
+
+def update_extrema_state(state: dict[str, Any], payload: dict[str, Any]) -> None:
+    lat = np.asarray(payload.get("grid", {}).get("latitudes", []), dtype=float)
+    lon = np.asarray(payload.get("grid", {}).get("longitudes", []), dtype=float)
+    if not lat.size or not lon.size:
+        return
+    valid_utc = payload.get("valid_utc")
+    fhr = int(payload.get("forecast_hour") or 0)
+
+    for field in EXTREMA_FIELDS:
+        arr = matrix_from_payload(payload, field)
+        if arr is None:
+            continue
+        for area in AREA_BOUNDS:
+            lat_idx, lon_idx = area_slice(lat, lon, area)
+            if not len(lat_idx) or not len(lon_idx):
+                continue
+            sub = arr[np.ix_(lat_idx, lon_idx)]
+            if not np.isfinite(sub).any():
+                continue
+            min_flat = int(np.nanargmin(sub))
+            max_flat = int(np.nanargmax(sub))
+            min_pos = np.unravel_index(min_flat, sub.shape)
+            max_pos = np.unravel_index(max_flat, sub.shape)
+            candidates = {
+                "min": (float(sub[min_pos]), int(lat_idx[min_pos[0]]), int(lon_idx[min_pos[1]])),
+                "max": (float(sub[max_pos]), int(lat_idx[max_pos[0]]), int(lon_idx[max_pos[1]])),
+            }
+            slot = state[area][field]
+            for kind, (value, ri, ci) in candidates.items():
+                current = slot[kind]
+                better = current is None or (value < current["value"] if kind == "min" else value > current["value"])
+                if better:
+                    slot[kind] = {
+                        "value": value,
+                        "forecast_hour": fhr,
+                        "valid_utc": valid_utc,
+                        "lat": round(float(lat[ri]), 2),
+                        "lon": round(float(lon[ci]), 2),
+                    }
+
+
+def finalize_extrema(state: dict[str, Any]) -> dict[str, Any]:
+    output: dict[str, Any] = {}
+    for area, fields in state.items():
+        output[area] = {}
+        for field, extrema in fields.items():
+            decimals = EXTREMA_DECIMALS[field]
+            out = {}
+            for kind in ("min", "max"):
+                point = extrema.get(kind)
+                if point is None:
+                    out[kind] = None
+                    continue
+                item = dict(point)
+                rounded = round(float(item["value"]), decimals)
+                item["value"] = int(rounded) if decimals == 0 else rounded
+                out[kind] = item
+            output[area][field] = out
+    return {
+        "period_hours": 360,
+        "description": "Minimum et maximum de chaque champ sur toutes les échéances GFS produites jusqu’à J+15.",
+        "by_area": output,
+    }
+
+
+def risk_level(value: float | None, thresholds: dict[str, float]) -> str:
+    if value is None or not math.isfinite(value):
+        return "indisponible"
+    if value >= thresholds["high"]:
+        return "fort"
+    if value >= thresholds["moderate"]:
+        return "modere"
+    return "faible"
+
+
+def init_risk_state() -> dict[str, Any]:
+    return {
+        area: {
+            day: {"gust_max": None, "rain_grid": None, "rain_hours": 0}
+            for day in range(1, 16)
+        }
+        for area in AREA_BOUNDS
+    }
+
+
+def update_risk_state(
+    state: dict[str, Any],
+    payload: dict[str, Any],
+    previous_cumulative_precip: np.ndarray | None,
+    previous_cumulative_end: int | None,
+) -> tuple[np.ndarray | None, int | None]:
+    fhr = int(payload.get("forecast_hour") or 0)
+    day = min(15, max(1, math.ceil(max(fhr, 1) / 24)))
+    lat = np.asarray(payload.get("grid", {}).get("latitudes", []), dtype=float)
+    lon = np.asarray(payload.get("grid", {}).get("longitudes", []), dtype=float)
+    gust = matrix_from_payload(payload, "gust_kmh")
+    precip = matrix_from_payload(payload, "precipitation_mm")
+
+    step_start, step_end = parse_step_range(payload.get("precipitation_step_range", ""), fhr)
+    precip_increment = None
+    increment_hours = max(0, step_end - step_start) or 6
+    if precip is not None and fhr > 0:
+        if step_start == 0 and previous_cumulative_precip is not None and previous_cumulative_end is not None and step_end > previous_cumulative_end:
+            precip_increment = np.maximum(precip - previous_cumulative_precip, 0.0)
+            increment_hours = max(1, step_end - previous_cumulative_end)
+        else:
+            precip_increment = np.maximum(precip, 0.0)
+
+    for area in AREA_BOUNDS:
+        lat_idx, lon_idx = area_slice(lat, lon, area)
+        if not len(lat_idx) or not len(lon_idx):
+            continue
+        slot = state[area][day]
+        if gust is not None:
+            sub = gust[np.ix_(lat_idx, lon_idx)]
+            if np.isfinite(sub).any():
+                value = float(np.nanmax(sub))
+                slot["gust_max"] = value if slot["gust_max"] is None else max(slot["gust_max"], value)
+        if precip_increment is not None:
+            subp = precip_increment[np.ix_(lat_idx, lon_idx)]
+            finite = np.where(np.isfinite(subp), subp, 0.0)
+            if slot["rain_grid"] is None:
+                slot["rain_grid"] = finite.copy()
+            else:
+                slot["rain_grid"] += finite
+            slot["rain_hours"] += increment_hours
+
+    if precip is not None and step_start == 0:
+        return precip.copy(), step_end
+    return None, None
+
+
+def finalize_risks(state: dict[str, Any], run: Run) -> dict[str, Any]:
+    by_area: dict[str, list[dict[str, Any]]] = {}
+    for area, days in state.items():
+        output = []
+        for day in range(1, 16):
+            slot = days[day]
+            rain_max = None
+            rain_grid = slot.get("rain_grid")
+            if isinstance(rain_grid, np.ndarray) and np.isfinite(rain_grid).any():
+                rain_max = float(np.nanmax(rain_grid))
+            gust_max = slot.get("gust_max")
+            start = run.dt + timedelta(hours=(day - 1) * 24)
+            end = run.dt + timedelta(hours=day * 24)
+            output.append({
+                "day": day,
+                "period_start_utc": iso(start),
+                "period_end_utc": iso(end),
+                "date_utc": end.strftime("%Y-%m-%d"),
+                "storm": {
+                    "level": risk_level(gust_max, RISK_THRESHOLDS["storm_gust_kmh"]),
+                    "max_gust_kmh": None if gust_max is None else round(gust_max),
+                },
+                "heavy_rain": {
+                    "level": risk_level(rain_max, RISK_THRESHOLDS["heavy_rain_24h_mm"]),
+                    "max_24h_mm": None if rain_max is None else round(rain_max, 1),
+                    "coverage_hours": min(24, int(slot.get("rain_hours") or 0)),
+                },
+            })
+        by_area[area] = output
+    return {
+        "method": "Indice automatique GFS; il ne remplace pas une vigilance officielle.",
+        "thresholds": RISK_THRESHOLDS,
+        "by_area": by_area,
+    }
 
 def write_json(path: Path, payload: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -364,7 +600,13 @@ def self_test() -> int:
     direction = (270.0 - np.degrees(np.arctan2(v, u))) % 360.0
     assert round(float(speed[0, 0])) == 36
     assert round(float(direction[0, 0])) == 270  # vent d'ouest
-    print("Self-test GFS OK")
+    assert risk_level(69, RISK_THRESHOLDS["storm_gust_kmh"]) == "faible"
+    assert risk_level(70, RISK_THRESHOLDS["storm_gust_kmh"]) == "modere"
+    assert risk_level(90, RISK_THRESHOLDS["storm_gust_kmh"]) == "fort"
+    assert parse_step_range("6-12", 12) == (6, 12)
+    ex = init_extrema_state()
+    assert set(ex["france"]) == set(EXTREMA_FIELDS)
+    print("Self-test GFS 15 jours / risques / extrêmes OK")
     return 0
 
 
@@ -390,6 +632,10 @@ def main() -> int:
     run = detect_latest_run()
     frames = []
     failures = []
+    risk_state = init_risk_state()
+    extrema_state = init_extrema_state()
+    previous_cumulative_precip = None
+    previous_cumulative_end = None
 
     with tempfile.TemporaryDirectory(prefix="am-gfs-") as tmpdir:
         tmp = Path(tmpdir)
@@ -400,12 +646,16 @@ def main() -> int:
                 payload = parse_frame(grib, run, fhr, source_url)
                 filename = f"gfs_f{fhr:03d}.json"
                 write_json(output_dir / filename, payload)
+                update_extrema_state(extrema_state, payload)
                 frames.append({
                     "forecast_hour": fhr,
                     "valid_utc": payload["valid_utc"],
                     "file": filename,
                     "precipitation_period_label": payload["precipitation_period_label"],
                 })
+                previous_cumulative_precip, previous_cumulative_end = update_risk_state(
+                    risk_state, payload, previous_cumulative_precip, previous_cumulative_end
+                )
             except Exception as exc:
                 print(f"::warning::GFS +{fhr:03d} h ignoré: {exc}")
                 failures.append({"forecast_hour": fhr, "error": str(exc)})
@@ -426,6 +676,8 @@ def main() -> int:
         "web_spacing_deg": 0.5,
         "variables": ["pressure_hpa", "temperature_2m_c", "precipitation_mm", "wind_speed_kmh", "wind_direction_deg", "gust_kmh"],
         "frames": frames,
+        "extrema_15d": finalize_extrema(extrema_state),
+        "risks": finalize_risks(risk_state, run),
         "failures": failures,
         "source": "NOAA/NCEP NOMADS GFS 0.25°",
     }
