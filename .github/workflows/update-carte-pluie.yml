@@ -26,6 +26,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Vérifier cohérence v2.4.1
+        shell: bash
+        run: |
+          grep -q 'VERSION = "2.4.1"' generer_pluie_meteofrance.py
+          grep -q '2.4.1' .github/workflows/update-carte-pluie.yml
+
       - name: Python
         uses: actions/setup-python@v5
         with:
@@ -36,14 +42,31 @@ jobs:
           python -m pip install --upgrade pip
           pip install requests==2.33.0
 
-      - name: Récupérer le cache climatologique précédent
+      - name: Récupérer les caches précédents
         shell: bash
         run: |
-          git fetch origin observations || true
-          git show origin/observations:cache_pluie_climatologie.json \
-            > cache_pluie_climatologie.json 2>/dev/null || true
-          git show origin/observations:cache_pluie_horaire.json \
-            > cache_pluie_horaire.json 2>/dev/null || true
+          git fetch origin observations
+          git show origin/observations:cache_pluie_horaire.json > cache_pluie_horaire.json
+          git show origin/observations:cache_pluie_climatologie.json > cache_pluie_climatologie.json 2>/dev/null || echo '{"schema_version":5,"stations":{}}' > cache_pluie_climatologie.json
+
+      - name: Refuser un cache 48h absent ou tronqué
+        run: |
+          python - <<'PY'
+          import json
+          from datetime import datetime
+          with open('cache_pluie_horaire.json', encoding='utf-8') as f:
+              d=json.load(f)
+          keys=sorted((d.get('hours') or {}).keys())
+          counts={}
+          for bucket in (d.get('hours') or {}).values():
+              for sid in (bucket or {}):
+                  counts[sid]=counts.get(sid,0)+1
+          c44=sum(v>=44 for v in counts.values())
+          print('Cache chargé :', len(keys), 'heures distinctes')
+          print('Stations avec >=44 RR1 :', c44)
+          if len(keys) < 48 or c44 == 0:
+              raise SystemExit('CACHE 48H NON INITIALISE : lancer d’abord « Initialiser cache 48h 72h pluie ». Le workflow horaire est arrêté volontairement pour ne jamais republier un cache 24/25 h.')
+          PY
 
       - name: Générer observations_pluie.json (mode rapide)
         env:
@@ -56,7 +79,7 @@ jobs:
         run: |
           python generer_pluie_meteofrance.py
 
-      - name: Vérifier le JSON v2.3.3
+      - name: Vérifier le JSON v2.4.1
         shell: bash
         run: |
           test -s observations_pluie.json
@@ -71,7 +94,7 @@ jobs:
 
           assert data["status"] == "ok"
           assert data["schema_version"] >= 5
-          assert data["module_version"] == "2.3.3"
+          assert data["module_version"] == "2.4.1"
           assert isinstance(data["stations"], list)
           assert data["stations_total"] > 0
 
@@ -89,7 +112,7 @@ jobs:
           ]
           assert not sapc, f"Stations SAPC encore présentes : {len(sapc)}"
 
-          print("JSON v2.3.3 valide")
+          print("JSON v2.4.1 valide")
           print("Stations :", data["stations_total"])
           print("RR24 :", data.get("stations_rr24"))
           print("RR48 :", data.get("stations_rr48"))
@@ -137,5 +160,5 @@ jobs:
             exit 0
           fi
 
-          git -C "$PUBLISH_DIR" commit -m "Mise à jour carte pluie Météo-France v2.3.3"
+          git -C "$PUBLISH_DIR" commit -m "Mise à jour carte pluie Météo-France v2.4.1"
           git -C "$PUBLISH_DIR" push origin HEAD:observations

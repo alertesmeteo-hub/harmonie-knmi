@@ -60,7 +60,7 @@ jobs:
           import json
           with open('observations_pluie.json', encoding='utf-8') as f:
               d=json.load(f)
-          assert d['module_version']=='2.3.3'
+          assert d['module_version']=='2.4.1'
           assert d['stations_total']>0
           print('Cumuls quotidiens mis à jour pour', d['stations_total'], 'stations')
           PY
@@ -89,5 +89,5 @@ jobs:
           cp /tmp/carte-pluie-publish/* "$PUBLISH_DIR"/
           git -C "$PUBLISH_DIR" add observations_pluie.json cache_pluie_climatologie.json cache_pluie_horaire.json
           if git -C "$PUBLISH_DIR" diff --cached --quiet; then exit 0; fi
-          git -C "$PUBLISH_DIR" commit -m "Mise à jour cumuls quotidiens pluie v2.3.3"
+          git -C "$PUBLISH_DIR" commit -m "Mise à jour cumuls quotidiens pluie v2.4.1"
           git -C "$PUBLISH_DIR" push origin HEAD:observations
