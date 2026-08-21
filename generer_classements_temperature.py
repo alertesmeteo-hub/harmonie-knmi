@@ -2,10 +2,11 @@
 # -*- coding: utf-8 -*-
 
 """
-Alertes-Meteo.com — Classements températures France
-Version 1.0.0
+Alertes-Meteo.com — Classements et observations France
+Version 1.1.0
 
-Produit un JSON pour 9 tableaux :
+Produit un JSON pour les tableaux de températures et les paramètres
+atmosphériques issus des paquets horaires Météo-France :
 1. Classement températures par heure locale
 2. Tn provisoire
 3. Tn 18-06 UTC
@@ -31,6 +32,7 @@ import os
 import re
 import sys
 import time
+import unicodedata
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -39,9 +41,9 @@ from zoneinfo import ZoneInfo
 
 import requests
 
-VERSION = "1.0.0"
-SCHEMA_VERSION = 1
-BUILD_ID = "classements-temperature-9-tableaux-20260820"
+VERSION = "1.1.0"
+SCHEMA_VERSION = 2
+BUILD_ID = "classements-observations-mf-complet-20260821"
 
 PACKAGE_URL = (
     "https://public-api.meteofrance.fr/public/"
@@ -54,6 +56,17 @@ DPOBS_STATIONS_URL = (
 
 OUTPUT = Path("classements_temperature.json")
 CACHE = Path("cache_classements_temperature_72h.json")
+QUALITY_CACHE = Path("cache_qualite_sites_mf.json")
+CLIMATE_CACHE = Path("cache_normales_records_mf.json")
+
+QUALITY_PDF_URL = (
+    "https://donneespubliques.meteofrance.fr/"
+    "metadonnees_publiques/fiches/fiche_{station_id}.pdf"
+)
+CLIMATE_DATA_URL = (
+    "https://donneespubliques.meteofrance.fr/"
+    "FichesClim/FICHECLIM_{station_id}.data"
+)
 
 PARIS = ZoneInfo("Europe/Paris")
 HTTP_TIMEOUT = 90
@@ -63,6 +76,8 @@ CACHE_HOURS = 72
 API_BACKFILL_HOURS = 24
 HOURLY_TABLE_HOURS = 24
 LATEST_PACKAGE_LOOKBACK_HOURS = 4
+METADATA_BATCH_SIZE = max(0, int(os.getenv("MF_METADATA_BATCH_SIZE", "60")))
+METADATA_DELAY = max(0.0, float(os.getenv("MF_METADATA_DELAY", "0.10")))
 
 session = requests.Session()
 session.headers.update({
@@ -148,6 +163,75 @@ def celsius(value: Any) -> Optional[float]:
     return round(n, 1)
 
 
+def pressure_hpa(value: Any) -> Optional[float]:
+    n = fnum(value)
+    if n is None:
+        return None
+    if n > 2000:
+        n /= 100.0
+    if n < 700 or n > 1150:
+        return None
+    return round(n, 1)
+
+
+def percent(value: Any) -> Optional[float]:
+    n = fnum(value)
+    if n is None or n < 0 or n > 100:
+        return None
+    return round(n, 1)
+
+
+def speed_kmh(value: Any) -> Optional[float]:
+    n = fnum(value)
+    if n is None or n < 0 or n > 150:
+        return None
+    return round(n * 3.6, 1)
+
+
+def visibility_km(value: Any) -> Optional[float]:
+    n = fnum(value)
+    if n is None or n < 0:
+        return None
+    if n > 200:
+        n /= 1000.0
+    return round(n, 1)
+
+
+def snow_depth_cm(value: Any) -> Optional[float]:
+    n = fnum(value)
+    if n is None or n < 0:
+        return None
+    # ht_neige est diffusée en mètres dans les paquets SYNOP.
+    if n <= 20:
+        n *= 100.0
+    if n > 2000:
+        return None
+    return round(n, 1)
+
+
+def sunshine_minutes(row: dict) -> Optional[float]:
+    raw_fraction = first(row, ("ssfrai", "SSFRAl", "sunshine_fraction"))
+    fraction = fnum(raw_fraction)
+    if fraction is not None:
+        if 0 <= fraction <= 1:
+            return round(fraction * 60.0, 1)
+        if 0 <= fraction <= 100:
+            return round(fraction * 0.6, 1)
+
+    raw_duration = first(row, (
+        "insolh", "INSOLH", "insolation", "sunshine_duration",
+        "duree_insolation", "sunshine_minutes",
+    ))
+    duration = fnum(raw_duration)
+    if duration is None or duration < 0:
+        return None
+    if duration <= 1:
+        duration *= 60.0
+    elif duration > 60:
+        duration /= 60.0
+    return round(min(duration, 60.0), 1)
+
+
 def first(row: dict, names: Iterable[str]) -> Any:
     for name in names:
         if name in row and row[name] not in (None, ""):
@@ -167,6 +251,8 @@ def station_id(row: dict) -> Optional[str]:
     sid = str(value).strip()
     if sid.endswith(".0") and sid[:-2].isdigit():
         sid = sid[:-2]
+    if sid.isdigit() and len(sid) <= 8:
+        sid = sid.zfill(8)
     return sid or None
 
 
@@ -293,7 +379,22 @@ def simplify_package(rows: List[dict], fallback_hour: datetime) -> List[dict]:
         t = celsius(first(row, ("t", "T")))
         tn = celsius(first(row, ("tn", "TN")))
         tx = celsius(first(row, ("tx", "TX")))
-        if t is None and tn is None and tx is None:
+        td = celsius(first(row, ("td", "TD", "dew_point", "point_rosee")))
+        humidity = percent(first(row, ("u", "U", "humidity", "humidite")))
+        pmer = pressure_hpa(first(row, ("pmer", "PMER", "pressure_msl")))
+        pressure = pressure_hpa(first(row, ("pres", "PRES", "pressure")))
+        wind_speed = speed_kmh(first(row, ("ff", "FF", "wind_speed")))
+        wind_direction = fnum(first(row, ("dd", "DD", "wind_direction")))
+        visibility = visibility_km(first(row, ("vv", "VV", "visibility")))
+        snow_depth = snow_depth_cm(first(row, (
+            "ht_neige", "HT_NEIGE", "snow_depth", "hauteur_neige",
+        )))
+        sunshine = sunshine_minutes(row)
+
+        if all(value is None for value in (
+            t, tn, tx, td, humidity, pmer, pressure, wind_speed,
+            visibility, snow_depth, sunshine,
+        )):
             continue
 
         lat = fnum(first(row, ("lat", "LAT", "latitude")))
@@ -305,6 +406,19 @@ def simplify_package(rows: List[dict], fallback_hour: datetime) -> List[dict]:
             "t": t,
             "tn": tn,
             "tx": tx,
+            "dew_point": td,
+            "humidity": humidity,
+            "pressure_msl": pmer,
+            "pressure": pressure,
+            "wind_speed": wind_speed,
+            "wind_direction": (
+                round(wind_direction, 0)
+                if wind_direction is not None and 0 <= wind_direction <= 360
+                else None
+            ),
+            "visibility_km": visibility,
+            "snow_depth_cm": snow_depth,
+            "sunshine_1h_minutes": sunshine,
         }
         if lat is not None and lon is not None and -90 <= lat <= 90 and -180 <= lon <= 180:
             item["lat"] = round(lat, 6)
@@ -316,17 +430,20 @@ def simplify_package(rows: List[dict], fallback_hour: datetime) -> List[dict]:
 
 def load_cache() -> dict:
     if not CACHE.exists():
-        return {"schema_version": 1, "hours": {}}
+        return {"schema_version": SCHEMA_VERSION, "hours": {}}
     try:
         data = json.loads(CACHE.read_text(encoding="utf-8"))
         if not isinstance(data, dict):
-            return {"schema_version": 1, "hours": {}}
+            return {"schema_version": SCHEMA_VERSION, "hours": {}}
+        if int(data.get("schema_version") or 0) < SCHEMA_VERSION:
+            print("Cache ancien : reconstruction des 24 dernières heures.")
+            return {"schema_version": SCHEMA_VERSION, "hours": {}}
         if not isinstance(data.get("hours"), dict):
             data["hours"] = {}
         return data
     except Exception as exc:
         print(f"::warning::Cache illisible, recréé : {exc}")
-        return {"schema_version": 1, "hours": {}}
+        return {"schema_version": SCHEMA_VERSION, "hours": {}}
 
 
 def update_cache(key: str) -> Tuple[dict, datetime]:
@@ -368,7 +485,7 @@ def update_cache(key: str) -> Tuple[dict, datetime]:
             pruned[iso(dt.replace(minute=0, second=0, microsecond=0))] = records
 
     cache = {
-        "schema_version": 1,
+        "schema_version": SCHEMA_VERSION,
         "module_version": VERSION,
         "updated_at": iso(utcnow()),
         "latest_observation_at": iso(latest_hour),
@@ -417,13 +534,245 @@ def load_station_meta(key: str) -> Dict[str, dict]:
         if is_sapc(name):
             continue
         dep = department_code(sid)
+        altitude = fnum(first(row, (
+            "altitude", "ALTITUDE", "alt", "elevation", "altitude_m",
+        )))
         out[sid] = {
             "name": name,
             "department_code": dep,
             "department_name": DEPARTMENTS.get(dep or "", dep or ""),
+            "altitude_m": round(altitude, 0) if altitude is not None else None,
         }
     print("Stations nommées :", len(out))
     return out
+
+
+def load_json_cache(path: Path) -> dict:
+    if not path.exists():
+        return {"schema_version": 1, "stations": {}}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(payload, dict) or not isinstance(payload.get("stations"), dict):
+            raise ValueError("structure incorrecte")
+        return payload
+    except Exception as exc:
+        print(f"::warning::{path.name} illisible, recréé : {exc}")
+        return {"schema_version": 1, "stations": {}}
+
+
+def save_json_cache(path: Path, stations: dict) -> None:
+    payload = {
+        "schema_version": 1,
+        "module_version": VERSION,
+        "updated_at": iso(utcnow()),
+        "stations": stations,
+    }
+    path.write_text(
+        json.dumps(payload, ensure_ascii=False, separators=(",", ":"), allow_nan=False),
+        encoding="utf-8",
+    )
+
+
+def ascii_text(value: Any) -> str:
+    return "".join(
+        char for char in unicodedata.normalize("NFD", str(value or ""))
+        if unicodedata.category(char) != "Mn"
+    ).lower()
+
+
+def climate_series(lines: List[str], heading: str) -> List[Optional[float]]:
+    wanted = ascii_text(heading)
+    for index, line in enumerate(lines):
+        if wanted not in ascii_text(line):
+            continue
+        for candidate in lines[index + 1:index + 7]:
+            parts = [part.strip() for part in candidate.split(";")]
+            values = parts[1:14] if len(parts) >= 14 else []
+            if len(values) != 13:
+                continue
+            parsed: List[Optional[float]] = []
+            for value in values:
+                if value == ".":
+                    parsed.append(0.0)
+                elif value in ("", "-"):
+                    parsed.append(None)
+                else:
+                    parsed.append(fnum(value))
+            if sum(value is not None for value in parsed) >= 6:
+                return parsed
+    return []
+
+
+def parse_climate_data(text: str) -> dict:
+    lines = text.replace("\r", "").split("\n")
+    high = climate_series(lines, "La température la plus élevée")
+    normal_max = climate_series(lines, "Température maximale (Moyenne")
+    normal_min = climate_series(lines, "Température minimale (Moyenne")
+    low = climate_series(lines, "La température la plus basse")
+    if not any((high, normal_max, normal_min, low)):
+        return {}
+    return {
+        "record_tmax_monthly": high[:12] if high else [],
+        "record_tmax_absolute": high[12] if len(high) >= 13 else None,
+        "normal_tmax_monthly": normal_max[:12] if normal_max else [],
+        "normal_tmin_monthly": normal_min[:12] if normal_min else [],
+        "record_tmin_monthly": low[:12] if low else [],
+        "record_tmin_absolute": low[12] if len(low) >= 13 else None,
+    }
+
+
+def parse_quality_text(text: str) -> dict:
+    # La fiche commence par le tableau « QUALITE DU SITE ». On s'arrête avant
+    # « CLASSE MESURES » afin de ne pas confondre classe de site et classe du
+    # capteur, qui sont deux notions différentes chez Météo-France.
+    normalized = text.replace("\r", "")
+    upper = ascii_text(normalized)
+    start = upper.find("qualite du site")
+    if start >= 0:
+        normalized = normalized[start:]
+        upper = upper[start:]
+    stop = upper.find("classe mesures")
+    if stop >= 0:
+        normalized = normalized[:stop]
+
+    aliases = {
+        "humidite": "humidity",
+        "pluie": "rain",
+        "ray_glo_diff": "radiation",
+        "rayonnement": "radiation",
+        "temperature": "temperature",
+        "vent": "wind",
+    }
+    output = {}
+    for raw_line in normalized.split("\n"):
+        line = ascii_text(raw_line).strip()
+        match = re.match(
+            r"^(humidite|pluie|ray_glo_diff|rayonnement|temperature|vent)\s+([1-5])\b",
+            line,
+        )
+        if not match:
+            continue
+        key = aliases[match.group(1)]
+        if key not in output:
+            output[key] = int(match.group(2))
+    return output
+
+
+def metadata_is_due(item: Any, max_age_days: int = 180) -> bool:
+    if not isinstance(item, dict):
+        return True
+    checked = parse_iso(item.get("checked_at"))
+    return checked is None or checked < utcnow() - timedelta(days=max_age_days)
+
+
+def decode_response_text(response: requests.Response) -> str:
+    for encoding in ("utf-8-sig", "utf-8", "latin-1"):
+        try:
+            return response.content.decode(encoding)
+        except UnicodeDecodeError:
+            continue
+    return response.content.decode("utf-8", errors="replace")
+
+
+def enrich_official_metadata(meta: Dict[str, dict], latest: datetime) -> Dict[str, dict]:
+    quality_cache = load_json_cache(QUALITY_CACHE)
+    climate_cache = load_json_cache(CLIMATE_CACHE)
+    quality_items = quality_cache["stations"]
+    climate_items = climate_cache["stations"]
+
+    candidates = [
+        sid for sid in sorted(meta)
+        if metadata_is_due(quality_items.get(sid))
+        or metadata_is_due(climate_items.get(sid))
+    ][:METADATA_BATCH_SIZE]
+
+    if candidates:
+        print("Métadonnées officielles à compléter :", len(candidates))
+
+    try:
+        from pypdf import PdfReader
+    except ImportError:
+        PdfReader = None
+        if candidates:
+            print("::warning::pypdf absent : classes de qualité non actualisées.")
+
+    for index, sid in enumerate(candidates, start=1):
+        checked_at = iso(utcnow())
+
+        if metadata_is_due(climate_items.get(sid)):
+            try:
+                response = session.get(
+                    CLIMATE_DATA_URL.format(station_id=sid),
+                    timeout=HTTP_TIMEOUT,
+                )
+                climate = parse_climate_data(decode_response_text(response)) if response.status_code == 200 else {}
+                climate_items[sid] = {
+                    "checked_at": checked_at,
+                    "status": "ok" if climate else "unavailable",
+                    "data": climate,
+                }
+            except requests.RequestException as exc:
+                print(f"::warning::Fiche climatologique {sid} : {exc}")
+
+        if PdfReader is not None and metadata_is_due(quality_items.get(sid)):
+            try:
+                response = session.get(
+                    QUALITY_PDF_URL.format(station_id=sid),
+                    timeout=HTTP_TIMEOUT,
+                )
+                quality = {}
+                if response.status_code == 200 and response.content.startswith(b"%PDF"):
+                    reader = PdfReader(io.BytesIO(response.content))
+                    pages = []
+                    for page in reader.pages[:3]:
+                        pages.append(page.extract_text() or "")
+                    quality = parse_quality_text("\n".join(pages))
+                quality_items[sid] = {
+                    "checked_at": checked_at,
+                    "status": "ok" if quality else "unavailable",
+                    "site_quality": quality,
+                }
+            except Exception as exc:
+                print(f"::warning::Qualité du site {sid} : {exc}")
+
+        if METADATA_DELAY and index < len(candidates):
+            time.sleep(METADATA_DELAY)
+
+    save_json_cache(QUALITY_CACHE, quality_items)
+    save_json_cache(CLIMATE_CACHE, climate_items)
+
+    month_index = latest.month - 1
+    for sid, info in meta.items():
+        quality = quality_items.get(sid) or {}
+        if quality.get("site_quality"):
+            info["site_quality"] = quality["site_quality"]
+
+        climate_entry = climate_items.get(sid) or {}
+        climate = climate_entry.get("data") or {}
+        if climate:
+            def month_value(key: str) -> Optional[float]:
+                values = climate.get(key) or []
+                return values[month_index] if len(values) > month_index else None
+
+            info["climate"] = {
+                "normal_tmax_month": month_value("normal_tmax_monthly"),
+                "normal_tmin_month": month_value("normal_tmin_monthly"),
+                "record_month_tmax": month_value("record_tmax_monthly"),
+                "record_month_tmin": month_value("record_tmin_monthly"),
+                "record_absolute_tmax": climate.get("record_tmax_absolute"),
+                "record_absolute_tmin": climate.get("record_tmin_absolute"),
+                "reference_period": "1991-2020",
+            }
+
+    print(
+        "Qualités disponibles :",
+        sum(bool((quality_items.get(sid) or {}).get("site_quality")) for sid in meta),
+    )
+    print(
+        "Normales disponibles :",
+        sum(bool((climate_items.get(sid) or {}).get("data")) for sid in meta),
+    )
+    return meta
 
 
 def local_dt_label(dt: datetime) -> str:
@@ -476,6 +825,9 @@ def enrich_row(sid: str, value: float, obs_dt: datetime, samples: int, expected:
         "name": name,
         "department_code": dep,
         "department_name": info.get("department_name") or DEPARTMENTS.get(dep or "", dep or ""),
+        "network": "Météo-France",
+        "altitude_m": info.get("altitude_m"),
+        "site_quality": info.get("site_quality") or {},
         "value": round(float(value), 1),
         "obs_time_utc": iso(obs_dt),
         "obs_time_local": compact_date_label(obs_dt),
@@ -486,6 +838,9 @@ def enrich_row(sid: str, value: float, obs_dt: datetime, samples: int, expected:
         row["lat"] = lat
     if lon is not None:
         row["lon"] = lon
+    for key, value in (info.get("climate") or {}).items():
+        if value is not None:
+            row[key] = value
     return row
 
 
@@ -587,6 +942,14 @@ def build_hourly_tables(cache_hours: Dict[datetime, List[dict]], meta: Dict[str,
                 fnum(obs.get("lat")), fnum(obs.get("lon"))
             )
             if row:
+                for key in (
+                    "dew_point", "humidity", "pressure_msl", "pressure",
+                    "wind_speed", "wind_direction", "visibility_km",
+                    "snow_depth_cm", "sunshine_1h_minutes",
+                ):
+                    value = obs.get(key)
+                    if value is not None:
+                        row[key] = value
                 rows.append(row)
         rows.sort(key=lambda r: (-r["value"], r["name"], r["id"]))
         vals = [r["value"] for r in rows]
@@ -663,6 +1026,7 @@ def main() -> int:
     key = get_api_key()
     cache, latest = update_cache(key)
     meta = load_station_meta(key)
+    meta = enrich_official_metadata(meta, latest)
     tables, hourly = build_tables(cache, meta, latest)
 
     output = {
@@ -675,11 +1039,16 @@ def main() -> int:
         "timezone_local": "Europe/Paris",
         "scope": "France métropolitaine",
         "unit": "°C",
-        "title": "Classements des températures en France",
+        "title": "Classements des observations en France",
         "source": {
             "provider": "Météo-France",
             "api": "DPPaquetObs v2 - paquets horaires stations",
-            "fields": "t, tn, tx",
+            "fields": (
+                "t, tn, tx, td, u, pmer, pres, ff, dd, vv, "
+                "ht_neige, insolh/ssfrai"
+            ),
+            "climatology": "Fiches climatologiques Météo-France 1991-2020",
+            "site_quality": "Fiches de postes Météo-France, classe par paramètre",
             "hourly_retention": "24 h côté API ; cache local glissant 72 h",
             "tn_final_period": "18 UTC J-1 à 18 UTC J",
             "tx_final_period": "06 UTC J à 06 UTC J+1",
@@ -690,6 +1059,9 @@ def main() -> int:
         "cache": {
             "hours_retained": len(cache.get("hours") or {}),
             "target_hours": CACHE_HOURS,
+            "site_quality_stations": sum(bool(info.get("site_quality")) for info in meta.values()),
+            "climatology_stations": sum(bool(info.get("climate")) for info in meta.values()),
+            "metadata_batch_size": METADATA_BATCH_SIZE,
         },
     }
 
