@@ -3,7 +3,7 @@
 
 """
 Météo Climat Pro — Carte pluie Météo-France
-Version 2.3.0
+Version 2.3.1
 
 Nouveautés v2.3.0
 -----------------
@@ -56,7 +56,7 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 import requests
 
 
-VERSION = "2.3.0"
+VERSION = "2.3.1"
 CACHE_SCHEMA = 5
 
 PACKAGE_BASE = (
@@ -113,6 +113,12 @@ RECORDS_REFRESH_DAYS = 180
 
 # Exclusion demandée.
 EXCLUDE_SAPC = True
+
+# Les archives historiques (records + normales) sont lourdes à télécharger.
+# Elles sont construites uniquement par le workflow dédié.
+BUILD_ARCHIVES = os.getenv("MF_BUILD_ARCHIVES", "0").strip().lower() in {
+    "1", "true", "yes", "oui", "on"
+}
 
 session = requests.Session()
 session.headers.update({
@@ -853,7 +859,12 @@ def update_current_month(
         recent_value = fnum(recent_record.get(sid))
         recent_date = recent_record_date.get(sid)
 
-        if archive_value is None and recent_value is None:
+        # Ne jamais présenter le maximum des deux dernières années comme un
+        # record absolu si l'historique n'a pas encore été initialisé.
+        if entry.get("record_archive_checked") is not True:
+            entry["record_daily"] = None
+            entry["record_daily_date"] = None
+        elif archive_value is None and recent_value is None:
             entry["record_daily"] = None
             entry["record_daily_date"] = None
         elif archive_value is None or (
@@ -1233,9 +1244,17 @@ def main() -> int:
     # 3. Cache climatologique
     cache = load_cache()
 
-    update_daily_records(cache, station_ids, latest_hour)
+    if BUILD_ARCHIVES:
+        print("Mode archives : construction/rafraîchissement des records et normales.")
+        update_daily_records(cache, station_ids, latest_hour)
+        update_normals(cache, station_ids, latest_hour)
+    else:
+        print(
+            "Mode rapide : archives historiques conservées depuis le cache. "
+            "Utiliser le workflow dédié pour les initialiser/rafraîchir."
+        )
+
     update_current_month(cache, station_ids, latest_hour)
-    update_normals(cache, station_ids, latest_hour)
 
     cache["schema_version"] = CACHE_SCHEMA
     cache["module_version"] = VERSION
