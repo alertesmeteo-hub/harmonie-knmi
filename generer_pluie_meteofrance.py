@@ -3,7 +3,7 @@
 
 """
 Météo Climat Pro — Carte pluie Météo-France
-Version 2.3.1
+Version 2.3.2
 
 Nouveautés v2.3.0
 -----------------
@@ -48,6 +48,7 @@ import os
 import re
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
@@ -56,7 +57,7 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 import requests
 
 
-VERSION = "2.3.1"
+VERSION = "2.3.2"
 CACHE_SCHEMA = 5
 
 PACKAGE_BASE = (
@@ -74,6 +75,8 @@ MF_S3_QUOT = (
     "data/synchro_ftp/BASE/QUOT"
 )
 
+DATAGOUV_HOURLY_DATASET_API = "https://www.data.gouv.fr/api/1/datasets/donnees-climatologiques-de-base-horaires/"
+
 MF_S3_MENS = (
     "https://meteofrance.s3.sbg.io.cloud.ovh.net/"
     "data/synchro_ftp/BASE/MENS"
@@ -81,6 +84,7 @@ MF_S3_MENS = (
 
 OUTPUT = Path("observations_pluie.json")
 CACHE = Path("cache_pluie_climatologie.json")
+HOURLY_CACHE = Path("cache_pluie_horaire.json")
 
 NORMAL_START = 1991
 NORMAL_END = 2020
@@ -277,6 +281,220 @@ def is_sapc_name(name: str) -> bool:
     return "SAPC" in normalized.split()
 
 
+
+# Villes/repères prioritaires par département pour conserver une bonne
+# couverture géographique quand l'utilisateur limite le nombre de stations.
+DEPARTMENT_CITY_HINTS = {
+    "01": ["BOURG", "AMBERIEU"], "02": ["LAON", "SAINT QUENTIN"],
+    "03": ["MOULINS", "VICHY"], "04": ["DIGNE"], "05": ["GAP"],
+    "06": ["NICE", "CANNES"], "07": ["PRIVAS", "AUBENAS"],
+    "08": ["CHARLEVILLE", "SEDAN"], "09": ["FOIX", "PAMIERS"],
+    "10": ["TROYES"], "11": ["CARCASSONNE", "NARBONNE"],
+    "12": ["RODEZ", "MILLAU"], "13": ["MARSEILLE", "MARIGNANE", "AIX"],
+    "14": ["CAEN"], "15": ["AURILLAC"], "16": ["ANGOULEME", "COGNAC"],
+    "17": ["LA ROCHELLE", "ROCHEFORT"], "18": ["BOURGES"],
+    "19": ["BRIVE", "TULLE"], "2A": ["AJACCIO"], "2B": ["BASTIA", "CALVI"],
+    "21": ["DIJON"], "22": ["SAINT BRIEUC"], "23": ["GUERET"],
+    "24": ["PERIGUEUX", "BERGERAC"], "25": ["BESANCON"],
+    "26": ["VALENCE", "MONTELIMAR"], "27": ["EVREUX"],
+    "28": ["CHARTRES"], "29": ["BREST", "QUIMPER"], "30": ["NIMES"],
+    "31": ["TOULOUSE"], "32": ["AUCH"], "33": ["BORDEAUX", "MERIGNAC"],
+    "34": ["MONTPELLIER", "BEZIERS"], "35": ["RENNES"],
+    "36": ["CHATEAUROUX"], "37": ["TOURS"], "38": ["GRENOBLE"],
+    "39": ["LONS", "DOLE"], "40": ["MONT DE MARSAN", "DAX"],
+    "41": ["BLOIS"], "42": ["SAINT ETIENNE"], "43": ["LE PUY"],
+    "44": ["NANTES"], "45": ["ORLEANS"], "46": ["CAHORS"],
+    "47": ["AGEN"], "48": ["MENDE"], "49": ["ANGERS"],
+    "50": ["SAINT LO", "CHERBOURG"], "51": ["REIMS", "CHALONS"],
+    "52": ["CHAUMONT", "LANGRES"], "53": ["LAVAL"],
+    "54": ["NANCY"], "55": ["BAR LE DUC", "VERDUN"],
+    "56": ["VANNES", "LORIENT"], "57": ["METZ"], "58": ["NEVERS"],
+    "59": ["LILLE", "DUNKERQUE", "DOUAI"], "60": ["BEAUVAIS", "CREIL"],
+    "61": ["ALENCON"], "62": ["ARRAS", "LE TOUQUET", "CALAIS"],
+    "63": ["CLERMONT"], "64": ["PAU", "BIARRITZ"], "65": ["TARBES"],
+    "66": ["PERPIGNAN"], "67": ["STRASBOURG"], "68": ["MULHOUSE", "COLMAR"],
+    "69": ["LYON", "BRON"], "70": ["VESOUL"], "71": ["MACON"],
+    "72": ["LE MANS"], "73": ["CHAMBERY"], "74": ["ANNECY"],
+    "75": ["PARIS"], "76": ["ROUEN", "DIEPPE"], "77": ["MELUN"],
+    "78": ["VERSAILLES", "TRAPPES"], "79": ["NIORT"],
+    "80": ["AMIENS", "ABBEVILLE"], "81": ["ALBI", "CASTRES"],
+    "82": ["MONTAUBAN"], "83": ["TOULON", "HYERES"], "84": ["AVIGNON"],
+    "85": ["LA ROCHE", "LES SABLES"], "86": ["POITIERS"],
+    "87": ["LIMOGES"], "88": ["EPINAL"], "89": ["AUXERRE"],
+    "90": ["BELFORT"], "91": ["EVRY", "ORLY"], "92": ["PARIS"],
+    "93": ["LE BOURGET", "PARIS"], "94": ["ORLY", "PARIS"],
+    "95": ["PONTOISE", "ROISSY"],
+}
+
+def normalize_name(value: str) -> str:
+    import unicodedata
+    txt = unicodedata.normalize("NFKD", str(value or ""))
+    txt = "".join(ch for ch in txt if not unicodedata.combining(ch)).upper()
+    return re.sub(r"[^A-Z0-9]+", " ", txt).strip()
+
+def department_code(sid: str) -> str:
+    d = re.sub(r"\D", "", str(sid or ""))
+    if d.startswith("20") and len(d) >= 3:
+        # Les identifiants corses ne permettent pas toujours de séparer 2A/2B.
+        return "20"
+    return d[:2] if len(d) >= 2 else ""
+
+def choose_department_anchors(station_ids: List[str], names: Dict[str, str]) -> set:
+    by_dep: Dict[str, List[str]] = defaultdict(list)
+    for sid in station_ids:
+        dep = department_code(sid)
+        if dep:
+            by_dep[dep].append(sid)
+    anchors = set()
+    for dep, ids in by_dep.items():
+        hints = DEPARTMENT_CITY_HINTS.get(dep, [])
+        best = None
+        best_score = 9999
+        for sid in ids:
+            n = normalize_name(names.get(sid, sid))
+            score = 500
+            for i, hint in enumerate(hints):
+                if normalize_name(hint) in n:
+                    score = i
+                    break
+            if best is None or (score, n, sid) < (best_score, normalize_name(names.get(best, best)), best):
+                best, best_score = sid, score
+        if best:
+            anchors.add(best)
+    return anchors
+
+# ---------------------------------------------------------------------
+# Cache horaire glissant (80 h)
+# ---------------------------------------------------------------------
+
+def load_hourly_cache() -> dict:
+    if not HOURLY_CACHE.exists():
+        return {"schema_version": 1, "hours": {}}
+    try:
+        data = json.loads(HOURLY_CACHE.read_text(encoding="utf-8"))
+        if not isinstance(data, dict):
+            raise ValueError("cache non objet")
+        data.setdefault("hours", {})
+        return data
+    except Exception as exc:
+        print(f"[WARN] cache horaire ignoré : {exc}")
+        return {"schema_version": 1, "hours": {}}
+
+
+def save_hourly_cache(cache: dict, latest_hour: datetime) -> None:
+    cutoff = latest_hour - timedelta(hours=79)
+    keep = {}
+    for key, value in (cache.get("hours") or {}).items():
+        dt = parse_iso(key)
+        if dt is not None and dt >= cutoff:
+            keep[iso(dt)] = value
+    cache["schema_version"] = 1
+    cache["module_version"] = VERSION
+    cache["latest_hour"] = iso(latest_hour)
+    cache["hours"] = keep
+    HOURLY_CACHE.write_text(json.dumps(cache, ensure_ascii=False, indent=2, allow_nan=False), encoding="utf-8")
+
+
+def parse_hourly_datetime(value: Any) -> Optional[datetime]:
+    if value in (None, ""):
+        return None
+    text = str(value).strip()
+    iso_dt = parse_iso(text)
+    if iso_dt is not None:
+        return iso_dt
+    digits = re.sub(r"\D", "", text)
+    for fmt, length in (("%Y%m%d%H%M", 12), ("%Y%m%d%H", 10), ("%Y%m%d", 8)):
+        if len(digits) >= length:
+            try:
+                return datetime.strptime(digits[:length], fmt).replace(tzinfo=timezone.utc)
+            except ValueError:
+                pass
+    return None
+
+
+def hourly_cache_depth(cache: dict, latest_hour: datetime) -> int:
+    ages = []
+    for key in (cache.get("hours") or {}):
+        dt = parse_iso(key)
+        if dt is None:
+            continue
+        age = int((latest_hour - dt).total_seconds() // 3600)
+        if 0 <= age < 80:
+            ages.append(age)
+    return (max(ages) + 1) if ages else 0
+
+
+def bootstrap_hourly_cache_from_datagouv(cache: dict, station_ids: List[str], latest_hour: datetime) -> None:
+    """Amorce le cache 72 h avec les données horaires climatologiques.
+
+    Ce secours n'est utilisé que lorsque la branche observations ne possède
+    pas encore assez d'historique. Ensuite le cache est alimenté par l'API
+    temps réel à chaque exécution horaire.
+    """
+    if hourly_cache_depth(cache, latest_hour) >= 72:
+        return
+    print("Cache 72 h incomplet : amorçage via Météo-France / data.gouv.fr...")
+    try:
+        r = session.get(DATAGOUV_HOURLY_DATASET_API, timeout=HTTP_TIMEOUT)
+        r.raise_for_status()
+        resources = r.json().get("resources", [])
+    except Exception as exc:
+        print(f"[WARN] catalogue horaire data.gouv.fr indisponible : {exc}")
+        return
+
+    deps = sorted({department_code(sid) for sid in station_ids if department_code(sid) and department_code(sid) != "20"})
+    by_dep_ids = {dep: {sid for sid in station_ids if department_code(sid) == dep} for dep in deps}
+    resource_by_dep = {}
+    for dep in deps:
+        needle = f"HOR_departement_{dep}_periode_".lower()
+        candidates = []
+        for res in resources:
+            title = str(res.get("title") or "")
+            url = str(res.get("url") or "")
+            if needle in title.lower() and url:
+                # Priorité au fichier qui contient l'année courante.
+                score = 0 if str(latest_hour.year) in title else 1
+                candidates.append((score, title, url))
+        if candidates:
+            candidates.sort()
+            resource_by_dep[dep] = candidates[0][2]
+
+    cutoff = latest_hour - timedelta(hours=79)
+
+    def fetch_dep(dep_url):
+        dep, url = dep_url
+        try:
+            rr = requests.get(url, timeout=120, headers={"User-Agent": f"alertes-meteo-carte-pluie/{VERSION}"})
+            rr.raise_for_status()
+            return dep, parse_delimited(rr.content), None
+        except Exception as exc:
+            return dep, None, exc
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        futures = [pool.submit(fetch_dep, item) for item in resource_by_dep.items()]
+        for future in as_completed(futures):
+            dep, rows, exc = future.result()
+            if exc is not None or rows is None:
+                print(f"[WARN] amorçage horaire {dep} impossible : {exc}")
+                continue
+            wanted = by_dep_ids.get(dep, set())
+            kept = 0
+            for row in rows:
+                sid = station_id(row)
+                if sid not in wanted:
+                    continue
+                hdt = parse_hourly_datetime(first(row, ("AAAAMMJJHH", "AAAAMMJJHHMM", "DATE", "date", "validity_time")))
+                if hdt is None or hdt < cutoff or hdt > latest_hour:
+                    continue
+                rr1 = clean_rain(first(row, ("RR1", "rr1", "RR", "rr")))
+                if rr1 is None:
+                    continue
+                key = iso(hdt.replace(minute=0, second=0, microsecond=0))
+                cache.setdefault("hours", {}).setdefault(key, {})[sid] = round(rr1, 3)
+                kept += 1
+            print(f"Amorçage {dep} : {kept} valeurs horaires récentes conservées")
+
+
 # ---------------------------------------------------------------------
 # Package Observations V2
 # ---------------------------------------------------------------------
@@ -343,122 +561,95 @@ def find_latest_package_hour(
 def load_package_history(
     key: str,
 ) -> Tuple[datetime, Dict[str, dict], Dict[str, dict]]:
+    """Charge le temps réel et reconstruit 24/48/72 h via un cache persistant.
 
+    L'API Package Observations a une profondeur de 24 h seulement. On récupère
+    autant d'heures récentes que possible (24 maximum) puis on fusionne avec
+    cache_pluie_horaire.json conservé sur la branche observations.
+    """
     latest_hour, first_response = find_latest_package_hour(key)
-
+    hourly_cache = load_hourly_cache()
+    cache_hours = hourly_cache.setdefault("hours", {})
     station_geo: Dict[str, dict] = {}
 
-    agg: Dict[str, dict] = defaultdict(
-        lambda: {
-            "rr24_sum": 0.0,
-            "rr24_hours": 0,
-            "rr48_sum": 0.0,
-            "rr48_hours": 0,
-            "rr72_sum": 0.0,
-            "rr72_hours": 0,
-            "today_sum": 0.0,
-            "today_hours": 0,
-            "latest_date": None,
-            "day_sums": defaultdict(float),
-            "day_hours": defaultdict(int),
-        }
-    )
-
-    latest_day = latest_hour.date()
-    old_missing = 0
-
-    for offset in range(PACKAGE_HISTORY_HOURS):
+    # L'API ne garantit que 24 h de rétention : ne jamais demander J-2/J-3.
+    for offset in range(24):
         target = latest_hour - timedelta(hours=offset)
-
-        if offset == 0:
-            response = first_response
-        else:
-            response = package_request(key, target)
+        response = first_response if offset == 0 else package_request(key, target)
+        if offset:
             time.sleep(PACKAGE_REQUEST_DELAY)
-
         if response is None:
             print(f"[INFO] Paquet indisponible : {iso(target)}")
-
-            # Dans la fenêtre RR24 on continue même si une heure manque.
-            # Au-delà, quelques absences consécutives indiquent généralement
-            # que l'on a dépassé la profondeur disponible.
-            if offset >= 24:
-                old_missing += 1
-                if old_missing >= PACKAGE_STOP_AFTER_OLD_MISSING:
-                    print(
-                        "Arrêt de la recherche historique après "
-                        f"{old_missing} paquet(s) ancien(s) indisponible(s)."
-                    )
-                    break
             continue
 
-        old_missing = 0
         rows = parse_delimited(response.content)
-
         print(f"Paquet {iso(target)} : {len(rows)} lignes")
+        hour_key = iso(target)
+        bucket = cache_hours.setdefault(hour_key, {})
 
         for row in rows:
             sid = station_id(row)
             if not sid:
                 continue
-
             lat = fnum(first(row, ("lat", "LAT", "latitude")))
             lon = fnum(first(row, ("lon", "LON", "longitude")))
-
-            if (
-                lat is not None
-                and lon is not None
-                and -90 <= lat <= 90
-                and -180 <= lon <= 180
-            ):
-                station_geo[sid] = {
-                    "lat": round(lat, 6),
-                    "lon": round(lon, 6),
-                }
-
+            if lat is not None and lon is not None and -90 <= lat <= 90 and -180 <= lon <= 180:
+                station_geo[sid] = {"lat": round(lat, 6), "lon": round(lon, 6)}
             rr1 = clean_rain(first(row, ("rr1", "RR1")))
             if rr1 is None:
                 continue
+            validity = parse_iso(first(row, ("validity_time", "reference_time", "date"))) or target
+            # Utiliser la vraie heure de validité comme clé si elle diffère.
+            vkey = iso(validity.replace(minute=0, second=0, microsecond=0))
+            cache_hours.setdefault(vkey, {})[sid] = round(rr1, 3)
 
-            validity = parse_iso(
-                first(
-                    row,
-                    ("validity_time", "reference_time", "date"),
-                )
-            ) or target
+    # Si le cache ne contient pas encore 72 h (première installation),
+    # l'amorcer avec les données horaires climatologiques mises à jour
+    # quotidiennement. Cela rend 48/72 h utilisables dès la première mise en route.
+    current_station_ids = sorted({sid for bucket in cache_hours.values() for sid in (bucket or {}).keys()})
+    bootstrap_hourly_cache_from_datagouv(hourly_cache, current_station_ids, latest_hour)
+    cache_hours = hourly_cache.setdefault("hours", {})
+    save_hourly_cache(hourly_cache, latest_hour)
 
+    agg: Dict[str, dict] = defaultdict(lambda: {
+        "rr24_sum": 0.0, "rr24_hours": 0,
+        "rr48_sum": 0.0, "rr48_hours": 0,
+        "rr72_sum": 0.0, "rr72_hours": 0,
+        "today_sum": 0.0, "today_hours": 0,
+        "latest_date": None,
+        "day_sums": defaultdict(float), "day_hours": defaultdict(int),
+    })
+    latest_day = latest_hour.date()
+    for hkey, bucket in cache_hours.items():
+        hdt = parse_iso(hkey)
+        if hdt is None:
+            continue
+        age = int((latest_hour - hdt).total_seconds() // 3600)
+        if age < 0 or age >= 72:
+            continue
+        for sid, raw_rr in (bucket or {}).items():
+            rr1 = clean_rain(raw_rr)
+            if rr1 is None:
+                continue
             item = agg[sid]
-            day_key = yyyymmdd(validity.date())
-
-            item["day_sums"][day_key] += rr1
-            item["day_hours"][day_key] += 1
-
-            # Cumuls glissants à partir des paquets horaires les plus récents.
-            if offset < 24:
-                item["rr24_sum"] += rr1
-                item["rr24_hours"] += 1
-            if offset < 48:
-                item["rr48_sum"] += rr1
-                item["rr48_hours"] += 1
-            if offset < 72:
-                item["rr72_sum"] += rr1
-                item["rr72_hours"] += 1
-
-            if validity.date() == latest_day:
-                item["today_sum"] += rr1
-                item["today_hours"] += 1
-
+            dkey = yyyymmdd(hdt.date())
+            item["day_sums"][dkey] += rr1
+            item["day_hours"][dkey] += 1
+            if age < 24:
+                item["rr24_sum"] += rr1; item["rr24_hours"] += 1
+            if age < 48:
+                item["rr48_sum"] += rr1; item["rr48_hours"] += 1
+            if age < 72:
+                item["rr72_sum"] += rr1; item["rr72_hours"] += 1
+            if hdt.date() == latest_day:
+                item["today_sum"] += rr1; item["today_hours"] += 1
             old_dt = parse_iso(item["latest_date"])
-            if old_dt is None or validity > old_dt:
-                item["latest_date"] = iso(validity)
+            if old_dt is None or hdt > old_dt:
+                item["latest_date"] = iso(hdt)
 
-    # Conversion des defaultdict pour faciliter la sérialisation/debug.
     for item in agg.values():
-        item["day_sums"] = {
-            k: round(v, 3) for k, v in item["day_sums"].items()
-        }
+        item["day_sums"] = {k: round(v, 3) for k, v in item["day_sums"].items()}
         item["day_hours"] = dict(item["day_hours"])
-
     return latest_hour, station_geo, agg
 
 
@@ -1235,6 +1426,9 @@ def main() -> int:
         if sid not in set(excluded_sapc_ids)
     ]
 
+    department_anchors = choose_department_anchors(station_ids, names)
+    print(f"Repères départementaux : {len(department_anchors)} station(s).")
+
     print(
         f"Stations paquets : {len(raw_station_ids)} | "
         f"SAPC exclues : {len(excluded_sapc_ids)} | "
@@ -1351,6 +1545,8 @@ def main() -> int:
         stations.append({
             "id": sid,
             "name": names.get(sid, sid),
+            "department": department_code(sid),
+            "department_anchor": sid in department_anchors,
             "lat": geo["lat"],
             "lon": geo["lon"],
             "date": h.get("latest_date"),
@@ -1578,10 +1774,10 @@ def main() -> int:
                 "Somme de RR1 sur les 24 paquets horaires les plus récents"
             ),
             "rr48_method": (
-                "Somme de RR1 sur les 48 paquets horaires les plus récents"
+                "Somme de RR1 sur un cache glissant persistant des 48 dernières heures"
             ),
             "rr72_method": (
-                "Somme de RR1 sur les 72 paquets horaires les plus récents"
+                "Somme de RR1 sur un cache glissant persistant des 72 dernières heures"
             ),
             "current_month": (
                 "Données climatologiques quotidiennes Météo-France, "
