@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-08-21T21:35:50Z",
+  "generated_at": "2026-08-21T21:58:40Z",
   "troncon_count": 337,
   "station_count": 4150,
-  "observation_count": 2993,
-  "alert_count": 104,
+  "observation_count": 2996,
+  "alert_count": 132,
   "source_mode": "github"
 }
