@@ -3,7 +3,7 @@
 
 """
 Météo Climat Pro — Carte pluie Météo-France
-Version 2.3.3
+Version 2.3.4
 
 Nouveautés v2.3.0
 -----------------
@@ -57,7 +57,7 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 import requests
 
 
-VERSION = "2.3.3"
+VERSION = "2.3.4"
 CACHE_SCHEMA = 5
 
 PACKAGE_BASE = (
@@ -89,7 +89,7 @@ HOURLY_CACHE = Path("cache_pluie_horaire.json")
 NORMAL_START = 1991
 NORMAL_END = 2020
 
-HTTP_TIMEOUT = 90
+HTTP_TIMEOUT = 35
 
 # L'API autorise 50 appels/minute. Le script temporise les appels historiques.
 PACKAGE_REQUEST_DELAY = float(os.getenv("MF_PACKAGE_DELAY", "1.35"))
@@ -566,22 +566,46 @@ def find_latest_package_hour(
     )
 
 
+def latest_cached_hour(cache: dict) -> Optional[datetime]:
+    values = []
+    for key in (cache.get("hours") or {}):
+        dt = parse_iso(key)
+        if dt is not None:
+            values.append(dt)
+    return max(values) if values else None
+
+
 def load_package_history(
     key: str,
 ) -> Tuple[datetime, Dict[str, dict], Dict[str, dict]]:
-    """Charge le temps réel et reconstruit 24/48/72 h via un cache persistant.
+    """Met à jour le cache RR1 sans re-télécharger 24 h à chaque run.
 
-    L'API Package Observations a une profondeur de 24 h seulement. On récupère
-    autant d'heures récentes que possible (24 maximum) puis on fusionne avec
-    cache_pluie_horaire.json conservé sur la branche observations.
+    - Premier lancement / cache vide : amorce les 24 dernières heures via
+      Package Observations (profondeur maximale officielle 24 h).
+    - Lancements suivants : récupère uniquement les heures nouvelles + 2 h
+      de recouvrement pour absorber les retards/corrections.
+    - Les 48/72 h sont ensuite reconstruits depuis cache_pluie_horaire.json.
     """
     latest_hour, first_response = find_latest_package_hour(key)
     hourly_cache = load_hourly_cache()
     cache_hours = hourly_cache.setdefault("hours", {})
     station_geo: Dict[str, dict] = {}
 
-    # L'API ne garantit que 24 h de rétention : ne jamais demander J-2/J-3.
-    for offset in range(24):
+    previous_latest = latest_cached_hour(hourly_cache)
+    if previous_latest is None:
+        fetch_count = 24
+        print("Cache horaire vide : amorçage léger des 24 dernières heures via Package Obs.")
+    else:
+        gap = max(0, int((latest_hour - previous_latest).total_seconds() // 3600))
+        # 2 h de recouvrement + heures réellement manquées. Toujours <= 24 h.
+        fetch_count = min(24, max(3, gap + 2))
+        print(
+            f"Cache déjà présent jusqu'à {iso(previous_latest)} : "
+            f"récupération de {fetch_count} paquet(s) récent(s)."
+        )
+
+    # Ne jamais demander plus de 24 h au Package Observations.
+    for offset in range(fetch_count):
         target = latest_hour - timedelta(hours=offset)
         response = first_response if offset == 0 else package_request(key, target)
         if offset:
@@ -592,8 +616,6 @@ def load_package_history(
 
         rows = parse_delimited(response.content)
         print(f"Paquet {iso(target)} : {len(rows)} lignes")
-        hour_key = iso(target)
-        bucket = cache_hours.setdefault(hour_key, {})
 
         for row in rows:
             sid = station_id(row)
@@ -607,20 +629,14 @@ def load_package_history(
             if rr1 is None:
                 continue
             validity = parse_iso(first(row, ("validity_time", "reference_time", "date"))) or target
-            # Utiliser la vraie heure de validité comme clé si elle diffère.
             vkey = iso(validity.replace(minute=0, second=0, microsecond=0))
             cache_hours.setdefault(vkey, {})[sid] = round(rr1, 3)
 
-    # L'amorçage 72 h via les gros fichiers climatologiques est volontairement
-    # interdit dans le workflow horaire. Il se fait uniquement via le workflow
-    # dédié avec MF_BOOTSTRAP_HOURLY=1.
-    current_station_ids = sorted({sid for bucket in cache_hours.values() for sid in (bucket or {}).keys()})
+    # Dans le workflow normal on ne télécharge JAMAIS les gros fichiers
+    # climatologiques nationaux. Le workflow 48/72 h dédié est matriciel.
     if BOOTSTRAP_HOURLY:
-        bootstrap_hourly_cache_from_datagouv(hourly_cache, current_station_ids, latest_hour)
-        cache_hours = hourly_cache.setdefault("hours", {})
-    else:
-        depth = hourly_cache_depth(hourly_cache, latest_hour)
-        print(f"Mode rapide : amorçage data.gouv désactivé (cache horaire ≈ {depth} h).")
+        print("[INFO] MF_BOOTSTRAP_HOURLY ignoré en v2.3.4 : utiliser le workflow matriciel dédié.")
+
     save_hourly_cache(hourly_cache, latest_hour)
 
     agg: Dict[str, dict] = defaultdict(lambda: {
