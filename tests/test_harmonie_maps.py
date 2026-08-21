@@ -3,7 +3,9 @@
 
 from __future__ import annotations
 
+import gzip
 import json
+import struct
 import sys
 import tempfile
 import unittest
@@ -84,6 +86,9 @@ class HarmonieMapRendererTest(unittest.TestCase):
             self.assertTrue((output / "fond.webp").is_file())
             self.assertTrue((output / "frontieres.svg").is_file())
             self.assertTrue((output / "temperature" / "006.webp").is_file())
+            self.assertTrue(
+                (output / "values" / "temperature" / "006.hkv.gz").is_file()
+            )
             self.assertTrue((output / "pluie_1h" / "006.webp").is_file())
 
             with Image.open(output / "temperature" / "006.webp") as image:
@@ -92,12 +97,30 @@ class HarmonieMapRendererTest(unittest.TestCase):
             with (output / "index.json").open("r", encoding="utf-8") as handle:
                 saved = json.load(handle)
             self.assertEqual(saved["projection"], "EPSG:3857")
-            self.assertEqual(saved["schema_version"], 5)
-            self.assertEqual(saved["module_version"], "3.4.0")
+            self.assertEqual(saved["schema_version"], 6)
+            self.assertEqual(saved["module_version"], "3.5.0")
             self.assertEqual(saved["overlay"], "maps/frontieres.svg")
             self.assertEqual(saved["places"], "maps/communes.json")
             self.assertEqual(saved["layers"]["rafales"]["group"], "Vent")
             self.assertEqual(saved["steps"][0]["valid_time"], "2026-08-21T12:00:00Z")
+            self.assertEqual(
+                saved["steps"][0]["probes"]["temperature"],
+                "maps/values/temperature/006.hkv.gz",
+            )
+
+            with gzip.open(
+                output / "values" / "temperature" / "006.hkv.gz",
+                "rb",
+            ) as handle:
+                probe = handle.read()
+            magic, width, height, minimum, maximum = struct.unpack(
+                "<4sHHff",
+                probe[:16],
+            )
+            self.assertEqual(magic, b"HKV1")
+            self.assertEqual((width, height), (60, 45))
+            self.assertEqual((minimum, maximum), (-25.0, 45.0))
+            self.assertEqual(len(probe), 16 + width * height * 2)
 
             overlay = (output / "frontieres.svg").read_text(encoding="utf-8")
             self.assertIn('vector-effect="non-scaling-stroke"', overlay)

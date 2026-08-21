@@ -9,6 +9,7 @@ sont ajoutées dans une surcouche indépendante.
 
 from __future__ import annotations
 
+import gzip
 import json
 import math
 import struct
@@ -22,8 +23,10 @@ from PIL import Image
 from scipy.spatial import cKDTree
 
 
-MAP_SCHEMA_VERSION = 5
-MODULE_VERSION = "3.4.0"
+MAP_SCHEMA_VERSION = 6
+MODULE_VERSION = "3.5.0"
+PROBE_DOWNSAMPLE = 4
+PROBE_MAGIC = b"HKV1"
 DEFAULT_BOUNDS = {
     "south": 38.0,
     "west": -12.0,
@@ -817,6 +820,60 @@ class HarmonieMapRenderer:
         alpha[~valid] = 0
         return Image.fromarray(np.dstack((rgb, alpha)), mode="RGBA")
 
+    def _write_probe_field(
+        self,
+        field: np.ndarray,
+        spec: LayerSpec,
+        destination: Path,
+    ) -> None:
+        """Écrit une grille numérique compacte pour la valeur sous le pointeur.
+
+        La grille conserve la résolution utile du modèle tout en évitant de
+        publier un second raster pleine définition. Les valeurs sont
+        quantifiées sur 16 bits puis compressées en gzip ; 65535 représente
+        un point hors domaine ou manquant.
+        """
+
+        sampled = np.asarray(
+            field[::PROBE_DOWNSAMPLE, ::PROBE_DOWNSAMPLE],
+            dtype=np.float32,
+        )
+        coverage = self._coverage_mask[
+            ::PROBE_DOWNSAMPLE,
+            ::PROBE_DOWNSAMPLE,
+        ]
+        minimum = float(spec.stops[0][0])
+        maximum = float(spec.stops[-1][0])
+        if not maximum > minimum:
+            raise ValueError(f"Échelle cartographique invalide : {spec.key}")
+
+        valid = coverage & np.isfinite(sampled)
+        encoded = np.full(sampled.shape, 65535, dtype="<u2")
+        normalized = (
+            np.clip(sampled[valid], minimum, maximum) - minimum
+        ) / (maximum - minimum)
+        encoded[valid] = np.rint(normalized * 65534.0).astype("<u2")
+
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        header = struct.pack(
+            "<4sHHff",
+            PROBE_MAGIC,
+            encoded.shape[1],
+            encoded.shape[0],
+            minimum,
+            maximum,
+        )
+        with destination.open("wb") as raw:
+            with gzip.GzipFile(
+                filename="",
+                mode="wb",
+                fileobj=raw,
+                compresslevel=6,
+                mtime=0,
+            ) as compressed:
+                compressed.write(header)
+                compressed.write(encoded.tobytes(order="C"))
+
     def _pixel(self, latitude: float, longitude: float) -> tuple[int, int]:
         west = float(self.bounds["west"])
         east = float(self.bounds["east"])
@@ -962,16 +1019,28 @@ class HarmonieMapRenderer:
         fields: dict[str, np.ndarray],
     ) -> None:
         files: dict[str, str] = {}
+        probes: dict[str, str] = {}
         for spec in LAYER_SPECS:
             values = fields.get(spec.field)
             if values is None or not np.any(np.isfinite(values)):
                 continue
+            field = self._interpolate(values)
             destination_directory = self.output_directory / spec.key
             destination_directory.mkdir(parents=True, exist_ok=True)
             destination = destination_directory / f"{lead_hour:03d}.webp"
-            image = self._image_from_field(self._interpolate(values), spec)
+            image = self._image_from_field(field, spec)
             image.save(destination, "WEBP", quality=86, method=5)
             files[spec.key] = f"maps/{spec.key}/{destination.name}"
+            probe_destination = (
+                self.output_directory
+                / "values"
+                / spec.key
+                / f"{lead_hour:03d}.hkv.gz"
+            )
+            self._write_probe_field(field, spec, probe_destination)
+            probes[spec.key] = (
+                f"maps/values/{spec.key}/{probe_destination.name}"
+            )
             self.available_layers.add(spec.key)
 
         self.steps.append(
@@ -979,6 +1048,7 @@ class HarmonieMapRenderer:
                 "lead_hour": int(lead_hour),
                 "valid_time": valid_time.isoformat().replace("+00:00", "Z"),
                 "files": files,
+                "probes": probes,
             }
         )
 

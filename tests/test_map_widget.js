@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
+const zlib = require('node:zlib');
 
 class ClassList {
     constructor() {
@@ -74,6 +75,7 @@ function make2dContext() {
     return {
         setTransform() {}, clearRect() {}, fillRect() {}, save() {}, restore() {},
         translate() {}, scale() {}, drawImage() { counters.fallbackImages += 1; },
+        getImageData() { return { data: new Uint8ClampedArray([128, 0, 128, 244]) }; },
         measureText(text) { return { width: String(text).length * 6 }; },
         strokeText() {},
         fillText() { counters.labels += 1; },
@@ -131,12 +133,16 @@ const selectors = [
     'menu-toggle', 'menu-close', 'layer-menu', 'layer-grid', 'current-layer',
     'previous', 'play', 'next', 'validity', 'lead', 'run', 'generated', 'stale',
     'viewport', 'map-title', 'map-run', 'map-date', 'loading', 'error', 'slider',
-    'legend', 'zoom-in', 'zoom-out', 'reset', 'fullscreen', 'zoom-level'
+    'legend', 'zoom-in', 'zoom-out', 'reset', 'fullscreen', 'zoom-level',
+    'probe', 'probe-value', 'probe-label'
 ];
 for (const name of selectors) elements[name] = new Element(name.includes('zoom') || ['previous', 'play', 'next', 'reset', 'fullscreen', 'menu-toggle', 'menu-close'].includes(name) ? 'button' : 'div');
 elements['layer-menu'].hidden = true;
 elements.error.hidden = true;
 elements.stale.hidden = true;
+elements.probe.hidden = true;
+elements.probe.offsetWidth = 170;
+elements.probe.offsetHeight = 54;
 elements.viewport.clientWidth = 1000;
 elements.viewport.clientHeight = 745;
 elements.weather = new Canvas('weather');
@@ -146,7 +152,7 @@ elements.labels = new Canvas('labels');
 const app = new Element('section');
 app.dataset = {
     baseUrl: 'https://example.test/data', variable: 'temperature',
-    timezone: 'Europe/Paris', moduleVersion: '3.4.1', animation: '1'
+    timezone: 'Europe/Paris', moduleVersion: '3.5.0', animation: '1'
 };
 app.querySelector = selector => {
     const match = selector.match(/^\[data-hkm-([^\]]+)\]$/);
@@ -157,7 +163,10 @@ const documentListeners = {};
 const documentMock = {
     readyState: 'complete', fullscreenElement: null,
     querySelectorAll(selector) { return selector === '[data-hkm-app]' ? [app] : []; },
-    createElement(tagName) { return new Element(tagName); },
+    createElement(tagName) {
+        return String(tagName).toLowerCase() === 'canvas'
+            ? new Canvas('sampler') : new Element(tagName);
+    },
     addEventListener(type, callback) { (documentListeners[type] ||= []).push(callback); },
     exitFullscreen() { this.fullscreenElement = null; }
 };
@@ -170,32 +179,67 @@ const manifest = {
     layers: {
         temperature: {
             label: 'Température à 2 m', unit: '°C', group: 'Températures',
+            decimals: 1, transparent_below: null, discrete: false,
             stops: [{ value: 0, color: '#0000ff' }, { value: 30, color: '#ff0000' }]
         }
     },
     steps: [{
         lead_hour: 7, valid_time: '2026-08-21T10:00:00Z',
-        files: { temperature: 'maps/temperature/007.webp' }
+        files: { temperature: 'maps/temperature/007.webp' },
+        probes: { temperature: 'maps/values/temperature/007.hkv.gz' }
     }]
 };
 const places = { places: [['Paris', 2100000, 48.8566, 2.3522]] };
 const svg = '<svg viewBox="0 0 2200 1640"><path d="M0,0 L20,20" stroke="#222" stroke-width="0.8"/><path d="M0,0 L30,30" stroke="#111" stroke-width="1.45"/><path d="M0,0 L40,40" stroke="#000" stroke-width="2"/></svg>';
 
+function makeProbeBuffer(value) {
+    const buffer = new ArrayBuffer(16 + 2 * 2 * 2);
+    const view = new DataView(buffer);
+    for (const [index, letter] of Array.from('HKV1').entries()) {
+        view.setUint8(index, letter.charCodeAt(0));
+    }
+    view.setUint16(4, 2, true);
+    view.setUint16(6, 2, true);
+    view.setFloat32(8, 0, true);
+    view.setFloat32(12, 30, true);
+    const code = Math.round(value / 30 * 65534);
+    for (let index = 0; index < 4; index += 1) {
+        view.setUint16(16 + index * 2, code, true);
+    }
+    return buffer;
+}
+
+const probeBuffer = zlib.gzipSync(Buffer.from(makeProbeBuffer(22.5)));
+
 function response(body) {
     return {
         ok: true, status: 200,
         json: async () => body,
-        text: async () => String(body)
+        text: async () => String(body),
+        arrayBuffer: async () => {
+            if (body instanceof ArrayBuffer) return body;
+            if (ArrayBuffer.isView(body)) {
+                return body.buffer.slice(body.byteOffset, body.byteOffset + body.byteLength);
+            }
+            return body;
+        }
     };
 }
 async function fetchMock(url) {
     if (String(url).includes('index.json')) return response(manifest);
     if (String(url).includes('communes.json')) return response(places);
     if (String(url).includes('frontieres.svg')) return response(svg);
+    if (String(url).includes('.hkv')) return response(probeBuffer);
     throw new Error(`URL inattendue: ${url}`);
 }
 
 class ImageMock {
+    constructor() {
+        this.naturalWidth = 2200;
+        this.naturalHeight = 1640;
+        this.width = 2200;
+        this.height = 1640;
+    }
     set src(value) {
         this._src = value;
         setImmediate(() => { if (this.onload) this.onload(); });
@@ -225,12 +269,14 @@ const windowListeners = {};
 let nextFrame = 1;
 const windowMock = {
     document: documentMock, devicePixelRatio: 1, Path2D: Path2DMock,
+    DecompressionStream,
     matchMedia() { return { matches: false }; },
     requestAnimationFrame(callback) {
         const id = nextFrame++;
         setImmediate(() => callback(Date.now()));
         return id;
     },
+    cancelAnimationFrame() {},
     setTimeout, clearTimeout, setInterval, clearInterval,
     addEventListener(type, callback) { (windowListeners[type] ||= []).push(callback); }
 };
@@ -238,7 +284,8 @@ const windowMock = {
 const context = {
     window: windowMock, document: documentMock, fetch: fetchMock, Image: ImageMock,
     Path2D: Path2DMock, DOMParser: DOMParserMock, Intl, Date, Math, Map, Set,
-    Array, Number, String, Boolean, Promise, Error, console, setTimeout,
+    Array, Number, String, Boolean, Promise, Error, DataView, ArrayBuffer,
+    Uint8Array, Uint8ClampedArray, Blob, Response, console, setTimeout,
     clearTimeout, setInterval, clearInterval, setImmediate
 };
 
@@ -258,6 +305,16 @@ vm.runInNewContext(fs.readFileSync(scriptPath, 'utf8'), context, { filename: scr
     }
     assert.ok(counters.strokes >= 3, 'Les frontières vectorielles n’ont pas été dessinées');
     assert.ok(counters.labels >= 1, 'Les noms de communes n’ont pas été dessinés');
+
+    elements.viewport.dispatch('pointermove', {
+        pointerId: 0, pointerType: 'mouse', clientX: 500, clientY: 370
+    });
+    await new Promise(resolve => setTimeout(resolve, 20));
+    assert.equal(elements.probe.hidden, false, 'La valeur au survol reste masquée');
+    assert.match(elements['probe-value'].textContent, /22,5\s°C/);
+    assert.equal(elements['probe-label'].textContent, 'Température à 2 m');
+    elements.viewport.dispatch('pointerleave', { pointerId: 0, pointerType: 'mouse' });
+    assert.equal(elements.probe.hidden, true);
 
     elements['zoom-in'].click();
     await new Promise(resolve => setTimeout(resolve, 20));
@@ -284,10 +341,10 @@ vm.runInNewContext(fs.readFileSync(scriptPath, 'utf8'), context, { filename: scr
     elements.viewport.dispatch('pointerup', { pointerId: 10, clientX: 400, clientY: 370 });
     elements.viewport.dispatch('pointerup', { pointerId: 11, clientX: 700, clientY: 370 });
     assert.equal(elements.viewport.classList.contains('is-dragging'), false);
-    for (let index = 0; index < 8; index += 1) elements['zoom-in'].click();
-    assert.equal(elements['zoom-level'].textContent, '1000 %');
+    for (let index = 0; index < 15; index += 1) elements['zoom-in'].click();
+    assert.equal(elements['zoom-level'].textContent, '6400 %');
     assert.equal(elements['zoom-in'].disabled, true);
-    console.log(`Widget cartographique: ${expectWebgl ? 'WebGL' : 'Canvas de secours'}, vecteurs, villes, zoom et déplacement OK`);
+    console.log(`Widget cartographique: ${expectWebgl ? 'WebGL' : 'Canvas de secours'}, valeur au survol et zoom 6400 % OK`);
 })().catch(error => {
     console.error(error);
     process.exitCode = 1;
