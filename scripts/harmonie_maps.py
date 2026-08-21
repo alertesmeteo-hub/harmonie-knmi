@@ -18,12 +18,12 @@ from pathlib import Path
 from typing import Any, Sequence
 
 import numpy as np
-from PIL import Image, ImageDraw
+from PIL import Image
 from scipy.spatial import cKDTree
 
 
-MAP_SCHEMA_VERSION = 2
-MODULE_VERSION = "3.1.1"
+MAP_SCHEMA_VERSION = 3
+MODULE_VERSION = "3.2.0"
 DEFAULT_BOUNDS = {
     "south": 38.0,
     "west": -12.0,
@@ -94,6 +94,7 @@ class LayerSpec:
     unit: str
     field: str
     stops: tuple[tuple[float, str], ...]
+    group: str = "Autres"
     decimals: int = 0
     transparent_below: float | None = None
     opacity: int = 244
@@ -151,6 +152,107 @@ LAYER_SPECS = (
             (40, "#a71f57"),
             (45, "#5b1037"),
         ),
+        group="Températures",
+        decimals=1,
+    ),
+    LayerSpec(
+        "temperature_ressentie",
+        "Refroidissement éolien",
+        "°C",
+        "wind_chill_c",
+        (
+            (-35, "#27145d"),
+            (-25, "#482173"),
+            (-15, "#303fa5"),
+            (-5, "#3478c5"),
+            (0, "#55b7dd"),
+            (5, "#53c6a8"),
+            (10, "#70cf66"),
+            (15, "#cbd83f"),
+            (20, "#f2d43d"),
+        ),
+        group="Températures",
+        decimals=1,
+    ),
+    LayerSpec(
+        "temperature_surface",
+        "Température de surface",
+        "°C",
+        "surface_temperature_c",
+        (
+            (-25, "#482173"), (-15, "#303fa5"), (-5, "#3478c5"),
+            (0, "#55b7dd"), (5, "#53c6a8"), (10, "#70cf66"),
+            (15, "#cbd83f"), (20, "#f2d43d"), (25, "#f2a331"),
+            (30, "#ea652b"), (35, "#d93435"), (40, "#a71f57"),
+            (45, "#5b1037"),
+        ),
+        group="Températures",
+        decimals=1,
+    ),
+    LayerSpec(
+        "point_rosee",
+        "Point de rosée à 2 m",
+        "°C",
+        "dewpoint_c",
+        (
+            (-25, "#57336f"),
+            (-15, "#3855a3"),
+            (-5, "#398bca"),
+            (0, "#56b7d8"),
+            (5, "#58c8a2"),
+            (10, "#79cf68"),
+            (15, "#d5d64a"),
+            (20, "#f0a83b"),
+            (25, "#df5d3c"),
+            (30, "#9f2955"),
+        ),
+        group="Températures",
+        decimals=1,
+    ),
+    LayerSpec(
+        "humidex",
+        "Humidex",
+        "",
+        "humidex",
+        (
+            (-10, "#3478c5"),
+            (0, "#55b7dd"),
+            (10, "#53c6a8"),
+            (20, "#b9d84c"),
+            (25, "#f2d43d"),
+            (30, "#f2a331"),
+            (35, "#ea652b"),
+            (40, "#d93435"),
+            (45, "#a71f57"),
+            (50, "#5b1037"),
+        ),
+        group="Températures",
+        decimals=1,
+    ),
+    LayerSpec(
+        "temperature_850",
+        "Température à 850 hPa",
+        "°C",
+        "temperature_850_c",
+        (
+            (-40, "#321253"), (-30, "#423c9c"), (-20, "#326eb7"),
+            (-10, "#3da6cf"), (0, "#5ac7ad"), (10, "#bcd84e"),
+            (20, "#f0a33a"), (30, "#d6403e"), (40, "#701d4c"),
+        ),
+        group="Températures",
+        decimals=1,
+    ),
+    LayerSpec(
+        "temperature_500",
+        "Température à 500 hPa",
+        "°C",
+        "temperature_500_c",
+        (
+            (-60, "#25104f"), (-50, "#3f3191"), (-40, "#315fae"),
+            (-30, "#398fc7"), (-20, "#51bfd0"), (-10, "#6dc89b"),
+            (0, "#cbd84b"), (10, "#ef9937"),
+        ),
+        group="Températures",
         decimals=1,
     ),
     LayerSpec(
@@ -159,6 +261,7 @@ LAYER_SPECS = (
         "mm",
         "precipitation_mm",
         tuple(stop for stop in PRECIPITATION_STOPS if stop[0] <= 100),
+        group="Précipitations",
         decimals=1,
         transparent_below=0.03,
         opacity=255,
@@ -170,9 +273,60 @@ LAYER_SPECS = (
         "mm",
         "precipitation_total_mm",
         PRECIPITATION_STOPS,
+        group="Précipitations",
         decimals=1,
         transparent_below=0.03,
         opacity=255,
+        discrete=True,
+    ),
+    LayerSpec(
+        "neige",
+        "Neige (équivalent en eau)",
+        "mm",
+        "snow_mm",
+        tuple(stop for stop in PRECIPITATION_STOPS if stop[0] <= 100),
+        group="Précipitations",
+        decimals=1,
+        transparent_below=0.03,
+        opacity=255,
+        discrete=True,
+    ),
+    LayerSpec(
+        "neige_au_sol",
+        "Épaisseur de neige au sol",
+        "cm",
+        "snow_depth_cm",
+        (
+            (0.1, "#f4f7fb"), (1, "#d7efff"), (2, "#a9d9ff"),
+            (5, "#70b8ef"), (10, "#3a91d5"), (20, "#536bc1"),
+            (30, "#7048ac"), (50, "#963b92"), (75, "#c65382"),
+            (100, "#f0b5cf"),
+        ),
+        group="Précipitations",
+        decimals=1,
+        transparent_below=0.05,
+        discrete=True,
+    ),
+    LayerSpec(
+        "equivalent_eau_neige",
+        "Équivalent en eau du manteau neigeux",
+        "mm",
+        "snow_water_equivalent_mm",
+        tuple(stop for stop in PRECIPITATION_STOPS if stop[0] <= 200),
+        group="Précipitations",
+        decimals=1,
+        transparent_below=0.03,
+        discrete=True,
+    ),
+    LayerSpec(
+        "graupel",
+        "Graupel",
+        "mm",
+        "graupel_mm",
+        tuple(stop for stop in PRECIPITATION_STOPS if stop[0] <= 100),
+        group="Précipitations",
+        decimals=1,
+        transparent_below=0.03,
         discrete=True,
     ),
     LayerSpec(
@@ -191,6 +345,7 @@ LAYER_SPECS = (
             (80, "#d63c57"),
             (100, "#7e1736"),
         ),
+        group="Vent",
     ),
     LayerSpec(
         "rafales",
@@ -207,10 +362,47 @@ LAYER_SPECS = (
             (130, "#4d1647"),
             (160, "#25152e"),
         ),
+        group="Vent",
+    ),
+    LayerSpec(
+        "vent_850",
+        "Vent à 850 hPa",
+        "km/h",
+        "wind_speed_850_kmh",
+        (
+            (0, "#eef7ea"), (20, "#a7db8d"), (40, "#43b894"),
+            (60, "#347cc3"), (80, "#6558b8"), (100, "#a43e94"),
+            (140, "#d63c57"), (180, "#7e1736"), (220, "#35132b"),
+        ),
+        group="Vent",
+    ),
+    LayerSpec(
+        "vent_500",
+        "Vent à 500 hPa",
+        "km/h",
+        "wind_speed_500_kmh",
+        (
+            (0, "#eef7ea"), (30, "#a7db8d"), (60, "#43b894"),
+            (90, "#347cc3"), (120, "#6558b8"), (150, "#a43e94"),
+            (200, "#d63c57"), (250, "#7e1736"), (300, "#35132b"),
+        ),
+        group="Vent",
+    ),
+    LayerSpec(
+        "jet_stream",
+        "Vent à 300 hPa (jet stream)",
+        "km/h",
+        "wind_speed_300_kmh",
+        (
+            (0, "#eef7ea"), (40, "#a7db8d"), (80, "#43b894"),
+            (120, "#347cc3"), (160, "#6558b8"), (200, "#a43e94"),
+            (250, "#d63c57"), (300, "#7e1736"), (350, "#35132b"),
+        ),
+        group="Vent",
     ),
     LayerSpec(
         "pression",
-        "Pression",
+        "Pression au niveau de la mer",
         "hPa",
         "pressure_hpa",
         (
@@ -223,6 +415,43 @@ LAYER_SPECS = (
             (1030, "#e57a34"),
             (1045, "#b52f43"),
         ),
+        group="Pression et géopotentiel",
+    ),
+    LayerSpec(
+        "pression_surface",
+        "Pression au sol",
+        "hPa",
+        "surface_pressure_hpa",
+        (
+            (700, "#44205f"), (800, "#3455a6"), (900, "#36a1bd"),
+            (950, "#54bf7c"), (1000, "#d6d64c"), (1030, "#ed9a36"),
+            (1060, "#b52f43"),
+        ),
+        group="Pression et géopotentiel",
+    ),
+    LayerSpec(
+        "geopotentiel_500",
+        "Géopotentiel à 500 hPa",
+        "m",
+        "geopotential_500_m",
+        (
+            (4800, "#3f1d69"), (5000, "#354bab"), (5200, "#3384c3"),
+            (5400, "#3cb9aa"), (5600, "#b5d04d"), (5800, "#efad3b"),
+            (6000, "#cf493e"),
+        ),
+        group="Pression et géopotentiel",
+    ),
+    LayerSpec(
+        "geopotentiel_850",
+        "Géopotentiel à 850 hPa",
+        "m",
+        "geopotential_850_m",
+        (
+            (900, "#3f1d69"), (1100, "#354bab"), (1300, "#3384c3"),
+            (1500, "#3cb9aa"), (1700, "#b5d04d"), (1900, "#efad3b"),
+            (2100, "#cf493e"),
+        ),
+        group="Pression et géopotentiel",
     ),
     LayerSpec(
         "nebulosite",
@@ -237,6 +466,52 @@ LAYER_SPECS = (
             (80, "#626e79"),
             (100, "#343d46"),
         ),
+        group="Nuages et humidité",
+    ),
+    LayerSpec(
+        "nuages_bas",
+        "Couverture nuageuse basse",
+        "%",
+        "cloud_low_pct",
+        (
+            (0, "#e6f4fa"),
+            (20, "#cddfe7"),
+            (40, "#adbec8"),
+            (60, "#8997a4"),
+            (80, "#626e79"),
+            (100, "#343d46"),
+        ),
+        group="Nuages et humidité",
+    ),
+    LayerSpec(
+        "nuages_moyens",
+        "Couverture nuageuse moyenne",
+        "%",
+        "cloud_mid_pct",
+        (
+            (0, "#e6f4fa"),
+            (20, "#cddfe7"),
+            (40, "#adbec8"),
+            (60, "#8997a4"),
+            (80, "#626e79"),
+            (100, "#343d46"),
+        ),
+        group="Nuages et humidité",
+    ),
+    LayerSpec(
+        "nuages_eleves",
+        "Couverture nuageuse élevée",
+        "%",
+        "cloud_high_pct",
+        (
+            (0, "#e6f4fa"),
+            (20, "#cddfe7"),
+            (40, "#adbec8"),
+            (60, "#8997a4"),
+            (80, "#626e79"),
+            (100, "#343d46"),
+        ),
+        group="Nuages et humidité",
     ),
     LayerSpec(
         "humidite",
@@ -251,6 +526,7 @@ LAYER_SPECS = (
             (80, "#48a6b6"),
             (100, "#28569f"),
         ),
+        group="Nuages et humidité",
     ),
     LayerSpec(
         "visibilite",
@@ -266,7 +542,119 @@ LAYER_SPECS = (
             (20, "#67b8d0"),
             (50, "#d8f1ff"),
         ),
+        group="Nuages et humidité",
         decimals=1,
+    ),
+    LayerSpec(
+        "humidite_850",
+        "Humidité relative à 850 hPa",
+        "%",
+        "humidity_850_pct",
+        (
+            (0, "#9a5429"), (20, "#d19a52"), (40, "#e3d16b"),
+            (60, "#83ca82"), (80, "#48a6b6"), (100, "#28569f"),
+        ),
+        group="Nuages et humidité",
+    ),
+    LayerSpec(
+        "humidite_500",
+        "Humidité relative à 500 hPa",
+        "%",
+        "humidity_500_pct",
+        (
+            (0, "#9a5429"), (20, "#d19a52"), (40, "#e3d16b"),
+            (60, "#83ca82"), (80, "#48a6b6"), (100, "#28569f"),
+        ),
+        group="Nuages et humidité",
+    ),
+    LayerSpec(
+        "base_nuages",
+        "Altitude de la base des nuages",
+        "m",
+        "cloud_base_m",
+        (
+            (0, "#5c2447"), (100, "#a33a45"), (200, "#df6b3e"),
+            (500, "#e6b846"), (1000, "#9bcb72"), (2000, "#59b3bd"),
+            (4000, "#6d75bd"), (8000, "#d4d9ef"),
+        ),
+        group="Nuages et humidité",
+    ),
+    LayerSpec(
+        "couche_limite",
+        "Hauteur de la couche limite",
+        "m",
+        "mixed_layer_depth_m",
+        (
+            (0, "#36215e"), (100, "#3f4a9f"), (300, "#397fb9"),
+            (500, "#46afad"), (1000, "#a6cf66"), (1500, "#e4c84c"),
+            (2500, "#e5813d"), (4000, "#b73549"),
+        ),
+        group="Autres",
+    ),
+    LayerSpec(
+        "rayonnement_global",
+        "Rayonnement solaire global cumulé",
+        "MJ/m²",
+        "global_radiation_mjm2",
+        (
+            (0, "#24346f"), (0.5, "#346aa5"), (1, "#3da6b3"),
+            (2, "#72c776"), (4, "#d4d74c"), (6, "#f3b53d"),
+            (9, "#e36b35"), (12, "#a52f49"),
+        ),
+        group="Autres",
+        decimals=2,
+    ),
+    LayerSpec(
+        "rayonnement_court",
+        "Rayonnement net ondes courtes cumulé",
+        "MJ/m²",
+        "net_shortwave_mjm2",
+        (
+            (-2, "#352061"), (0, "#345e9f"), (1, "#39a3b5"),
+            (2, "#77c66e"), (4, "#d5d54a"), (6, "#f0a33b"),
+            (10, "#c63d43"),
+        ),
+        group="Autres",
+        decimals=2,
+    ),
+    LayerSpec(
+        "rayonnement_long",
+        "Rayonnement net ondes longues cumulé",
+        "MJ/m²",
+        "net_longwave_mjm2",
+        (
+            (-8, "#341c64"), (-5, "#3b57aa"), (-3, "#3ca0bd"),
+            (-1, "#7bca7d"), (0, "#e2d34c"), (1, "#e47b38"),
+            (3, "#b63148"),
+        ),
+        group="Autres",
+        decimals=2,
+    ),
+    LayerSpec(
+        "flux_sensible",
+        "Flux de chaleur sensible cumulé",
+        "MJ/m²",
+        "sensible_heat_mjm2",
+        (
+            (-8, "#2c2876"), (-4, "#397fbc"), (-1, "#55c1ba"),
+            (0, "#e7e8d0"), (1, "#e7cf4e"), (4, "#e47b38"),
+            (8, "#aa3049"),
+        ),
+        group="Autres",
+        decimals=2,
+    ),
+    LayerSpec(
+        "flux_latent",
+        "Flux de chaleur latente cumulé",
+        "MJ/m²",
+        "latent_heat_mjm2",
+        (
+            (-8, "#2c2876"), (-4, "#397fbc"), (-1, "#55c1ba"),
+            (0, "#e7e8d0"), (1, "#e7cf4e"), (4, "#e47b38"),
+            (8, "#aa3049"),
+        ),
+        group="Autres",
+        decimals=2,
     ),
 )
 
@@ -296,8 +684,8 @@ class HarmonieMapRenderer:
         longitudes: np.ndarray,
         output_directory: Path,
         *,
-        width: int = 1100,
-        height: int = 820,
+        width: int = 1650,
+        height: int = 1230,
         bounds: dict[str, float] | None = None,
         source_max_distance: float = 0.22,
         france_latitudes: np.ndarray | None = None,
@@ -335,6 +723,7 @@ class HarmonieMapRenderer:
             list(france_departments) if france_departments is not None else None
         )
         self.steps: list[dict[str, Any]] = []
+        self.available_layers: set[str] = set()
 
         self._prepare_interpolation()
         self._write_static_maps()
@@ -438,42 +827,49 @@ class HarmonieMapRenderer:
         y *= self.height - 1
         return int(round(x)), int(round(y))
 
-    def _draw_shapefile(
-        self,
-        draw: ImageDraw.ImageDraw,
-        path: Path,
-        *,
-        colour: str,
-        width: int,
-    ) -> None:
+    def _shapefile_svg_path(self, path: Path) -> str:
         if not path.is_file():
-            return
+            return ""
         south = float(self.bounds["south"]) - 1
         north = float(self.bounds["north"]) + 1
         west = float(self.bounds["west"]) - 1
         east = float(self.bounds["east"]) + 1
+        paths: list[str] = []
         for points in _iter_shapefile_parts(path):
-            segment: list[tuple[int, int]] = []
+            segment: list[tuple[float, float]] = []
             for longitude, latitude in points:
                 if west <= longitude <= east and south <= latitude <= north:
                     segment.append(self._pixel(latitude, longitude))
-                elif len(segment) >= 2:
-                    draw.line(segment, fill=colour, width=width, joint="curve")
-                    segment = []
-                else:
+                elif segment:
+                    if len(segment) >= 2:
+                        paths.append(
+                            "M" + " L".join(
+                                f"{x:.1f},{y:.1f}" for x, y in segment
+                            )
+                        )
                     segment = []
             if len(segment) >= 2:
-                draw.line(segment, fill=colour, width=width, joint="curve")
+                paths.append(
+                    "M" + " L".join(f"{x:.1f},{y:.1f}" for x, y in segment)
+                )
+        return " ".join(paths)
 
-    def _department_overlay(self) -> Image.Image:
-        overlay = Image.new("RGBA", (self.width, self.height), (0, 0, 0, 0))
+    @staticmethod
+    def _true_runs(mask: np.ndarray):
+        padded = np.concatenate(
+            (np.asarray([False]), np.asarray(mask, dtype=bool), np.asarray([False]))
+        )
+        changes = np.flatnonzero(padded[1:] != padded[:-1])
+        return zip(changes[::2], changes[1::2])
+
+    def _department_svg_path(self) -> str:
         if (
             self.france_latitudes is None
             or self.france_longitudes is None
             or self.france_departments is None
             or len(self.france_departments) != len(self.france_latitudes)
         ):
-            return overlay
+            return ""
 
         source = np.column_stack(
             (
@@ -498,52 +894,64 @@ class HarmonieMapRenderer:
         departments = encoded[indexes].reshape(self.height, self.width)
         france = distances.reshape(self.height, self.width) <= 0.18
 
-        edges = np.zeros_like(france)
-        horizontal = (
+        changes_between_columns = (
             france[:, 1:]
             & france[:, :-1]
             & (departments[:, 1:] != departments[:, :-1])
         )
-        vertical = (
+        changes_between_rows = (
             france[1:, :]
             & france[:-1, :]
             & (departments[1:, :] != departments[:-1, :])
         )
-        edges[:, 1:] |= horizontal
-        edges[1:, :] |= vertical
-        department_alpha = Image.fromarray(
-            (edges * 150).astype(np.uint8), mode="L"
-        )
-        department_lines = Image.new("RGBA", overlay.size, (12, 12, 16, 0))
-        department_lines.putalpha(department_alpha)
-        overlay.alpha_composite(department_lines)
-        return overlay
+        paths: list[str] = []
+        for x in range(changes_between_columns.shape[1]):
+            for start, end in self._true_runs(changes_between_columns[:, x]):
+                coordinate = x + 0.5
+                paths.append(
+                    f"M{coordinate:.1f},{start:.1f} L{coordinate:.1f},{end:.1f}"
+                )
+        for y in range(changes_between_rows.shape[0]):
+            for start, end in self._true_runs(changes_between_rows[y, :]):
+                coordinate = y + 0.5
+                paths.append(
+                    f"M{start:.1f},{coordinate:.1f} L{end:.1f},{coordinate:.1f}"
+                )
+        return " ".join(paths)
 
     def _write_static_maps(self) -> None:
         base = Image.new("RGB", (self.width, self.height), "#a5a6b0")
         base.save(self.output_directory / "fond.webp", "WEBP", quality=86, method=4)
 
-        borders = Image.new("RGBA", (self.width, self.height), (0, 0, 0, 0))
-        draw = ImageDraw.Draw(borders)
+        national_path = ""
+        coastline_path = ""
         if self.boundary_directory is not None:
-            self._draw_shapefile(
-                draw,
+            national_path = self._shapefile_svg_path(
                 self.boundary_directory / "ne_50m_admin_0_boundary_lines_land.shp",
-                colour="#111116",
-                width=2,
             )
-            self._draw_shapefile(
-                draw,
+            coastline_path = self._shapefile_svg_path(
                 self.boundary_directory / "ne_50m_coastline.shp",
-                colour="#050507",
-                width=3,
             )
-        borders.alpha_composite(self._department_overlay())
-        borders.save(
-            self.output_directory / "frontieres.webp",
-            "WEBP",
-            lossless=True,
-            method=4,
+        department_path = self._department_svg_path()
+        svg = (
+            '<?xml version="1.0" encoding="UTF-8"?>\n'
+            f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {self.width} '
+            f'{self.height}" preserveAspectRatio="none" '
+            'shape-rendering="geometricPrecision">\n'
+            f'<path d="{department_path}" fill="none" stroke="#20242b" '
+            'stroke-opacity="0.58" stroke-width="0.8" '
+            'vector-effect="non-scaling-stroke"/>\n'
+            f'<path d="{national_path}" fill="none" stroke="#111116" '
+            'stroke-width="1.45" stroke-linejoin="round" stroke-linecap="round" '
+            'vector-effect="non-scaling-stroke"/>\n'
+            f'<path d="{coastline_path}" fill="none" stroke="#050507" '
+            'stroke-width="2" stroke-linejoin="round" stroke-linecap="round" '
+            'vector-effect="non-scaling-stroke"/>\n'
+            '</svg>\n'
+        )
+        (self.output_directory / "frontieres.svg").write_text(
+            svg,
+            encoding="utf-8",
         )
 
     def render_step(
@@ -556,14 +964,15 @@ class HarmonieMapRenderer:
         files: dict[str, str] = {}
         for spec in LAYER_SPECS:
             values = fields.get(spec.field)
-            if values is None:
+            if values is None or not np.any(np.isfinite(values)):
                 continue
             destination_directory = self.output_directory / spec.key
             destination_directory.mkdir(parents=True, exist_ok=True)
             destination = destination_directory / f"{lead_hour:03d}.webp"
             image = self._image_from_field(self._interpolate(values), spec)
-            image.save(destination, "WEBP", quality=84, method=4)
+            image.save(destination, "WEBP", quality=86, method=5)
             files[spec.key] = f"maps/{spec.key}/{destination.name}"
+            self.available_layers.add(spec.key)
 
         self.steps.append(
             {
@@ -583,6 +992,7 @@ class HarmonieMapRenderer:
             spec.key: {
                 "label": spec.label,
                 "unit": spec.unit,
+                "group": spec.group,
                 "decimals": spec.decimals,
                 "transparent_below": spec.transparent_below,
                 "discrete": spec.discrete,
@@ -592,6 +1002,7 @@ class HarmonieMapRenderer:
                 ],
             }
             for spec in LAYER_SPECS
+            if spec.key in self.available_layers
         }
         manifest = {
             "schema_version": MAP_SCHEMA_VERSION,
@@ -604,7 +1015,7 @@ class HarmonieMapRenderer:
             "width": self.width,
             "height": self.height,
             "background": "maps/fond.webp",
-            "overlay": "maps/frontieres.webp",
+            "overlay": "maps/frontieres.svg",
             "layers": layers,
             "steps": self.steps,
         }

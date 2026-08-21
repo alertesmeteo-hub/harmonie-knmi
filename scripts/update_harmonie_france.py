@@ -37,7 +37,7 @@ from harmonie_maps import DEFAULT_BOUNDS, HarmonieMapRenderer
 
 
 LOGGER = logging.getLogger("harmonie.france")
-NATIONAL_PIPELINE_VERSION = "3.1.1"
+NATIONAL_PIPELINE_VERSION = "3.2.0"
 DEFAULT_CURRENT_METADATA_URL = (
     "https://raw.githubusercontent.com/alertesmeteo-hub/"
     "harmonie-knmi/data/index.json"
@@ -74,13 +74,42 @@ CONDITION_CODES = {
 
 REQUIRED_PARAMETERS = {
     "pressure_pa",
+    "surface_pressure_pa",
+    "geopotential_500_raw",
+    "geopotential_850_raw",
+    "surface_temperature_k",
     "temperature_k",
+    "temperature_500_k",
+    "temperature_850_k",
+    "dewpoint_k",
     "visibility_m",
     "wind_u_ms",
     "wind_v_ms",
+    "wind_u_300_ms",
+    "wind_v_300_ms",
+    "wind_u_500_ms",
+    "wind_v_500_ms",
+    "wind_u_850_ms",
+    "wind_v_850_ms",
     "humidity_pct",
+    "humidity_500_pct",
+    "humidity_850_pct",
     "precipitation_raw_mm",
+    "snow_water_equivalent_mm",
+    "snow_depth_m",
+    "snow_raw_mm",
+    "graupel_raw_mm",
     "cloud_pct",
+    "cloud_low_pct",
+    "cloud_mid_pct",
+    "cloud_high_pct",
+    "cloud_base_m",
+    "mixed_layer_depth_m",
+    "net_shortwave_jm2",
+    "net_longwave_jm2",
+    "global_radiation_jm2",
+    "sensible_heat_jm2",
+    "latent_heat_jm2",
     "gust_u_ms",
     "gust_v_ms",
 }
@@ -422,10 +451,36 @@ def transform_step(
 ) -> tuple[dict[str, np.ndarray], np.ndarray | None]:
     raw = step["values"]
     temperature = rounded(raw["temperature_k"] - 273.15, 1)
+    surface_temperature = rounded(raw["surface_temperature_k"] - 273.15, 1)
+    temperature_500 = rounded(raw["temperature_500_k"] - 273.15, 1)
+    temperature_850 = rounded(raw["temperature_850_k"] - 273.15, 1)
+    dewpoint = rounded(raw["dewpoint_k"] - 273.15, 1)
     humidity = rounded(np.clip(raw["humidity_pct"] * 100.0, 0, 100), 0)
     cloud = rounded(np.clip(raw["cloud_pct"] * 100.0, 0, 100), 0)
+    cloud_low = rounded(np.clip(raw["cloud_low_pct"] * 100.0, 0, 100), 0)
+    cloud_mid = rounded(np.clip(raw["cloud_mid_pct"] * 100.0, 0, 100), 0)
+    cloud_high = rounded(np.clip(raw["cloud_high_pct"] * 100.0, 0, 100), 0)
+    humidity_500 = rounded(np.clip(raw["humidity_500_pct"] * 100.0, 0, 100), 0)
+    humidity_850 = rounded(np.clip(raw["humidity_850_pct"] * 100.0, 0, 100), 0)
     pressure = rounded(raw["pressure_pa"] / 100.0, 0)
+    surface_pressure = rounded(raw["surface_pressure_pa"] / 100.0, 0)
+    geopotential_500 = rounded(raw["geopotential_500_raw"] / 9.80665, 0)
+    geopotential_850 = rounded(raw["geopotential_850_raw"] / 9.80665, 0)
     visibility = rounded(raw["visibility_m"] / 1000.0, 1)
+    cloud_base = rounded(raw["cloud_base_m"], 0)
+    mixed_layer_depth = rounded(raw["mixed_layer_depth_m"], 0)
+    snow_water_equivalent = rounded(
+        np.maximum(raw["snow_water_equivalent_mm"], 0.0),
+        1,
+    )
+    snow_depth = rounded(np.maximum(raw["snow_depth_m"], 0.0) * 100.0, 1)
+    snow = rounded(np.maximum(raw["snow_raw_mm"], 0.0), 1)
+    graupel = rounded(np.maximum(raw["graupel_raw_mm"], 0.0), 1)
+    net_shortwave = rounded(raw["net_shortwave_jm2"] / 1_000_000.0, 2)
+    net_longwave = rounded(raw["net_longwave_jm2"] / 1_000_000.0, 2)
+    global_radiation = rounded(raw["global_radiation_jm2"] / 1_000_000.0, 2)
+    sensible_heat = rounded(raw["sensible_heat_jm2"] / 1_000_000.0, 2)
+    latent_heat = rounded(raw["latent_heat_jm2"] / 1_000_000.0, 2)
 
     precipitation_raw = np.maximum(raw["precipitation_raw_mm"], 0.0)
     if step.get("precip_start_step") == 0 and step.get("precip_end_step") is not None:
@@ -449,6 +504,42 @@ def transform_step(
         np.hypot(raw["gust_u_ms"], raw["gust_v_ms"]) * 3.6,
         0,
     )
+    wind_speed_300 = rounded(
+        np.hypot(raw["wind_u_300_ms"], raw["wind_v_300_ms"]) * 3.6,
+        0,
+    )
+    wind_speed_500 = rounded(
+        np.hypot(raw["wind_u_500_ms"], raw["wind_v_500_ms"]) * 3.6,
+        0,
+    )
+    wind_speed_850 = rounded(
+        np.hypot(raw["wind_u_850_ms"], raw["wind_v_850_ms"]) * 3.6,
+        0,
+    )
+
+    wind_chill = temperature.copy()
+    wind_chill_valid = (
+        np.isfinite(temperature)
+        & np.isfinite(wind_speed)
+        & (temperature <= 10.0)
+        & (wind_speed >= 4.8)
+    )
+    wind_factor = np.power(np.maximum(wind_speed, 0.0), 0.16)
+    wind_chill[wind_chill_valid] = (
+        13.12
+        + 0.6215 * temperature[wind_chill_valid]
+        - 11.37 * wind_factor[wind_chill_valid]
+        + 0.3965
+        * temperature[wind_chill_valid]
+        * wind_factor[wind_chill_valid]
+    )
+    wind_chill = rounded(wind_chill, 1)
+
+    dewpoint_kelvin = np.clip(dewpoint + 273.15, 173.15, 333.15)
+    vapour_pressure = 6.11 * np.exp(
+        5417.7530 * (1.0 / 273.16 - 1.0 / dewpoint_kelvin)
+    )
+    humidex = rounded(temperature + 0.5555 * (vapour_pressure - 10.0), 1)
 
     condition = np.zeros(len(temperature), dtype=np.int16)
     condition[np.isfinite(cloud) & (cloud <= 20)] = 1
@@ -469,14 +560,42 @@ def transform_step(
     return (
         {
             "temperature_c": temperature,
+            "surface_temperature_c": surface_temperature,
+            "temperature_500_c": temperature_500,
+            "temperature_850_c": temperature_850,
+            "wind_chill_c": wind_chill,
+            "dewpoint_c": dewpoint,
+            "humidex": humidex,
             "humidity_pct": humidity,
             "precipitation_mm": precipitation,
             "cloud_cover_pct": cloud,
+            "cloud_low_pct": cloud_low,
+            "cloud_mid_pct": cloud_mid,
+            "cloud_high_pct": cloud_high,
+            "humidity_500_pct": humidity_500,
+            "humidity_850_pct": humidity_850,
             "wind_speed_kmh": wind_speed,
+            "wind_speed_300_kmh": wind_speed_300,
+            "wind_speed_500_kmh": wind_speed_500,
+            "wind_speed_850_kmh": wind_speed_850,
             "wind_direction_deg": wind_direction,
             "wind_gust_kmh": gust_speed,
             "pressure_hpa": pressure,
+            "surface_pressure_hpa": surface_pressure,
+            "geopotential_500_m": geopotential_500,
+            "geopotential_850_m": geopotential_850,
             "visibility_km": visibility,
+            "cloud_base_m": cloud_base,
+            "mixed_layer_depth_m": mixed_layer_depth,
+            "snow_water_equivalent_mm": snow_water_equivalent,
+            "snow_depth_cm": snow_depth,
+            "snow_mm": snow,
+            "graupel_mm": graupel,
+            "net_shortwave_mjm2": net_shortwave,
+            "net_longwave_mjm2": net_longwave,
+            "global_radiation_mjm2": global_radiation,
+            "sensible_heat_mjm2": sensible_heat,
+            "latent_heat_mjm2": latent_heat,
             "condition_code": condition,
         },
         previous_cumulative,
