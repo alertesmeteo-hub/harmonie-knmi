@@ -15,7 +15,6 @@ concurrency:
 jobs:
   generate:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
 
     steps:
       - name: Checkout
@@ -44,11 +43,11 @@ jobs:
         env:
           METEOFRANCE_PACKAGE_OBS_KEY: ${{ secrets.METEOFRANCE_PACKAGE_OBS_KEY }}
           METEOFRANCE_OBS_TOKEN: ${{ secrets.METEOFRANCE_OBS_TOKEN }}
-          MF_PACKAGE_DELAY: "1.25"
+          MF_PACKAGE_DELAY: "1.35"
         run: |
           python generer_pluie_meteofrance.py
 
-      - name: Vérifier le JSON
+      - name: Vérifier le JSON v2.3
         shell: bash
         run: |
           test -s observations_pluie.json
@@ -56,15 +55,23 @@ jobs:
 
           python - <<'PY'
           import json
-          from datetime import datetime, timezone
 
           with open("observations_pluie.json", encoding="utf-8") as f:
               data = json.load(f)
 
           assert data["status"] == "ok"
-          assert data["schema_version"] >= 4
+          assert data["schema_version"] >= 5
+          assert data["module_version"] == "2.3.0"
           assert isinstance(data["stations"], list)
           assert data["stations_total"] > 0
+
+          required_metrics = {
+              "rr24", "rr48", "rr72",
+              "rr_month_current", "rr_season_current", "rr_year_current",
+              "rr_daily_record", "rr_month_mean", "rr_year_mean",
+          }
+          missing = required_metrics - set(data.get("metrics", {}))
+          assert not missing, f"Métriques absentes : {sorted(missing)}"
 
           sapc = [
               s for s in data["stations"]
@@ -72,20 +79,18 @@ jobs:
           ]
           assert not sapc, f"Stations SAPC encore présentes : {len(sapc)}"
 
-          latest = str(data.get("latest_observation_at") or "")
-          assert latest, "latest_observation_at absent"
-          dt = datetime.fromisoformat(latest.replace("Z", "+00:00"))
-          age_h = (datetime.now(timezone.utc) - dt).total_seconds() / 3600
-          print(f"Âge du dernier relevé : {age_h:.2f} h")
-          if age_h > 6:
-              print("::warning::Le dernier relevé Météo-France a plus de 6 h.")
-
-          print("JSON valide")
+          print("JSON v2.3 valide")
           print("Stations :", data["stations_total"])
           print("SAPC exclues :", data.get("stations_excluded_sapc"))
-          print("Stations RR24 :", data["stations_rr24"])
-          print("Dernier relevé :", latest)
+          print("Stations RR24 :", data.get("stations_rr24"))
+          print("Stations RR48 :", data.get("stations_rr48"))
+          print("Stations RR72 :", data.get("stations_rr72"))
+          print("Stations records :", data.get("stations_records"))
+          print("Saison :", data.get("current_season", {}).get("label"))
+          print("Année :", data.get("current_year", {}).get("year"))
           print("Max 24h :", data["metrics"]["rr24"]["max"], "mm")
+          print("Max 48h :", data["metrics"]["rr48"]["max"], "mm")
+          print("Max 72h :", data["metrics"]["rr72"]["max"], "mm")
           PY
 
       - name: Préparer la publication
@@ -100,61 +105,26 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          REPO_URL="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          BRANCH="observations"
+          if git ls-remote --exit-code --heads origin observations >/dev/null 2>&1; then
+            git fetch origin observations
+            git switch -C observations origin/observations
+          else
+            git switch --orphan observations
+            git rm -rf . || true
+          fi
 
-          for attempt in 1 2 3 4; do
-            echo "Publication tentative ${attempt}/4..."
-            publish_dir="$(mktemp -d)"
+          cp /tmp/carte-pluie-publish/observations_pluie.json .
+          cp /tmp/carte-pluie-publish/cache_pluie_climatologie.json .
 
-            if git ls-remote --exit-code --heads "$REPO_URL" "$BRANCH" >/dev/null 2>&1; then
-              git clone --depth 1 --branch "$BRANCH" "$REPO_URL" "$publish_dir"
-            else
-              git init -b "$BRANCH" "$publish_dir"
-            fi
+          git add observations_pluie.json cache_pluie_climatologie.json
 
-            cp /tmp/carte-pluie-publish/observations_pluie.json "$publish_dir/observations_pluie.json"
-            cp /tmp/carte-pluie-publish/cache_pluie_climatologie.json "$publish_dir/cache_pluie_climatologie.json"
+          if git diff --cached --quiet; then
+            echo "Aucun changement à publier."
+            exit 0
+          fi
 
-            git -C "$publish_dir" config user.name "github-actions[bot]"
-            git -C "$publish_dir" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git -C "$publish_dir" add observations_pluie.json cache_pluie_climatologie.json
-
-            if git -C "$publish_dir" diff --cached --quiet; then
-              echo "Aucun changement à publier."
-              exit 0
-            fi
-
-            git -C "$publish_dir" commit -m "Mise à jour carte pluie Météo-France"
-
-            if git -C "$publish_dir" push "$REPO_URL" "HEAD:$BRANCH"; then
-              echo "Publication réussie sur ${BRANCH}."
-              exit 0
-            fi
-
-            echo "::warning::La branche a changé ou le push a été refusé ; nouvelle tentative."
-            rm -rf "$publish_dir"
-            sleep $((attempt * 3))
-          done
-
-          echo "::error::Impossible de publier sur la branche observations après 4 tentatives."
-          exit 1
-
-      - name: Vérifier la publication distante
-        shell: bash
-        run: |
-          set -euo pipefail
-          sleep 3
-          RAW_URL="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/observations/observations_pluie.json?run=${GITHUB_RUN_ID}"
-          curl -fLsS --retry 4 --retry-delay 2 "$RAW_URL" -o /tmp/observations_pluie_remote.json
-          python - <<'PY'
-          import json
-          with open('/tmp/observations_pluie_remote.json', encoding='utf-8') as f:
-              data = json.load(f)
-          assert data.get('status') == 'ok'
-          assert data.get('latest_observation_at')
-          print('JSON distant publié : OK')
-          print('Dernier relevé distant :', data['latest_observation_at'])
-          PY
+          git commit -m "Mise à jour carte pluie Météo-France v2.3"
+          git push origin observations
