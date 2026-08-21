@@ -3,17 +3,15 @@
 
 """
 Météo Climat Pro — Carte pluie Météo-France
-Version 2.4.1
+Version 2.6.0
 
-Nouveautés v2.3.0
------------------
-- Ajout des cumuls glissants 48 h et 72 h.
-- Ajout du cumul de la saison météorologique en cours.
-- Ajout du cumul de l'année en cours.
-- Ajout du record quotidien de précipitations et de sa date.
-- Conservation du mois en cours et des normales 1991-2020.
-- Exclusion des stations dont le nom contient le marqueur SAPC.
-- Assemblage prudent des données quotidiennes et horaires sans créer de trou.
+Version 2.6.0
+-------------
+- 24 h / 48 h / 72 h glissantes calculées uniquement avec RR1 Météo-France.
+- Amorçage 80 h depuis les archives horaires officielles via le workflow dédié.
+- Entretien du cache à chaque exécution avec Package Observations V2.
+- Mois, saison, année, records et normales conservés.
+- Exclusion SAPC et repères départementaux conservés.
 
 Produit :
   observations_pluie.json
@@ -48,7 +46,6 @@ import os
 import re
 import sys
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
@@ -57,7 +54,7 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 import requests
 
 
-VERSION = "2.4.1"
+VERSION = "2.6.0"
 CACHE_SCHEMA = 5
 
 PACKAGE_BASE = (
@@ -74,8 +71,6 @@ MF_S3_QUOT = (
     "https://meteofrance.s3.sbg.io.cloud.ovh.net/"
     "data/synchro_ftp/BASE/QUOT"
 )
-
-DATAGOUV_HOURLY_DATASET_API = "https://www.data.gouv.fr/api/1/datasets/donnees-climatologiques-de-base-horaires/"
 
 MF_S3_MENS = (
     "https://meteofrance.s3.sbg.io.cloud.ovh.net/"
@@ -101,12 +96,6 @@ PACKAGE_RETRIES_HOURS = 4
 RR24_MIN_VALID_HOURS = 22
 RR48_MIN_VALID_HOURS = 44
 RR72_MIN_VALID_HOURS = 66
-
-# Historique demandé au Package Obs pour essayer de combler J-1/J-2.
-# Le script arrête rapidement si les heures les plus anciennes ne sont
-# plus disponibles.
-PACKAGE_HISTORY_HOURS = 72
-PACKAGE_STOP_AFTER_OLD_MISSING = 4
 
 # Un jour reconstitué avec RR1 est considéré exploitable avec au moins 22 h.
 FULL_DAY_MIN_VALID_HOURS = 22
@@ -432,77 +421,6 @@ def hourly_cache_depth(cache: dict, latest_hour: datetime) -> int:
     return (max(ages) + 1) if ages else 0
 
 
-def bootstrap_hourly_cache_from_datagouv(cache: dict, station_ids: List[str], latest_hour: datetime) -> None:
-    """Amorce le cache 72 h avec les données horaires climatologiques.
-
-    Ce secours n'est utilisé que lorsque la branche observations ne possède
-    pas encore assez d'historique. Ensuite le cache est alimenté par l'API
-    temps réel à chaque exécution horaire.
-    """
-    if hourly_cache_depth(cache, latest_hour) >= 72:
-        return
-    print("Cache 72 h incomplet : amorçage via Météo-France / data.gouv.fr...")
-    try:
-        r = session.get(DATAGOUV_HOURLY_DATASET_API, timeout=HTTP_TIMEOUT)
-        r.raise_for_status()
-        resources = r.json().get("resources", [])
-    except Exception as exc:
-        print(f"[WARN] catalogue horaire data.gouv.fr indisponible : {exc}")
-        return
-
-    deps = sorted({department_code(sid) for sid in station_ids if department_code(sid) and department_code(sid) != "20"})
-    by_dep_ids = {dep: {sid for sid in station_ids if department_code(sid) == dep} for dep in deps}
-    resource_by_dep = {}
-    for dep in deps:
-        needle = f"HOR_departement_{dep}_periode_".lower()
-        candidates = []
-        for res in resources:
-            title = str(res.get("title") or "")
-            url = str(res.get("url") or "")
-            if needle in title.lower() and url:
-                # Priorité au fichier qui contient l'année courante.
-                score = 0 if str(latest_hour.year) in title else 1
-                candidates.append((score, title, url))
-        if candidates:
-            candidates.sort()
-            resource_by_dep[dep] = candidates[0][2]
-
-    cutoff = latest_hour - timedelta(hours=79)
-
-    def fetch_dep(dep_url):
-        dep, url = dep_url
-        try:
-            rr = requests.get(url, timeout=120, headers={"User-Agent": f"alertes-meteo-carte-pluie/{VERSION}"})
-            rr.raise_for_status()
-            return dep, parse_delimited(rr.content), None
-        except Exception as exc:
-            return dep, None, exc
-
-    with ThreadPoolExecutor(max_workers=8) as pool:
-        futures = [pool.submit(fetch_dep, item) for item in resource_by_dep.items()]
-        for future in as_completed(futures):
-            dep, rows, exc = future.result()
-            if exc is not None or rows is None:
-                print(f"[WARN] amorçage horaire {dep} impossible : {exc}")
-                continue
-            wanted = by_dep_ids.get(dep, set())
-            kept = 0
-            for row in rows:
-                sid = station_id(row)
-                if sid not in wanted:
-                    continue
-                hdt = parse_hourly_datetime(first(row, ("AAAAMMJJHH", "AAAAMMJJHHMM", "DATE", "date", "validity_time")))
-                if hdt is None or hdt < cutoff or hdt > latest_hour:
-                    continue
-                rr1 = clean_rain(first(row, ("RR1", "rr1", "RR", "rr")))
-                if rr1 is None:
-                    continue
-                key = iso(hdt.replace(minute=0, second=0, microsecond=0))
-                cache.setdefault("hours", {}).setdefault(key, {})[sid] = round(rr1, 3)
-                kept += 1
-            print(f"Amorçage {dep} : {kept} valeurs horaires récentes conservées")
-
-
 # ---------------------------------------------------------------------
 # Package Observations V2
 # ---------------------------------------------------------------------
@@ -635,7 +553,7 @@ def load_package_history(
     # Dans le workflow normal on ne télécharge JAMAIS les gros fichiers
     # climatologiques nationaux. Le workflow 48/72 h dédié est matriciel.
     if BOOTSTRAP_HOURLY:
-        print("[INFO] MF_BOOTSTRAP_HOURLY ignoré en v2.4.1 : utiliser le workflow matriciel dédié.")
+        print("[INFO] MF_BOOTSTRAP_HOURLY ignoré en v2.6.0 : utiliser le workflow matriciel dédié.")
 
     depth_before_save = hourly_cache_depth(hourly_cache, latest_hour)
     save_hourly_cache(hourly_cache, latest_hour)
@@ -650,6 +568,17 @@ def load_package_history(
 
     # Utiliser le cache réellement sauvegardé pour les agrégations RR24/48/72.
     cache_hours = saved_cache.get("hours") or {}
+
+    # Les archives horaires servent aussi de secours géographique : une station
+    # absente du tout dernier paquet ne doit pas disparaître de la carte si elle
+    # possède encore des RR1 valides dans la fenêtre glissante.
+    for sid, meta in (saved_cache.get("stations_meta") or {}).items():
+        if sid in station_geo or not isinstance(meta, dict):
+            continue
+        lat = fnum(meta.get("lat"))
+        lon = fnum(meta.get("lon"))
+        if lat is not None and lon is not None and -90 <= lat <= 90 and -180 <= lon <= 180:
+            station_geo[sid] = {"lat": round(lat, 6), "lon": round(lon, 6)}
 
     agg: Dict[str, dict] = defaultdict(lambda: {
         "rr24_sum": 0.0, "rr24_hours": 0,
@@ -1451,6 +1380,12 @@ def main() -> int:
 
     # 2. Noms
     names = load_station_names(obs_key)
+    # Repli sur les noms archivés pour les stations momentanément absentes de
+    # liste-stations ou du paquet le plus récent.
+    cache_meta = (load_hourly_cache().get("stations_meta") or {})
+    for sid, meta in cache_meta.items():
+        if sid not in names and isinstance(meta, dict) and meta.get("name"):
+            names[sid] = str(meta.get("name")).strip()
 
     raw_station_ids = sorted(station_geo.keys())
 
@@ -1814,6 +1749,7 @@ def main() -> int:
         "hourly_cache_depth_hours": hourly_cache_depth(load_hourly_cache(), latest_hour),
         "hourly_cache_ready_48h": hourly_cache_depth(load_hourly_cache(), latest_hour) >= 48,
         "hourly_cache_ready_72h": hourly_cache_depth(load_hourly_cache(), latest_hour) >= 72,
+        "hourly_cache_source": "Météo-France uniquement",
 
         "source": {
             "observations": (
@@ -1823,10 +1759,10 @@ def main() -> int:
                 "Somme de RR1 sur les 24 paquets horaires les plus récents"
             ),
             "rr48_method": (
-                "Somme de RR1 sur un cache glissant persistant des 48 dernières heures"
+                "Somme glissante des RR1 Météo-France sur les 48 dernières heures (archives horaires pour amorçage, puis Package Observations)"
             ),
             "rr72_method": (
-                "Somme de RR1 sur un cache glissant persistant des 72 dernières heures"
+                "Somme glissante des RR1 Météo-France sur les 72 dernières heures (archives horaires pour amorçage, puis Package Observations)"
             ),
             "current_month": (
                 "Données climatologiques quotidiennes Météo-France, "
