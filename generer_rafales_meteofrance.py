@@ -3,7 +3,7 @@
 
 """
 Alertes-Meteo.com — Vent & Rafales Météo-France
-Version 1.2.0 STABLE
+Version 1.2.1 STABLE
 
 Principe :
 - un seul paquet horaire Météo-France est téléchargé à chaque run ;
@@ -16,6 +16,7 @@ Cela évite de refaire 72 appels API à chaque heure.
 from __future__ import annotations
 
 import csv
+import gzip
 import io
 import json
 import math
@@ -30,9 +31,9 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 import requests
 
 
-VERSION = "1.2.0"
+VERSION = "1.2.1"
 SCHEMA_VERSION = 3
-BUILD_ID = "vent-rafales-cache-72h-stable-20260820"
+BUILD_ID = "vent-rafales-api-mf-cache-72h-20260821"
 
 PACKAGE_URL = (
     "https://public-api.meteofrance.fr/public/"
@@ -131,7 +132,29 @@ def station_id(row: dict) -> Optional[str]:
     return sid or None
 
 
+def department_code(sid: str) -> Optional[str]:
+    digits = re.sub(r"\D", "", str(sid))
+
+    if len(digits) < 2:
+        return None
+
+    code = digits[:2]
+
+    if code == "20":
+        return "20"
+
+    try:
+        number = int(code)
+    except ValueError:
+        return None
+
+    return code if 1 <= number <= 95 else None
+
+
 def parse_csv(raw: bytes) -> List[dict]:
+    if raw[:2] == b"\x1f\x8b":
+        raw = gzip.decompress(raw)
+
     text = None
 
     for enc in ("utf-8-sig", "utf-8", "latin-1"):
@@ -266,15 +289,23 @@ def package_request(
     )
 
     for attempt in range(3):
-        response = session.get(
-            PACKAGE_URL,
-            params={
-                "date": iso(target),
-                "format": "csv",
-            },
-            headers=headers(key),
-            timeout=HTTP_TIMEOUT,
-        )
+        try:
+            response = session.get(
+                PACKAGE_URL,
+                params={
+                    "date": iso(target),
+                    "format": "csv",
+                },
+                headers=headers(key),
+                timeout=HTTP_TIMEOUT,
+            )
+        except requests.RequestException as exc:
+            if attempt == 2:
+                raise RuntimeError(
+                    f"Erreur réseau Météo-France pour {iso(target)} : {exc}"
+                ) from exc
+            time.sleep(5 + attempt * 5)
+            continue
 
         if response.status_code == 200:
             return response
@@ -334,15 +365,19 @@ def find_latest_package(
     )
 
 
-def load_station_names(
+def load_station_meta(
     key: str,
-) -> Dict[str, str]:
+) -> Dict[str, dict]:
 
-    response = session.get(
-        STATIONS_URL,
-        headers=headers(key),
-        timeout=HTTP_TIMEOUT,
-    )
+    try:
+        response = session.get(
+            STATIONS_URL,
+            headers=headers(key),
+            timeout=HTTP_TIMEOUT,
+        )
+    except requests.RequestException as exc:
+        print("[WARN] liste-stations indisponible :", exc)
+        return {}
 
     if response.status_code != 200:
         print(
@@ -377,7 +412,7 @@ def load_station_names(
     else:
         rows = parse_csv(response.content)
 
-    names = {}
+    stations = {}
 
     for row in rows:
         if not isinstance(row, dict):
@@ -400,10 +435,23 @@ def load_station_names(
             ),
         )
 
-        if name:
-            names[sid] = str(name).strip()
+        if not name:
+            name = sid
 
-    return names
+        altitude = fnum(first(row, ("altitude", "ALTITUDE", "alti", "ALTI")))
+        quality = fnum(first(row, (
+            "quality", "QUALITY", "classe", "CLASSE",
+            "type_poste_actuel", "TYPE_POSTE_ACTUEL",
+        )))
+
+        stations[sid] = {
+            "name": str(name).strip(),
+            "department_code": department_code(sid),
+            "altitude_m": round(altitude, 1) if altitude is not None else None,
+            "quality": int(round(quality)) if quality is not None and 1 <= quality <= 5 else None,
+        }
+
+    return stations
 
 
 def load_cache() -> dict:
@@ -590,9 +638,16 @@ def main() -> int:
     package_key = get_secret(
         "METEOFRANCE_PACKAGE_OBS_KEY"
     )
-    obs_key = get_secret(
-        "METEOFRANCE_OBS_TOKEN"
-    )
+    try:
+        obs_key = get_secret(
+            "METEOFRANCE_OBS_TOKEN"
+        )
+    except RuntimeError:
+        print(
+            "[WARN] METEOFRANCE_OBS_TOKEN absent : "
+            "utilisation de METEOFRANCE_PACKAGE_OBS_KEY pour liste-stations."
+        )
+        obs_key = package_key
 
     # Seulement 1 paquet récent.
     latest_hour, response = find_latest_package(
@@ -634,7 +689,7 @@ def main() -> int:
         len(cache["samples"]),
     )
 
-    names = load_station_names(obs_key)
+    station_meta = load_station_meta(obs_key)
 
     by_station: Dict[str, List[dict]] = {}
 
@@ -658,7 +713,8 @@ def main() -> int:
             or datetime.min.replace(tzinfo=timezone.utc)
         )
 
-        name = names.get(sid, sid)
+        info = station_meta.get(sid) or {}
+        name = info.get("name") or sid
 
         if is_sapc(name):
             excluded_sapc += 1
@@ -676,12 +732,13 @@ def main() -> int:
             ) <= 3600
         ]
 
-        if not latest_candidates:
-            # La station reste dans les vues historiques,
-            # même si elle n'a pas publié au dernier paquet.
-            latest_sample = samples[-1]
-        else:
-            latest_sample = latest_candidates[-1]
+        # Coordonnées : dernier échantillon disponible dans le cache.
+        latest_sample = samples[-1]
+
+        # Valeurs « actuelles » uniquement si le poste a publié autour du
+        # dernier paquet. Une ancienne valeur ne doit jamais être présentée
+        # comme une observation actuelle.
+        current_sample = latest_candidates[-1] if latest_candidates else {}
 
         samples_24 = [
             s
@@ -724,14 +781,18 @@ def main() -> int:
         stations.append({
             "id": sid,
             "name": name,
+            "department_code": info.get("department_code") or department_code(sid),
+            "network": "Météo-France",
+            "quality": info.get("quality"),
+            "altitude_m": info.get("altitude_m"),
             "lat": latest_sample.get("lat"),
             "lon": latest_sample.get("lon"),
 
-            "latest_gust_kmh": latest_sample.get("gust_kmh"),
-            "latest_direction_deg": latest_sample.get(
+            "latest_gust_kmh": current_sample.get("gust_kmh"),
+            "latest_direction_deg": current_sample.get(
                 "gust_direction_deg"
             ),
-            "latest_gust_time": latest_sample.get("time"),
+            "latest_gust_time": current_sample.get("time"),
 
             "gust_24h_kmh": gust24,
             "gust_24h_direction_deg": gust24dir,
@@ -741,13 +802,13 @@ def main() -> int:
             "gust_72h_direction_deg": gust72dir,
             "gust_72h_time": gust72time,
 
-            "latest_mean_wind_kmh": latest_sample.get(
+            "latest_mean_wind_kmh": current_sample.get(
                 "mean_wind_kmh"
             ),
-            "latest_mean_wind_direction_deg": latest_sample.get(
+            "latest_mean_wind_direction_deg": current_sample.get(
                 "mean_wind_direction_deg"
             ),
-            "latest_mean_wind_time": latest_sample.get("time"),
+            "latest_mean_wind_time": current_sample.get("time"),
 
             "mean_wind_24h_max_kmh": mean24,
             "mean_wind_24h_direction_deg": mean24dir,
