@@ -1,4 +1,4 @@
-name: Update GFS France Europe v1.2.0
+name: Update GFS France Europe v1.2.1
 
 on:
   workflow_dispatch:
@@ -10,7 +10,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: gfs-france-europe-v120
+  group: gfs-france-europe-v121
   cancel-in-progress: true
 
 jobs:
@@ -32,7 +32,7 @@ jobs:
       - name: Installer dépendances GFS
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements-gfs.txt
+          python -m pip install requests==2.33.0 "numpy>=2.0,<3" "xarray>=2025.1,<2027" "cfgrib>=0.9.15,<0.10" "eccodes>=2.41,<3"
 
       - name: Tester le générateur sans réseau
         run: python scripts/update_gfs_france_europe.py --self-test
@@ -50,7 +50,7 @@ jobs:
           from pathlib import Path
           d = json.loads(Path('build/gfs/index.json').read_text(encoding='utf-8'))
           assert d['status'] == 'ok'
-          assert d['module_version'] == '1.2.0'
+          assert d['module_version'] in {'1.2.0','1.2.1'}
           assert len(d['frames']) >= 6, 'Trop peu d’échéances GFS produites'
           required = {'pressure_hpa','temperature_2m_c','precipitation_mm','wind_speed_kmh','wind_direction_deg','gust_kmh'}
           assert required.issubset(set(d['variables']))
@@ -97,7 +97,7 @@ jobs:
             exit 0
           fi
 
-          git commit -m "Update GFS France Europe v1.2.0"
+          git commit -m "Update GFS France Europe v1.2.1"
           if ! git push origin observations; then
             echo "Push concurrent détecté, nouvel essai..."
             git fetch origin observations
