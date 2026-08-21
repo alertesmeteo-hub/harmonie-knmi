@@ -11,25 +11,80 @@ from __future__ import annotations
 
 import json
 import math
+import struct
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Sequence
 
 import numpy as np
-import shapefile
 from PIL import Image, ImageDraw
 from scipy.spatial import cKDTree
 
 
 MAP_SCHEMA_VERSION = 2
-MODULE_VERSION = "3.1.0"
+MODULE_VERSION = "3.1.1"
 DEFAULT_BOUNDS = {
     "south": 38.0,
     "west": -12.0,
     "north": 57.0,
     "east": 18.0,
 }
+
+
+def _iter_shapefile_parts(path: Path):
+    """Lit les lignes/polygones ESRI Shapefile sans dépendance externe.
+
+    Les couches Natural Earth embarquées n'ont besoin que des coordonnées X/Y
+    et des indices de parties. Les éventuelles valeurs Z/M peuvent donc être
+    ignorées en toute sécurité.
+    """
+
+    with path.open("rb") as handle:
+        header = handle.read(100)
+        if len(header) != 100 or struct.unpack_from(">i", header, 0)[0] != 9994:
+            raise ValueError(f"En-tête Shapefile invalide : {path}")
+
+        while True:
+            record_header = handle.read(8)
+            if not record_header:
+                break
+            if len(record_header) != 8:
+                raise ValueError(f"Enregistrement Shapefile tronqué : {path}")
+
+            _record_number, content_words = struct.unpack(">2i", record_header)
+            content_size = content_words * 2
+            content = handle.read(content_size)
+            if len(content) != content_size:
+                raise ValueError(f"Contenu Shapefile tronqué : {path}")
+            if len(content) < 4:
+                continue
+
+            shape_type = struct.unpack_from("<i", content, 0)[0]
+            if shape_type == 0:
+                continue
+            if shape_type not in {3, 5, 13, 15, 23, 25} or len(content) < 44:
+                continue
+
+            part_count, point_count = struct.unpack_from("<2i", content, 36)
+            if part_count <= 0 or point_count <= 0:
+                continue
+            required_size = 44 + 4 * part_count + 16 * point_count
+            if len(content) < required_size:
+                raise ValueError(f"Géométrie Shapefile tronquée : {path}")
+
+            part_starts = list(
+                struct.unpack_from(f"<{part_count}i", content, 44)
+            )
+            points_offset = 44 + 4 * part_count
+            part_ends = part_starts[1:] + [point_count]
+            for start, end in zip(part_starts, part_ends):
+                if start < 0 or end > point_count or start >= end:
+                    continue
+                yield [
+                    struct.unpack_from("<2d", content, points_offset + index * 16)
+                    for index in range(start, end)
+                ]
 
 
 @dataclass(frozen=True)
@@ -393,25 +448,22 @@ class HarmonieMapRenderer:
     ) -> None:
         if not path.is_file():
             return
-        reader = shapefile.Reader(str(path))
         south = float(self.bounds["south"]) - 1
         north = float(self.bounds["north"]) + 1
         west = float(self.bounds["west"]) - 1
         east = float(self.bounds["east"]) + 1
-        for shape in reader.iterShapes():
-            parts = list(shape.parts) + [len(shape.points)]
-            for start, end in zip(parts, parts[1:]):
-                segment: list[tuple[int, int]] = []
-                for longitude, latitude in shape.points[start:end]:
-                    if west <= longitude <= east and south <= latitude <= north:
-                        segment.append(self._pixel(latitude, longitude))
-                    elif len(segment) >= 2:
-                        draw.line(segment, fill=colour, width=width, joint="curve")
-                        segment = []
-                    else:
-                        segment = []
-                if len(segment) >= 2:
+        for points in _iter_shapefile_parts(path):
+            segment: list[tuple[int, int]] = []
+            for longitude, latitude in points:
+                if west <= longitude <= east and south <= latitude <= north:
+                    segment.append(self._pixel(latitude, longitude))
+                elif len(segment) >= 2:
                     draw.line(segment, fill=colour, width=width, joint="curve")
+                    segment = []
+                else:
+                    segment = []
+            if len(segment) >= 2:
+                draw.line(segment, fill=colour, width=width, joint="curve")
 
     def _department_overlay(self) -> Image.Image:
         overlay = Image.new("RGBA", (self.width, self.height), (0, 0, 0, 0))
