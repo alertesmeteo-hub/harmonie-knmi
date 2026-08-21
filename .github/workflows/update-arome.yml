@@ -43,7 +43,7 @@ jobs:
             echo "publish=true" >> "$GITHUB_OUTPUT"
           else
             echo "publish=false" >> "$GITHUB_OUTPUT"
-            echo "Le run AROME disponible est déjà publié."
+            echo "Aucune nouvelle publication AROME complète à envoyer."
           fi
 
       - name: Vérifier la publication
