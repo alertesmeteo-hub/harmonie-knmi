@@ -26,8 +26,28 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Vérifier l'authentification configurée
+        shell: bash
+        env:
+          MF_APPLICATION_ID: ${{ secrets.METEOFRANCE_APPLICATION_ID }}
+          MF_API_KEY: ${{ secrets.METEOFRANCE_API_KEY }}
+          MF_LEGACY_TOKEN: ${{ secrets.METEOFRANCE_TOKEN }}
+        run: |
+          if [ -n "$MF_APPLICATION_ID" ]; then
+            echo "Authentification : APPLICATION_ID (renouvellement OAuth2 automatique)"
+          elif [ -n "$MF_API_KEY" ]; then
+            echo "Authentification : API Key"
+          elif [ -n "$MF_LEGACY_TOKEN" ]; then
+            echo "::warning::METEOFRANCE_TOKEN est un mode de secours. Un token généré dans le portail peut expirer après environ 1 heure."
+          else
+            echo "::error::Ajoutez METEOFRANCE_APPLICATION_ID (recommandé) ou METEOFRANCE_API_KEY dans Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+
       - name: Télécharger la vigilance Météo-France
         env:
+          METEOFRANCE_APPLICATION_ID: ${{ secrets.METEOFRANCE_APPLICATION_ID }}
+          METEOFRANCE_API_KEY: ${{ secrets.METEOFRANCE_API_KEY }}
           METEOFRANCE_TOKEN: ${{ secrets.METEOFRANCE_TOKEN }}
         run: python scripts/update_vigilance.py
 
