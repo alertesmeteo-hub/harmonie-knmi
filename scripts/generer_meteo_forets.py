@@ -27,7 +27,7 @@ ARCHIVE_JSON = DATA_DIR / "meteo_forets_archive.json"
 GEOJSON = DATA_DIR / "departements.geojson"
 
 HEADERS = {
-    "User-Agent": "alertes-meteo-github-meteo-forets/1.2.1",
+    "User-Agent": "alertes-meteo-github-meteo-forets/1.2.2",
     "Accept": "*/*",
 }
 
@@ -216,7 +216,37 @@ def choose_csv_urls(dataset: dict[str, Any] | None, now_year: int | None = None)
     return urls
 
 
+def decode_text_content(content: bytes) -> str:
+    """Décode un CSV Météo-France sans supposer un encodage unique."""
+    if content.startswith(b"\xff\xfe"):
+        return content.decode("utf-16-le")
+    if content.startswith(b"\xfe\xff"):
+        return content.decode("utf-16-be")
+
+    for encoding in (
+        "utf-8-sig",
+        "utf-8",
+        "cp1252",
+        "iso-8859-15",
+        "utf-16",
+        "utf-16-le",
+        "utf-16-be",
+    ):
+        try:
+            text = content.decode(encoding)
+            if text.count("\x00") <= max(2, len(text) // 100):
+                return text
+        except UnicodeDecodeError:
+            continue
+
+    return content.decode("utf-8", errors="replace")
+
+
 def download_csv_text(urls: list[str]) -> tuple[str, str]:
+    """
+    Télécharge la première archive réellement exploitable.
+    Le schéma CSV est validé après normalisation par parse_archive().
+    """
     errors: list[str] = []
 
     for url in urls:
@@ -228,27 +258,29 @@ def download_csv_text(urls: list[str]) -> tuple[str, str]:
 
         content = response.content
 
-        if content[:2] == b"\x1f\x8b" or url.lower().endswith(".gz"):
+        # Décompresser uniquement si la signature gzip est réellement présente.
+        # requests peut avoir déjà décompressé un Content-Encoding gzip.
+        if content[:2] == b"\x1f\x8b":
             try:
                 content = gzip.decompress(content)
             except OSError as exc:
                 errors.append(f"{url}: gzip invalide ({exc})")
                 continue
 
-        text = None
-        for encoding in ("utf-8-sig", "utf-8", "cp1252", "iso-8859-15"):
-            try:
-                text = content.decode(encoding)
-                break
-            except UnicodeDecodeError:
-                continue
+        text = decode_text_content(content)
 
-        if text is None:
-            text = content.decode("utf-8", errors="replace")
+        if not text.strip():
+            errors.append(f"{url}: fichier vide après décodage")
+            continue
 
-        normalized = text.lower()
-        if "reference_time" not in normalized or "dep_code" not in normalized:
-            errors.append(f"{url}: entête CSV inattendue")
+        try:
+            parse_archive(text)
+        except Exception as exc:
+            lines = text.splitlines()
+            first_line = lines[0][:220] if lines else "<vide>"
+            errors.append(
+                f"{url}: CSV non reconnu ({exc}); première ligne={first_line!r}"
+            )
             continue
 
         return text, url
@@ -258,9 +290,14 @@ def download_csv_text(urls: list[str]) -> tuple[str, str]:
         "\n".join(errors[-5:])
     )
 
-
 def detect_delimiter(first_line: str) -> str:
-    return ";" if first_line.count(";") >= first_line.count(",") else ","
+    candidates = {
+        ";": first_line.count(";"),
+        ",": first_line.count(","),
+        "\t": first_line.count("\t"),
+        "|": first_line.count("|"),
+    }
+    return max(candidates, key=candidates.get)
 
 
 def pick(row: dict[str, str], *keys: str) -> str:
@@ -288,11 +325,23 @@ def parse_archive(text: str) -> tuple[dict[str, Any], list[dict[str, Any]], list
         raise RuntimeError("Entête CSV absente.")
 
     headers = {norm_key(name or "") for name in reader.fieldnames}
-    required = {"reference_time", "dep_code", "niveau_j1", "niveau_j2", "nom_dep"}
+    aliases = {
+        "reference_time": {"reference_time", "referencetime", "date_reference", "date"},
+        "dep_code": {"dep_code", "code_dep", "code_departement", "departement", "department"},
+        "niveau_j1": {"niveau_j1", "j1", "level_j1", "niveauj1"},
+        "niveau_j2": {"niveau_j2", "j2", "level_j2", "niveauj2"},
+        "nom_dep": {"nom_dep", "dep_nom", "nom_departement", "name", "nom"},
+    }
 
-    if not required.issubset(headers):
-        missing = ", ".join(sorted(required - headers))
-        raise RuntimeError(f"Colonnes Météo-France manquantes: {missing}")
+    missing = [
+        canonical for canonical, choices in aliases.items()
+        if not (headers & choices)
+    ]
+    if missing:
+        raise RuntimeError(
+            "Colonnes Météo-France manquantes: " + ", ".join(missing) +
+            " ; en-têtes reçus: " + ", ".join(sorted(headers))
+        )
 
     grouped: dict[str, dict[str, Any]] = {}
 
@@ -305,13 +354,15 @@ def parse_archive(text: str) -> tuple[dict[str, Any], list[dict[str, Any]], list
             for key, value in raw.items()
         }
 
-        ref = pick(row, "reference_time")
-        code = normalize_dep_code(pick(row, "dep_code"))
-        name = pick(row, "nom_dep")
+        ref = pick(row, "reference_time", "referencetime", "date_reference", "date")
+        code = normalize_dep_code(
+            pick(row, "dep_code", "code_dep", "code_departement", "departement", "department")
+        )
+        name = pick(row, "nom_dep", "dep_nom", "nom_departement", "name", "nom")
 
         try:
-            j1 = int(float(pick(row, "niveau_j1")))
-            j2 = int(float(pick(row, "niveau_j2")))
+            j1 = int(float(pick(row, "niveau_j1", "j1", "level_j1", "niveauj1")))
+            j2 = int(float(pick(row, "niveau_j2", "j2", "level_j2", "niveauj2")))
         except (TypeError, ValueError):
             continue
 

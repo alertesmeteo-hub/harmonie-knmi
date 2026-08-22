@@ -68,6 +68,22 @@ class MeteoForetsTests(unittest.TestCase):
         self.assertIn("mdf_2026.csv.gz", urls[0])
         self.assertTrue(any("mdf_2025.csv.gz" in url for url in urls))
 
+    def test_header_variants(self):
+        csv_text = """Reference Time,code_dep,j1,j2,nom_departement
+2026-08-21T17:00:00+02:00,59,2,3,Nord
+2026-08-21T17:00:00+02:00,62,1,2,Pas-de-Calais
+2026-08-21T17:00:00+02:00,2A,1,1,Corse-du-Sud
+2026-08-21T17:00:00+02:00,2B,1,1,Haute-Corse
+"""
+        latest, history, archive = module.parse_archive(csv_text)
+        self.assertEqual(latest["bulletin_date"], "2026-08-21")
+        self.assertEqual(len(latest["departments"]), 4)
+
+    def test_decode_utf16_bom(self):
+        raw = "Reference_time;dep_code;niveau_j1;niveau_j2;nom_dep\\n".encode("utf-16")
+        text = module.decode_text_content(raw)
+        self.assertIn("Reference_time", text)
+
 
 if __name__ == "__main__":
     unittest.main()
