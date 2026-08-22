@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 Alertes-Meteo.com — GFS France / Europe
-Version 1.3.2
+Version 1.3.4
 
 Télécharge via le filtre NOMADS uniquement les champs GFS 0,25° utiles à la carte :
 - PRMSL : pression au niveau moyen de la mer
@@ -36,8 +36,13 @@ from urllib.parse import urlencode
 import numpy as np
 import requests
 
-VERSION = "1.3.2"
-BUILD_ID = "gfs-france-europe-15j-risques-extremes-20260821"
+try:
+    from global_land_mask import globe as _land_globe
+except Exception:
+    _land_globe = None
+
+VERSION = "1.3.4"
+BUILD_ID = "gfs-france-europe-15j-terres-europe-apcp-v134-20260821"
 NOMADS_FILTER = "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25.pl"
 LEFT, RIGHT, BOTTOM, TOP = -35.0, 50.0, 30.0, 75.0
 DOWNSAMPLE = 2  # 0,25° -> 0,50°
@@ -48,7 +53,7 @@ SESSION.headers.update({"User-Agent": f"alertes-meteo-gfs/{VERSION} (+https://al
 
 AREA_BOUNDS = {
     "france": {"west": -6.0, "east": 11.0, "south": 41.0, "north": 52.0},
-    "europe": {"west": LEFT, "east": RIGHT, "south": BOTTOM, "north": TOP},
+    "europe": {"west": -12.0, "east": 40.0, "south": 34.0, "north": 72.0},
 }
 RISK_THRESHOLDS = {
     "storm_gust_kmh": {"moderate": 70.0, "high": 90.0},
@@ -336,8 +341,12 @@ def parse_frame(path: Path, run: Run, fhr: int, source_url: str) -> dict[str, An
         gust = gust * 3.6
 
     # APCP en kg/m² équivaut numériquement à mm d'eau.
+    # À f000, l'analyse ne représente pas une accumulation prévisionnelle exploitable :
+    # on la neutralise pour éviter les faux maxima vus dans l'ancienne version.
     if precip is not None:
         precip = np.where(precip < -0.01, np.nan, np.maximum(precip, 0.0))
+        if fhr == 0:
+            precip = None
 
     valid = run.dt + timedelta(hours=fhr)
     return {
@@ -377,6 +386,92 @@ def parse_frame(path: Path, run: Run, fhr: int, source_url: str) -> dict[str, An
 
 
 
+def normalize_precipitation_payload(
+    payload: dict[str, Any],
+    previous_cumulative_raw: np.ndarray | None,
+    previous_cumulative_fhr: int | None,
+) -> tuple[np.ndarray | None, int | None]:
+    """Convertit APCP en cumul de l'intervalle réellement porté par le GRIB.
+
+    Priorité absolue à GRIB_stepRange :
+    - ``6-12`` => le champ est déjà l'accumulation 6-12 h, aucune soustraction ;
+    - ``0-12`` => cumul depuis le run, on soustrait le dernier cumul ``0-x`` ;
+    - si la métadonnée manque, repli prudent sur la quasi-monotonie.
+
+    Cela évite de soustraire deux champs qui sont déjà des accumulations de
+    périodes distinctes, source de valeurs pluie incohérentes.
+    """
+    fhr = int(payload.get("forecast_hour") or 0)
+    raw = matrix_from_payload(payload, "precipitation_mm")
+    raw_range = str(payload.get("precipitation_step_range") or "").strip()
+    raw_type = str(payload.get("precipitation_step_type") or "").strip().lower()
+
+    if raw is None or fhr <= 0:
+        payload["fields"]["precipitation_mm"] = None
+        payload["precipitation_period_label"] = "Pas d’accumulation prévisionnelle à +000 h"
+        payload["precipitation_step_range"] = ""
+        payload["precipitation_step_type"] = "none"
+        return None, None
+
+    nums = [int(x) for x in re.findall(r"\d+", raw_range)]
+    has_range = len(nums) >= 2
+    if has_range:
+        start_h, end_h = nums[0], nums[-1]
+    else:
+        start_h, end_h = max(0, fhr - 6), fhr
+
+    increment = np.maximum(raw, 0.0)
+    mode = "interval"
+    next_cumulative_raw = None
+    next_cumulative_fhr = None
+
+    cumulative_hint = (
+        has_range and start_h == 0 and end_h == fhr and fhr > 0
+    ) or ("accum" in raw_type and has_range and start_h == 0 and end_h == fhr)
+
+    if cumulative_hint:
+        mode = "cumulative"
+        if (
+            previous_cumulative_raw is not None
+            and previous_cumulative_fhr is not None
+            and previous_cumulative_raw.shape == raw.shape
+            and previous_cumulative_fhr < fhr
+        ):
+            valid = np.isfinite(raw) & np.isfinite(previous_cumulative_raw)
+            increment = np.where(valid, np.maximum(raw - previous_cumulative_raw, 0.0), np.nan)
+            start_h = int(previous_cumulative_fhr)
+            mode = "difference_cumulative"
+        else:
+            start_h = 0
+        next_cumulative_raw = raw.copy()
+        next_cumulative_fhr = fhr
+    elif has_range:
+        # Le GRIB dit explicitement que le champ est déjà une période (ex. 6-12 h).
+        mode = "interval_grib"
+    else:
+        # Repli uniquement si la métadonnée de période a disparu.
+        if previous_cumulative_raw is not None and previous_cumulative_raw.shape == raw.shape:
+            valid = np.isfinite(raw) & np.isfinite(previous_cumulative_raw)
+            if valid.any():
+                monotonic_fraction = float(np.mean(raw[valid] >= previous_cumulative_raw[valid] - 0.05))
+                if monotonic_fraction >= 0.995:
+                    increment = np.where(valid, np.maximum(raw - previous_cumulative_raw, 0.0), np.nan)
+                    start_h = int(previous_cumulative_fhr or max(0, fhr - 6))
+                    mode = "difference_cumulative_fallback"
+                    next_cumulative_raw = raw.copy()
+                    next_cumulative_fhr = fhr
+        if next_cumulative_raw is None:
+            start_h = max(0, fhr - 6)
+            end_h = fhr
+            mode = "interval_fallback"
+
+    payload["fields"]["precipitation_mm"] = round_matrix(increment, 1)
+    payload["precipitation_period_label"] = f"Accumulation GFS +{start_h:03d} à +{end_h:03d} h"
+    payload["precipitation_step_range"] = f"{start_h}-{end_h}"
+    payload["precipitation_step_type"] = mode
+    return next_cumulative_raw, next_cumulative_fhr
+
+
 def parse_step_range(value: str, fhr: int) -> tuple[int, int]:
     text = str(value or "").strip()
     match = re.search(r"(\d+)\s*[-:]\s*(\d+)", text)
@@ -396,6 +491,55 @@ def area_slice(lat: np.ndarray, lon: np.ndarray, area: str) -> tuple[np.ndarray,
     lat_idx = np.flatnonzero((lat >= bounds["south"]) & (lat <= bounds["north"]))
     lon_idx = np.flatnonzero((lon >= bounds["west"]) & (lon <= bounds["east"]))
     return lat_idx, lon_idx
+
+
+# Boîtes de repli utilisées seulement si global-land-mask n'est pas disponible.
+# Elles servent à éliminer l'essentiel de l'Atlantique, de la mer du Nord et de
+# la Méditerranée des maxima "Europe" plutôt qu'à dessiner une frontière.
+EUROPE_LAND_BOXES = (
+    (-10.8, 4.5, 36.0, 44.8),   # péninsule Ibérique
+    (-5.8, 16.5, 43.0, 55.5),   # France / Benelux / Allemagne / Alpes
+    (-11.0, 2.5, 49.0, 59.5),   # Irlande / Royaume-Uni
+    (5.0, 31.5, 36.0, 49.0),    # Italie / Balkans / Grèce
+    (15.0, 40.0, 45.0, 61.0),   # Europe centrale et orientale
+    (4.0, 32.5, 55.0, 72.0),    # Scandinavie / Finlande
+    (-25.0, -12.0, 63.0, 67.5), # Islande
+)
+
+
+def land_mask_for_subset(lat_values: np.ndarray, lon_values: np.ndarray, area: str) -> np.ndarray:
+    lat2d, lon2d = np.meshgrid(lat_values, lon_values, indexing="ij")
+    if area == "france":
+        # La boîte France est petite ; global-land-mask permet aussi d'écarter mer
+        # du Nord / Atlantique quand disponible.
+        if _land_globe is not None:
+            try:
+                return np.asarray(_land_globe.is_land(lat2d, lon2d), dtype=bool)
+            except Exception:
+                pass
+        return np.ones(lat2d.shape, dtype=bool)
+
+    if _land_globe is not None:
+        try:
+            return np.asarray(_land_globe.is_land(lat2d, lon2d), dtype=bool)
+        except Exception:
+            pass
+
+    mask = np.zeros(lat2d.shape, dtype=bool)
+    for west, east, south, north in EUROPE_LAND_BOXES:
+        mask |= (lon2d >= west) & (lon2d <= east) & (lat2d >= south) & (lat2d <= north)
+    return mask
+
+
+def masked_area_array(arr: np.ndarray, lat: np.ndarray, lon: np.ndarray, area: str) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    lat_idx, lon_idx = area_slice(lat, lon, area)
+    if not len(lat_idx) or not len(lon_idx):
+        return np.empty((0, 0)), lat_idx, lon_idx
+    sub = arr[np.ix_(lat_idx, lon_idx)].astype(float, copy=True)
+    mask = land_mask_for_subset(lat[lat_idx], lon[lon_idx], area)
+    if mask.shape == sub.shape:
+        sub[~mask] = np.nan
+    return sub, lat_idx, lon_idx
 
 
 def matrix_from_payload(payload: dict[str, Any], field: str) -> np.ndarray | None:
@@ -429,11 +573,8 @@ def update_extrema_state(state: dict[str, Any], payload: dict[str, Any]) -> None
         if arr is None:
             continue
         for area in AREA_BOUNDS:
-            lat_idx, lon_idx = area_slice(lat, lon, area)
-            if not len(lat_idx) or not len(lon_idx):
-                continue
-            sub = arr[np.ix_(lat_idx, lon_idx)]
-            if not np.isfinite(sub).any():
+            sub, lat_idx, lon_idx = masked_area_array(arr, lat, lon, area)
+            if not sub.size or not np.isfinite(sub).any():
                 continue
             min_flat = int(np.nanargmin(sub))
             max_flat = int(np.nanargmax(sub))
@@ -476,7 +617,7 @@ def finalize_extrema(state: dict[str, Any]) -> dict[str, Any]:
             output[area][field] = out
     return {
         "period_hours": 360,
-        "description": "Minimum et maximum de chaque champ sur toutes les échéances GFS produites jusqu’à J+15.",
+        "description": "Minimum et maximum sur les terres de la zone (Europe: océans exclus) pour toutes les échéances jusqu’à J+15.",
         "by_area": output,
     }
 
@@ -504,48 +645,40 @@ def init_risk_state() -> dict[str, Any]:
 def update_risk_state(
     state: dict[str, Any],
     payload: dict[str, Any],
-    previous_cumulative_precip: np.ndarray | None,
-    previous_cumulative_end: int | None,
-) -> tuple[np.ndarray | None, int | None]:
+) -> None:
     fhr = int(payload.get("forecast_hour") or 0)
     day = min(15, max(1, math.ceil(max(fhr, 1) / 24)))
     lat = np.asarray(payload.get("grid", {}).get("latitudes", []), dtype=float)
     lon = np.asarray(payload.get("grid", {}).get("longitudes", []), dtype=float)
     gust = matrix_from_payload(payload, "gust_kmh")
-    precip = matrix_from_payload(payload, "precipitation_mm")
+    precip_increment = matrix_from_payload(payload, "precipitation_mm")
 
     step_start, step_end = parse_step_range(payload.get("precipitation_step_range", ""), fhr)
-    precip_increment = None
-    increment_hours = max(0, step_end - step_start) or 6
-    if precip is not None and fhr > 0:
-        if step_start == 0 and previous_cumulative_precip is not None and previous_cumulative_end is not None and step_end > previous_cumulative_end:
-            precip_increment = np.maximum(precip - previous_cumulative_precip, 0.0)
-            increment_hours = max(1, step_end - previous_cumulative_end)
-        else:
-            precip_increment = np.maximum(precip, 0.0)
+    increment_hours = max(0, step_end - step_start) or (0 if fhr == 0 else 6)
 
     for area in AREA_BOUNDS:
-        lat_idx, lon_idx = area_slice(lat, lon, area)
-        if not len(lat_idx) or not len(lon_idx):
-            continue
         slot = state[area][day]
         if gust is not None:
-            sub = gust[np.ix_(lat_idx, lon_idx)]
-            if np.isfinite(sub).any():
+            sub, lat_idx, lon_idx = masked_area_array(gust, lat, lon, area)
+            if sub.size and np.isfinite(sub).any():
                 value = float(np.nanmax(sub))
                 slot["gust_max"] = value if slot["gust_max"] is None else max(slot["gust_max"], value)
-        if precip_increment is not None:
-            subp = precip_increment[np.ix_(lat_idx, lon_idx)]
-            finite = np.where(np.isfinite(subp), subp, 0.0)
-            if slot["rain_grid"] is None:
-                slot["rain_grid"] = finite.copy()
-            else:
-                slot["rain_grid"] += finite
-            slot["rain_hours"] += increment_hours
-
-    if precip is not None and step_start == 0:
-        return precip.copy(), step_end
-    return None, None
+        if precip_increment is not None and fhr > 0:
+            subp, lat_idx, lon_idx = masked_area_array(precip_increment, lat, lon, area)
+            if subp.size:
+                # Les cellules mer restent NaN et ne participent jamais au maximum.
+                finite = np.where(np.isfinite(subp), subp, 0.0)
+                valid_land = np.isfinite(subp)
+                if slot["rain_grid"] is None:
+                    slot["rain_grid"] = np.where(valid_land, finite, np.nan)
+                else:
+                    current = slot["rain_grid"]
+                    slot["rain_grid"] = np.where(
+                        valid_land,
+                        np.nan_to_num(current, nan=0.0) + finite,
+                        current,
+                    )
+                slot["rain_hours"] += increment_hours
 
 
 def finalize_risks(state: dict[str, Any], run: Run) -> dict[str, Any]:
@@ -604,6 +737,12 @@ def self_test() -> int:
     assert risk_level(70, RISK_THRESHOLDS["storm_gust_kmh"]) == "modere"
     assert risk_level(90, RISK_THRESHOLDS["storm_gust_kmh"]) == "fort"
     assert parse_step_range("6-12", 12) == (6, 12)
+    sample = {"forecast_hour": 6, "precipitation_step_range": "0-6", "precipitation_step_type": "accum", "fields": {"precipitation_mm": [[1.0, 2.0]]}}
+    raw, fh = normalize_precipitation_payload(sample, None, None)
+    assert sample["fields"]["precipitation_mm"] == [[1.0, 2.0]] and fh == 6
+    sample2 = {"forecast_hour": 12, "precipitation_step_range": "0-12", "precipitation_step_type": "accum", "fields": {"precipitation_mm": [[3.0, 5.0]]}}
+    raw2, fh2 = normalize_precipitation_payload(sample2, raw, fh)
+    assert sample2["fields"]["precipitation_mm"] == [[2.0, 3.0]] and fh2 == 12
     ex = init_extrema_state()
     assert set(ex["france"]) == set(EXTREMA_FIELDS)
     print("Self-test GFS 15 jours / risques / extrêmes OK")
@@ -634,8 +773,8 @@ def main() -> int:
     failures = []
     risk_state = init_risk_state()
     extrema_state = init_extrema_state()
-    previous_cumulative_precip = None
-    previous_cumulative_end = None
+    previous_raw_precip = None
+    previous_precip_fhr = None
 
     with tempfile.TemporaryDirectory(prefix="am-gfs-") as tmpdir:
         tmp = Path(tmpdir)
@@ -644,6 +783,9 @@ def main() -> int:
             try:
                 source_url = download_frame(run, fhr, grib)
                 payload = parse_frame(grib, run, fhr, source_url)
+                previous_raw_precip, previous_precip_fhr = normalize_precipitation_payload(
+                    payload, previous_raw_precip, previous_precip_fhr
+                )
                 filename = f"gfs_f{fhr:03d}.json"
                 write_json(output_dir / filename, payload)
                 update_extrema_state(extrema_state, payload)
@@ -653,9 +795,7 @@ def main() -> int:
                     "file": filename,
                     "precipitation_period_label": payload["precipitation_period_label"],
                 })
-                previous_cumulative_precip, previous_cumulative_end = update_risk_state(
-                    risk_state, payload, previous_cumulative_precip, previous_cumulative_end
-                )
+                update_risk_state(risk_state, payload)
             except Exception as exc:
                 print(f"::warning::GFS +{fhr:03d} h ignoré: {exc}")
                 failures.append({"forecast_hour": fhr, "error": str(exc)})
@@ -672,6 +812,7 @@ def main() -> int:
         "run_utc": iso(run.dt),
         "generated_at": iso(utcnow()),
         "coverage": {"west": LEFT, "east": RIGHT, "south": BOTTOM, "north": TOP},
+        "statistics_areas": AREA_BOUNDS,
         "native_spacing_deg": 0.25,
         "web_spacing_deg": 0.5,
         "variables": ["pressure_hpa", "temperature_2m_c", "precipitation_mm", "wind_speed_kmh", "wind_direction_deg", "gust_kmh"],
