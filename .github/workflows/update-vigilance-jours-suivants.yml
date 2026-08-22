@@ -3,7 +3,9 @@ name: Mise à jour vigilance jours suivants
 on:
   workflow_dispatch:
   schedule:
-    - cron: '15 4,10,16,22 * * *'
+    # Météo-France émet le bulletin vers 06h30 et 12h45 (heure de Paris).
+    # On repasse en fin de journée pour rattraper une éventuelle réémission.
+    - cron: '20 5,11,15,20 * * *'
 
 permissions:
   contents: write
@@ -15,7 +17,7 @@ concurrency:
 jobs:
   update:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
       - name: Récupérer le dépôt
         uses: actions/checkout@v4
@@ -32,28 +34,16 @@ jobs:
           pip install -r requirements.txt
           python -m playwright install --with-deps chromium
 
+      - name: Test de non-régression (bulletin de référence, hors ligne)
+        run: python tests/test_parse.py
+
       - name: Générer le JSON J+2 à J+7
         env:
-          VJS_MF_URL: https://vigilance.meteofrance.fr/fr
-          VJS_REFERENCE_URL: https://meteo-npdc.fr/vigilance-jours-suivants
-          VJS_ALLOW_REFERENCE_FALLBACK: '1'
-          VJS_RETRIES: '2'
+          VJS_RETRIES: '3'
         run: python scripts/update_vjs.py
 
-      - name: Contrôler le JSON
-        run: |
-          python - <<'PY'
-          import json
-          from pathlib import Path
-          p=Path('data/vigilance-jours-suivants.json')
-          d=json.loads(p.read_text(encoding='utf-8'))
-          assert d['schema_version'] == 2
-          assert [x['label'] for x in d['cards']] == ['J+2','J+3','J+4','J+5','J+6 et J+7']
-          for c in d['cards']:
-              assert len(c['departments']) >= 96, (c['label'], len(c['departments']))
-              assert all(v['probability'] in {'none','low','medium','high'} for v in c['departments'].values())
-          print('Contrôle OK : 5 cartes et 96 départements par échéance.')
-          PY
+      - name: Contrôler le fichier publié
+        run: python scripts/check_data.py data/vigilance-jours-suivants.json
 
       - name: Publier uniquement si les données ont changé
         run: |
@@ -64,5 +54,5 @@ jobs:
           git config user.name "alertesmeteo-bot"
           git config user.email "actions@users.noreply.github.com"
           git add data/vigilance-jours-suivants.json
-          git commit -m "Mise à jour vigilance jours suivants"
+          git commit -m "Vigilance jours suivants — $(python -c "import json;print(json.load(open('data/vigilance-jours-suivants.json'))['bulletin']['issued_label'])")"
           git push
