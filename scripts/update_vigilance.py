@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 import time
 from datetime import datetime, timezone
@@ -19,7 +20,7 @@ OUT = Path(os.getenv("VIGILANCE_OUTPUT", "data/vigilance.json"))
 APPLICATION_ID = os.getenv("METEOFRANCE_APPLICATION_ID", "").strip()
 API_KEY = os.getenv("METEOFRANCE_API_KEY", "").strip()
 LEGACY_TOKEN = os.getenv("METEOFRANCE_TOKEN", "").strip()
-USER_AGENT = "alertes-meteo-vigilance/1.2.0"
+USER_AGENT = "alertes-meteo-vigilance/1.2.1"
 RETRY_CODES = {429, 500, 502, 503, 504}
 
 
@@ -40,14 +41,48 @@ def retry_delay(headers: Any, attempt: int) -> float:
     return min(8.0, 2.0 ** attempt)
 
 
-def request_oauth_token(attempts: int = 3) -> str:
-    """Obtenir un jeton OAuth2 temporaire à chaque exécution via l'APPLICATION_ID."""
-    if not APPLICATION_ID:
+def normalize_application_id(value: str) -> str:
+    """Accepte l'APPLICATION_ID seul, `Basic ...` ou même la commande curl copiée du portail."""
+    value = value.strip().strip('"').strip("'")
+    if not value:
         raise RuntimeError("Secret METEOFRANCE_APPLICATION_ID absent")
 
+    # Si l'utilisateur a collé toute la commande curl du portail, extraire la valeur après Basic.
+    match = re.search(r"Authorization\s*:\s*Basic\s+([^\s\"']+)", value, flags=re.IGNORECASE)
+    if match:
+        value = match.group(1).strip()
+    elif value.lower().startswith("basic "):
+        value = value[6:].strip()
+
+    # Les tokens/API keys JWT commencent typiquement par eyJ... et contiennent deux points.
+    # Ils ne doivent PAS être utilisés comme APPLICATION_ID.
+    if value.startswith("eyJ") and value.count(".") >= 2:
+        raise RuntimeError(
+            "METEOFRANCE_APPLICATION_ID ressemble à un token/API Key JWT (eyJ...). "
+            "Ce n'est pas l'APPLICATION_ID. Dans le portail Météo-France, choisissez OAuth2 puis "
+            "copiez uniquement la chaîne située après 'Authorization: Basic' dans la commande curl. "
+            "Si vous souhaitez utiliser une API Key, enregistrez-la plutôt dans METEOFRANCE_API_KEY."
+        )
+
+    if any(ch.isspace() for ch in value):
+        raise RuntimeError(
+            "METEOFRANCE_APPLICATION_ID contient des espaces. Copiez uniquement la chaîne après "
+            "'Authorization: Basic' dans la commande curl du portail Météo-France."
+        )
+    return value
+
+
+def response_excerpt(raw: bytes, limit: int = 350) -> str:
+    text = raw.decode("utf-8", errors="replace").strip().replace("\r", " ").replace("\n", " ")
+    return text[:limit] if text else "<réponse vide>"
+
+
+def request_oauth_token(attempts: int = 3) -> str:
+    """Obtenir un jeton OAuth2 temporaire à chaque exécution via l'APPLICATION_ID."""
+    app_id = normalize_application_id(APPLICATION_ID)
     body = urlencode({"grant_type": "client_credentials"}).encode("ascii")
     headers = {
-        "Authorization": f"Basic {APPLICATION_ID}",
+        "Authorization": f"Basic {app_id}",
         "Content-Type": "application/x-www-form-urlencoded",
         "Accept": "application/json",
         "User-Agent": USER_AGENT,
@@ -58,29 +93,51 @@ def request_oauth_token(attempts: int = 3) -> str:
         try:
             with urlopen(req, timeout=35) as response:
                 raw = response.read()
-                data = json.loads(raw.decode("utf-8-sig"))
-                token = str(data.get("access_token", "")).strip() if isinstance(data, dict) else ""
+                content_type = response.headers.get("Content-Type", "inconnu")
+                try:
+                    data = json.loads(raw.decode("utf-8-sig"))
+                except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+                    raise RuntimeError(
+                        "Le serveur d'authentification Météo-France n'a pas renvoyé du JSON. "
+                        f"HTTP {getattr(response, 'status', 200)}, Content-Type={content_type}, "
+                        f"début de réponse={response_excerpt(raw)!r}. "
+                        "Vérifiez que METEOFRANCE_APPLICATION_ID est bien la chaîne située après "
+                        "'Authorization: Basic' dans le curl OAuth2 du portail, et non le token généré."
+                    ) from exc
+
+                if not isinstance(data, dict):
+                    raise RuntimeError("Réponse d'authentification Météo-France inattendue (objet JSON attendu)")
+                token = str(data.get("access_token", "")).strip()
                 if not token:
-                    raise RuntimeError("Réponse d'authentification Météo-France sans access_token")
-                expires = data.get("expires_in") if isinstance(data, dict) else None
+                    err = data.get("error_description") or data.get("error") or "access_token absent"
+                    raise RuntimeError(f"Météo-France a refusé la génération du token OAuth2: {err}")
+                expires = data.get("expires_in")
                 print(f"Jeton OAuth2 Météo-France obtenu{f' (validité {expires}s)' if expires else ''}.")
                 return token
         except HTTPError as exc:
+            raw = b""
+            try:
+                raw = exc.read()
+            except Exception:
+                pass
+            detail = response_excerpt(raw)
             if exc.code not in RETRY_CODES or attempt == attempts - 1:
-                if exc.code == 401:
+                if exc.code in {400, 401, 403}:
                     raise RuntimeError(
-                        "Météo-France HTTP 401 lors de la génération du token : "
-                        "METEOFRANCE_APPLICATION_ID invalide ou abonnement/API non correctement configuré"
+                        f"Météo-France HTTP {exc.code} lors de la génération du token OAuth2. "
+                        f"Réponse={detail!r}. Vérifiez METEOFRANCE_APPLICATION_ID : il faut copier "
+                        "uniquement la chaîne après 'Authorization: Basic' dans le curl OAuth2."
                     ) from exc
-                raise RuntimeError(f"Météo-France HTTP {exc.code} lors de la génération du token") from exc
+                raise RuntimeError(
+                    f"Météo-France HTTP {exc.code} lors de la génération du token; réponse={detail!r}"
+                ) from exc
             delay = retry_delay(exc.headers, attempt)
             print(f"HTTP {exc.code} pour le token; nouvel essai dans {delay:.0f}s", file=sys.stderr)
             time.sleep(delay)
-        except (URLError, json.JSONDecodeError, UnicodeDecodeError) as exc:
+        except URLError as exc:
             if attempt == attempts - 1:
-                raise RuntimeError(f"Impossible d'obtenir le token OAuth2 Météo-France: {exc}") from exc
-            delay = min(8.0, 2.0 ** attempt)
-            time.sleep(delay)
+                raise RuntimeError(f"Erreur réseau lors de la génération du token OAuth2: {exc.reason}") from exc
+            time.sleep(min(8.0, 2.0 ** attempt))
 
     raise RuntimeError("Impossible d'obtenir le token OAuth2 Météo-France")
 
@@ -89,7 +146,14 @@ def resolve_token() -> tuple[str, str]:
     # Pour un automatisme GitHub, l'APPLICATION_ID est le mode recommandé ici :
     # il permet de renouveler automatiquement le jeton OAuth2 (env. 1 h).
     if APPLICATION_ID:
-        return request_oauth_token(), "oauth2"
+        try:
+            return request_oauth_token(), "oauth2"
+        except RuntimeError as exc:
+            if API_KEY:
+                print(f"AVERTISSEMENT OAuth2: {exc}", file=sys.stderr)
+                print("Bascule sur METEOFRANCE_API_KEY.", file=sys.stderr)
+                return API_KEY, "api_key"
+            raise
     if API_KEY:
         print("Authentification Météo-France par API Key.")
         return API_KEY, "api_key"
