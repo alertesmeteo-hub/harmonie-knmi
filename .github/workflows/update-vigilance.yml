@@ -34,6 +34,10 @@ jobs:
           MF_LEGACY_TOKEN: ${{ secrets.METEOFRANCE_TOKEN }}
         run: |
           if [ -n "$MF_APPLICATION_ID" ]; then
+            if [[ "$MF_APPLICATION_ID" == eyJ*.*.* ]]; then
+              echo "::error::METEOFRANCE_APPLICATION_ID ressemble à un token/API Key JWT (eyJ...). Ce n'est pas l'APPLICATION_ID. Copiez la chaîne après Authorization: Basic dans le curl OAuth2 du portail Météo-France."
+              exit 1
+            fi
             echo "Authentification : APPLICATION_ID (renouvellement OAuth2 automatique)"
           elif [ -n "$MF_API_KEY" ]; then
             echo "Authentification : API Key"
