@@ -10,12 +10,16 @@ from email.utils import parsedate_to_datetime
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
+from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 BASE = "https://public-api.meteofrance.fr/public/DPVigilance/v1"
+TOKEN_URL = "https://portail-api.meteofrance.fr/token"
 OUT = Path(os.getenv("VIGILANCE_OUTPUT", "data/vigilance.json"))
-TOKEN = os.getenv("METEOFRANCE_TOKEN", "").strip()
-USER_AGENT = "alertes-meteo-vigilance/1.1.0"
+APPLICATION_ID = os.getenv("METEOFRANCE_APPLICATION_ID", "").strip()
+API_KEY = os.getenv("METEOFRANCE_API_KEY", "").strip()
+LEGACY_TOKEN = os.getenv("METEOFRANCE_TOKEN", "").strip()
+USER_AGENT = "alertes-meteo-vigilance/1.2.0"
 RETRY_CODES = {429, 500, 502, 503, 504}
 
 
@@ -36,13 +40,76 @@ def retry_delay(headers: Any, attempt: int) -> float:
     return min(8.0, 2.0 ** attempt)
 
 
-def get_json(path: str, optional: bool = False, attempts: int = 4) -> dict[str, Any] | None:
-    if not TOKEN:
-        raise RuntimeError("Secret METEOFRANCE_TOKEN absent")
+def request_oauth_token(attempts: int = 3) -> str:
+    """Obtenir un jeton OAuth2 temporaire à chaque exécution via l'APPLICATION_ID."""
+    if not APPLICATION_ID:
+        raise RuntimeError("Secret METEOFRANCE_APPLICATION_ID absent")
 
+    body = urlencode({"grant_type": "client_credentials"}).encode("ascii")
+    headers = {
+        "Authorization": f"Basic {APPLICATION_ID}",
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Accept": "application/json",
+        "User-Agent": USER_AGENT,
+    }
+
+    for attempt in range(attempts):
+        req = Request(TOKEN_URL, data=body, headers=headers, method="POST")
+        try:
+            with urlopen(req, timeout=35) as response:
+                raw = response.read()
+                data = json.loads(raw.decode("utf-8-sig"))
+                token = str(data.get("access_token", "")).strip() if isinstance(data, dict) else ""
+                if not token:
+                    raise RuntimeError("Réponse d'authentification Météo-France sans access_token")
+                expires = data.get("expires_in") if isinstance(data, dict) else None
+                print(f"Jeton OAuth2 Météo-France obtenu{f' (validité {expires}s)' if expires else ''}.")
+                return token
+        except HTTPError as exc:
+            if exc.code not in RETRY_CODES or attempt == attempts - 1:
+                if exc.code == 401:
+                    raise RuntimeError(
+                        "Météo-France HTTP 401 lors de la génération du token : "
+                        "METEOFRANCE_APPLICATION_ID invalide ou abonnement/API non correctement configuré"
+                    ) from exc
+                raise RuntimeError(f"Météo-France HTTP {exc.code} lors de la génération du token") from exc
+            delay = retry_delay(exc.headers, attempt)
+            print(f"HTTP {exc.code} pour le token; nouvel essai dans {delay:.0f}s", file=sys.stderr)
+            time.sleep(delay)
+        except (URLError, json.JSONDecodeError, UnicodeDecodeError) as exc:
+            if attempt == attempts - 1:
+                raise RuntimeError(f"Impossible d'obtenir le token OAuth2 Météo-France: {exc}") from exc
+            delay = min(8.0, 2.0 ** attempt)
+            time.sleep(delay)
+
+    raise RuntimeError("Impossible d'obtenir le token OAuth2 Météo-France")
+
+
+def resolve_token() -> tuple[str, str]:
+    # Pour un automatisme GitHub, l'APPLICATION_ID est le mode recommandé ici :
+    # il permet de renouveler automatiquement le jeton OAuth2 (env. 1 h).
+    if APPLICATION_ID:
+        return request_oauth_token(), "oauth2"
+    if API_KEY:
+        print("Authentification Météo-France par API Key.")
+        return API_KEY, "api_key"
+    if LEGACY_TOKEN:
+        print(
+            "ATTENTION: METEOFRANCE_TOKEN est utilisé directement. "
+            "Un token généré par le portail peut expirer (souvent ~1 h).",
+            file=sys.stderr,
+        )
+        return LEGACY_TOKEN, "legacy_token"
+    raise RuntimeError(
+        "Aucun secret Météo-France configuré. Ajoutez METEOFRANCE_APPLICATION_ID "
+        "(recommandé) ou METEOFRANCE_API_KEY dans GitHub Actions."
+    )
+
+
+def get_json(path: str, token: str, auth_mode: str, optional: bool = False, attempts: int = 4) -> dict[str, Any] | None:
     url = f"{BASE}/{path.lstrip('/')}"
     headers = {
-        "Authorization": f"Bearer {TOKEN}",
+        "Authorization": f"Bearer {token}",
         "Accept": "application/json,*/*",
         "User-Agent": USER_AGENT,
     }
@@ -67,6 +134,25 @@ def get_json(path: str, optional: bool = False, attempts: int = 4) -> dict[str, 
             if optional and exc.code in {204, 404}:
                 return None
             last_error = exc
+            if exc.code == 401:
+                if auth_mode == "legacy_token":
+                    raise RuntimeError(
+                        f"Météo-France HTTP 401 pour {path}: le METEOFRANCE_TOKEN est invalide ou expiré. "
+                        "Utilisez METEOFRANCE_APPLICATION_ID pour renouveler automatiquement le token."
+                    ) from exc
+                if auth_mode == "api_key":
+                    raise RuntimeError(
+                        f"Météo-France HTTP 401 pour {path}: METEOFRANCE_API_KEY invalide ou expirée."
+                    ) from exc
+                raise RuntimeError(
+                    f"Météo-France HTTP 401 pour {path} malgré un token OAuth2 fraîchement généré. "
+                    "Vérifiez l'abonnement à l'API Bulletin Vigilance dans le portail Météo-France."
+                ) from exc
+            if exc.code == 403:
+                raise RuntimeError(
+                    f"Météo-France HTTP 403 pour {path}: abonnement à l'API Bulletin Vigilance absent "
+                    "ou droits insuffisants."
+                ) from exc
             if exc.code not in RETRY_CODES or attempt == attempts - 1:
                 raise RuntimeError(f"Météo-France HTTP {exc.code} pour {path}") from exc
             delay = retry_delay(exc.headers, attempt)
@@ -161,13 +247,15 @@ def atomic_write(path: Path, content: str) -> None:
 
 
 def main() -> int:
-    carte = get_json("cartevigilance/encours")
+    token, auth_mode = resolve_token()
+
+    carte = get_json("cartevigilance/encours", token, auth_mode)
     if carte is None:
         raise RuntimeError("Météo-France n'a renvoyé aucune carte de vigilance")
     validate_carte(carte)
 
     try:
-        textes = get_json("textesvigilance/encours", optional=True)
+        textes = get_json("textesvigilance/encours", token, auth_mode, optional=True)
         validate_textes(textes)
     except Exception as exc:
         print(f"Avertissement textesvigilance: {exc}", file=sys.stderr)
