@@ -1,0 +1,72 @@
+name: Update Meteo des forets
+
+on:
+  workflow_dispatch:
+  schedule:
+    # La diffusion officielle est quotidienne vers 17 h heure locale de Paris.
+    # De juin à septembre, Paris est normalement en UTC+2 :
+    # 15:10, 15:30, 16:00 et 16:30 UTC = 17:10, 17:30, 18:00 et 18:30 à Paris.
+    - cron: '10,30 15 * 6-9 *'
+    - cron: '0,30 16 * 6-9 *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: meteo-forets-update
+  cancel-in-progress: true
+
+jobs:
+  update:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Python 3.11
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+
+      - name: Installer la dépendance Python
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests==2.33.0
+
+      - name: Tests hors réseau
+        run: |
+          python -m unittest scripts/test_meteo_forets.py -v
+
+      - name: Générer les données Météo des forêts
+        run: |
+          python scripts/generer_meteo_forets.py
+
+      - name: Contrôler les fichiers générés
+        run: |
+          python scripts/controler_meteo_forets.py
+
+      - name: Publier uniquement si les données changent
+        shell: bash
+        run: |
+          FILES=(
+            data/meteo_forets_latest.json
+            data/meteo_forets_history.json
+            data/meteo_forets_archive.json
+            data/departements.geojson
+          )
+
+          if [ -z "$(git status --porcelain -- "${FILES[@]}")" ]; then
+            echo "Aucune modification des données."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add "${FILES[@]}"
+          git commit -m "Mise à jour Météo des forêts"
+          git push
