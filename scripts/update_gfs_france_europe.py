@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 Alertes-Meteo.com — GFS France / Europe
-Version 1.3.4
+Version 1.3.5
 
 Télécharge via le filtre NOMADS uniquement les champs GFS 0,25° utiles à la carte :
 - PRMSL : pression au niveau moyen de la mer
@@ -41,8 +41,8 @@ try:
 except Exception:
     _land_globe = None
 
-VERSION = "1.3.4"
-BUILD_ID = "gfs-france-europe-15j-terres-europe-apcp-v134-20260821"
+VERSION = "1.3.5"
+BUILD_ID = "gfs-france-europe-15j-complete-run-v135-20260822"
 NOMADS_FILTER = "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_0p25.pl"
 LEFT, RIGHT, BOTTOM, TOP = -35.0, 50.0, 30.0, 75.0
 DOWNSAMPLE = 2  # 0,25° -> 0,50°
@@ -133,21 +133,45 @@ def looks_like_grib(response: requests.Response) -> bool:
     return b"GRIB" in response.content[:64] or len(response.content) > 1000
 
 
+def probe_run_frame(run: Run, fhr: int) -> tuple[bool, str]:
+    """Teste très légèrement qu'une échéance d'un run existe sur NOMADS."""
+    try:
+        response = SESSION.get(nomads_url(run, fhr, tiny=True), timeout=HTTP_TIMEOUT)
+    except requests.RequestException as exc:
+        return False, str(exc)
+    ok = looks_like_grib(response)
+    return ok, f"HTTP {response.status_code}, {len(response.content)} o"
+
+
 def detect_latest_run() -> Run:
+    """Choisit le run le plus récent réellement disponible jusqu'à J+15.
+
+    NOMADS publie progressivement un nouveau run. Tester seulement f000 peut donc
+    sélectionner un run encore incomplet. On exige ici f000 ET f360 ; si le run
+    courant n'est pas terminé, on recule automatiquement au cycle précédent.
+    """
     now = utcnow()
     errors: list[str] = []
     for run in candidates(now):
-        try:
-            response = SESSION.get(nomads_url(run, 0, tiny=True), timeout=HTTP_TIMEOUT)
-        except requests.RequestException as exc:
-            errors.append(str(exc))
+        ok0, info0 = probe_run_frame(run, 0)
+        if not ok0:
+            errors.append(f"{run.date}/{run.cycle} f000: {info0}")
+            time.sleep(0.20)
             continue
-        if looks_like_grib(response):
-            print("Run GFS détecté :", iso(run.dt))
+
+        ok360, info360 = probe_run_frame(run, 360)
+        if ok360:
+            print("Run GFS complet J+15 détecté :", iso(run.dt))
             return run
-        errors.append(f"{run.date}/{run.cycle}: HTTP {response.status_code}, {len(response.content)} o")
+
+        print(f"::notice::Run {run.date}/{run.cycle} encore incomplet à +360 h ({info360}); essai du cycle précédent.")
+        errors.append(f"{run.date}/{run.cycle} f360: {info360}")
         time.sleep(0.25)
-    raise RuntimeError("Aucun run GFS disponible. " + " | ".join(errors[-5:]))
+
+    raise RuntimeError(
+        "Aucun run GFS complet jusqu'à +360 h disponible dans les 48 dernières heures. "
+        + " | ".join(errors[-8:])
+    )
 
 
 def download_frame(run: Run, fhr: int, target: Path) -> str:
