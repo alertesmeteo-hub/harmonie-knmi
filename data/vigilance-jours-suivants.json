@@ -1,0 +1,3446 @@
+{
+  "schema_version": 2,
+  "status": "ok",
+  "generated_at": "2026-08-21T12:50:00+02:00",
+  "source": {
+    "provider": "Météo-France",
+    "product": "Prévision des phénomènes dangereux",
+    "mode": "fallback intégré"
+  },
+  "bulletin": {
+    "issued_at": "21/08/2026 à 12h47",
+    "updated_at": "21/08/2026 à 12h50"
+  },
+  "summaries": {
+    "j2_j3": "Dimanche, la journée ne présente pas de risque particulier. Lundi, une dégradation pluvio-orageuse traverse le pays. Les orages devraient être localement forts, particulièrement dans la moitié sud. Dans le Languedoc-Roussillon, risque plus marqué de forts cumuls de pluie.",
+    "j4_j7": "Les fortes pluies sur le sud-est s'évacuent mardi en matinée. Une nouvelle dégradation pluvio-orageuse est attendue mercredi sur l'ouest du pays avec une probabilité faible de passage en vigilance orange. Le temps reste perturbé pour la fin de semaine avec de fortes précipitations possibles, surtout sur le sud-est jeudi."
+  },
+  "cards": [
+    {
+      "label": "J+2",
+      "date": "Dimanche 23/08/2026",
+      "none": true,
+      "departments": {
+        "01": {
+          "name": "Ain",
+          "probability": "none",
+          "phenomena": []
+        },
+        "02": {
+          "name": "Aisne",
+          "probability": "none",
+          "phenomena": []
+        },
+        "03": {
+          "name": "Allier",
+          "probability": "none",
+          "phenomena": []
+        },
+        "04": {
+          "name": "Alpes-de-Haute-Provence",
+          "probability": "none",
+          "phenomena": []
+        },
+        "05": {
+          "name": "Hautes-Alpes",
+          "probability": "none",
+          "phenomena": []
+        },
+        "06": {
+          "name": "Maritime Alps",
+          "probability": "none",
+          "phenomena": []
+        },
+        "07": {
+          "name": "Ardèche",
+          "probability": "none",
+          "phenomena": []
+        },
+        "08": {
+          "name": "Ardennes",
+          "probability": "none",
+          "phenomena": []
+        },
+        "09": {
+          "name": "Ariège",
+          "probability": "none",
+          "phenomena": []
+        },
+        "10": {
+          "name": "Aube",
+          "probability": "none",
+          "phenomena": []
+        },
+        "11": {
+          "name": "Aude",
+          "probability": "none",
+          "phenomena": []
+        },
+        "12": {
+          "name": "Aveyron",
+          "probability": "none",
+          "phenomena": []
+        },
+        "13": {
+          "name": "Bouches-du-Rhône",
+          "probability": "none",
+          "phenomena": []
+        },
+        "14": {
+          "name": "Calvados",
+          "probability": "none",
+          "phenomena": []
+        },
+        "15": {
+          "name": "Cantal",
+          "probability": "none",
+          "phenomena": []
+        },
+        "16": {
+          "name": "Charente",
+          "probability": "none",
+          "phenomena": []
+        },
+        "17": {
+          "name": "Charente-Maritime",
+          "probability": "none",
+          "phenomena": []
+        },
+        "18": {
+          "name": "Cher",
+          "probability": "none",
+          "phenomena": []
+        },
+        "19": {
+          "name": "Corrèze",
+          "probability": "none",
+          "phenomena": []
+        },
+        "21": {
+          "name": "Côte-d'Or",
+          "probability": "none",
+          "phenomena": []
+        },
+        "22": {
+          "name": "Côtes-d'Armor",
+          "probability": "none",
+          "phenomena": []
+        },
+        "23": {
+          "name": "Creuse",
+          "probability": "none",
+          "phenomena": []
+        },
+        "24": {
+          "name": "Dordogne",
+          "probability": "none",
+          "phenomena": []
+        },
+        "25": {
+          "name": "Doubs",
+          "probability": "none",
+          "phenomena": []
+        },
+        "26": {
+          "name": "Drôme",
+          "probability": "none",
+          "phenomena": []
+        },
+        "27": {
+          "name": "Eure",
+          "probability": "none",
+          "phenomena": []
+        },
+        "28": {
+          "name": "Eure-et-Loir",
+          "probability": "none",
+          "phenomena": []
+        },
+        "29": {
+          "name": "Finistère",
+          "probability": "none",
+          "phenomena": []
+        },
+        "2A": {
+          "name": "Corse-du-Sud",
+          "probability": "none",
+          "phenomena": []
+        },
+        "2B": {
+          "name": "Haute-Corse",
+          "probability": "none",
+          "phenomena": []
+        },
+        "30": {
+          "name": "Gard",
+          "probability": "none",
+          "phenomena": []
+        },
+        "31": {
+          "name": "Haute-Garonne",
+          "probability": "none",
+          "phenomena": []
+        },
+        "32": {
+          "name": "Gers",
+          "probability": "none",
+          "phenomena": []
+        },
+        "33": {
+          "name": "Gironde",
+          "probability": "none",
+          "phenomena": []
+        },
+        "34": {
+          "name": "Hérault",
+          "probability": "none",
+          "phenomena": []
+        },
+        "35": {
+          "name": "Ille-et-Vilaine",
+          "probability": "none",
+          "phenomena": []
+        },
+        "36": {
+          "name": "Indre",
+          "probability": "none",
+          "phenomena": []
+        },
+        "37": {
+          "name": "Indre-et-Loire",
+          "probability": "none",
+          "phenomena": []
+        },
+        "38": {
+          "name": "Isère",
+          "probability": "none",
+          "phenomena": []
+        },
+        "39": {
+          "name": "Jura",
+          "probability": "none",
+          "phenomena": []
+        },
+        "40": {
+          "name": "Landes",
+          "probability": "none",
+          "phenomena": []
+        },
+        "41": {
+          "name": "Loir-et-Cher",
+          "probability": "none",
+          "phenomena": []
+        },
+        "42": {
+          "name": "Loire",
+          "probability": "none",
+          "phenomena": []
+        },
+        "43": {
+          "name": "Haute-Loire",
+          "probability": "none",
+          "phenomena": []
+        },
+        "44": {
+          "name": "Loire-Atlantique",
+          "probability": "none",
+          "phenomena": []
+        },
+        "45": {
+          "name": "Loiret",
+          "probability": "none",
+          "phenomena": []
+        },
+        "46": {
+          "name": "Lot",
+          "probability": "none",
+          "phenomena": []
+        },
+        "47": {
+          "name": "Lot-et-Garonne",
+          "probability": "none",
+          "phenomena": []
+        },
+        "48": {
+          "name": "Lozère",
+          "probability": "none",
+          "phenomena": []
+        },
+        "49": {
+          "name": "Maine-et-Loire",
+          "probability": "none",
+          "phenomena": []
+        },
+        "50": {
+          "name": "Manche",
+          "probability": "none",
+          "phenomena": []
+        },
+        "51": {
+          "name": "Marne",
+          "probability": "none",
+          "phenomena": []
+        },
+        "52": {
+          "name": "Haute-Marne",
+          "probability": "none",
+          "phenomena": []
+        },
+        "53": {
+          "name": "Mayenne",
+          "probability": "none",
+          "phenomena": []
+        },
+        "54": {
+          "name": "Meurthe-et-Moselle",
+          "probability": "none",
+          "phenomena": []
+        },
+        "55": {
+          "name": "Meuse",
+          "probability": "none",
+          "phenomena": []
+        },
+        "56": {
+          "name": "Morbihan",
+          "probability": "none",
+          "phenomena": []
+        },
+        "57": {
+          "name": "Moselle",
+          "probability": "none",
+          "phenomena": []
+        },
+        "58": {
+          "name": "Nièvre",
+          "probability": "none",
+          "phenomena": []
+        },
+        "59": {
+          "name": "Nord",
+          "probability": "none",
+          "phenomena": []
+        },
+        "60": {
+          "name": "Oise",
+          "probability": "none",
+          "phenomena": []
+        },
+        "61": {
+          "name": "Orne",
+          "probability": "none",
+          "phenomena": []
+        },
+        "62": {
+          "name": "Pas-de-Calais",
+          "probability": "none",
+          "phenomena": []
+        },
+        "63": {
+          "name": "Puy-de-Dôme",
+          "probability": "none",
+          "phenomena": []
+        },
+        "64": {
+          "name": "Pyrénées-Atlantiques",
+          "probability": "none",
+          "phenomena": []
+        },
+        "65": {
+          "name": "Hautes Pyrenees",
+          "probability": "none",
+          "phenomena": []
+        },
+        "66": {
+          "name": "Pyrénées-Orientales",
+          "probability": "none",
+          "phenomena": []
+        },
+        "67": {
+          "name": "Bas-Rhin",
+          "probability": "none",
+          "phenomena": []
+        },
+        "68": {
+          "name": "Haut-Rhin",
+          "probability": "none",
+          "phenomena": []
+        },
+        "69": {
+          "name": "Rhône",
+          "probability": "none",
+          "phenomena": []
+        },
+        "70": {
+          "name": "Haute-Saône",
+          "probability": "none",
+          "phenomena": []
+        },
+        "71": {
+          "name": "Saône-et-Loire",
+          "probability": "none",
+          "phenomena": []
+        },
+        "72": {
+          "name": "Sarthe",
+          "probability": "none",
+          "phenomena": []
+        },
+        "73": {
+          "name": "Savoy",
+          "probability": "none",
+          "phenomena": []
+        },
+        "74": {
+          "name": "Upper Savoy",
+          "probability": "none",
+          "phenomena": []
+        },
+        "75": {
+          "name": "Paris",
+          "probability": "none",
+          "phenomena": []
+        },
+        "76": {
+          "name": "Seine-Maritime",
+          "probability": "none",
+          "phenomena": []
+        },
+        "77": {
+          "name": "Seine-et-Marne",
+          "probability": "none",
+          "phenomena": []
+        },
+        "78": {
+          "name": "Yvelines",
+          "probability": "none",
+          "phenomena": []
+        },
+        "79": {
+          "name": "Deux-Sèvres",
+          "probability": "none",
+          "phenomena": []
+        },
+        "80": {
+          "name": "Somme",
+          "probability": "none",
+          "phenomena": []
+        },
+        "81": {
+          "name": "Tarn",
+          "probability": "none",
+          "phenomena": []
+        },
+        "82": {
+          "name": "Tarn-et-Garonne",
+          "probability": "none",
+          "phenomena": []
+        },
+        "83": {
+          "name": "Var",
+          "probability": "none",
+          "phenomena": []
+        },
+        "84": {
+          "name": "Vaucluse",
+          "probability": "none",
+          "phenomena": []
+        },
+        "85": {
+          "name": "Vendée",
+          "probability": "none",
+          "phenomena": []
+        },
+        "86": {
+          "name": "Vienne",
+          "probability": "none",
+          "phenomena": []
+        },
+        "87": {
+          "name": "Haute-Vienne",
+          "probability": "none",
+          "phenomena": []
+        },
+        "88": {
+          "name": "Vosges",
+          "probability": "none",
+          "phenomena": []
+        },
+        "89": {
+          "name": "Yonne",
+          "probability": "none",
+          "phenomena": []
+        },
+        "90": {
+          "name": "Territoire-de-Belfort",
+          "probability": "none",
+          "phenomena": []
+        },
+        "91": {
+          "name": "Essonne",
+          "probability": "none",
+          "phenomena": []
+        },
+        "92": {
+          "name": "Hauts-de-Seine",
+          "probability": "none",
+          "phenomena": []
+        },
+        "93": {
+          "name": "Seine-Saint-Denis",
+          "probability": "none",
+          "phenomena": []
+        },
+        "94": {
+          "name": "Val-de-Marne",
+          "probability": "none",
+          "phenomena": []
+        },
+        "95": {
+          "name": "Val-d'Oise",
+          "probability": "none",
+          "phenomena": []
+        }
+      },
+      "risk_summary": []
+    },
+    {
+      "label": "J+3",
+      "date": "Lundi 24/08/2026",
+      "none": false,
+      "departments": {
+        "01": {
+          "name": "Ain",
+          "probability": "none",
+          "phenomena": []
+        },
+        "02": {
+          "name": "Aisne",
+          "probability": "none",
+          "phenomena": []
+        },
+        "03": {
+          "name": "Allier",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "canicule",
+              "level": "low"
+            }
+          ]
+        },
+        "04": {
+          "name": "Alpes-de-Haute-Provence",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "canicule",
+              "level": "low"
+            },
+            {
+              "phenomenon": "orages",
+              "level": "low"
+            }
+          ]
+        },
+        "05": {
+          "name": "Hautes-Alpes",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "canicule",
+              "level": "low"
+            },
+            {
+              "phenomenon": "orages",
+              "level": "low"
+            }
+          ]
+        },
+        "06": {
+          "name": "Maritime Alps",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "canicule",
+              "level": "low"
+            },
+            {
+              "phenomenon": "orages",
+              "level": "low"
+            }
+          ]
+        },
+        "07": {
+          "name": "Ardèche",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "canicule",
+              "level": "low"
+            },
+            {
+              "phenomenon": "orages",
+              "level": "low"
+            }
+          ]
+        },
+        "08": {
+          "name": "Ardennes",
+          "probability": "none",
+          "phenomena": []
+        },
+        "09": {
+          "name": "Ariège",
+          "probability": "medium",
+          "phenomena": [
+            {
+              "phenomenon": "canicule",
+              "level": "medium"
+            }
+          ]
+        },
+        "10": {
+          "name": "Aube",
+          "probability": "none",
+          "phenomena": []
+        },
+        "11": {
+          "name": "Aude",
+          "probability": "medium",
+          "phenomena": [
+            {
+              "phenomenon": "canicule",
+              "level": "medium"
+            }
+          ]
+        },
+        "12": {
+          "name": "Aveyron",
+          "probability": "medium",
+          "phenomena": [
+            {
+              "phenomenon": "orages",
+              "level": "medium"
+            }
+          ]
+        },
+        "13": {
+          "name": "Bouches-du-Rhône",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "canicule",
+              "level": "low"
+            },
+            {
+              "phenomenon": "orages",
+              "level": "low"
+            }
+          ]
+        },
+        "14": {
+          "name": "Calvados",
+          "probability": "none",
+          "phenomena": []
+        },
+        "15": {
+          "name": "Cantal",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "canicule",
+              "level": "low"
+            }
+          ]
+        },
+        "16": {
+          "name": "Charente",
+          "probability": "medium",
+          "phenomena": [
+            {
+              "phenomenon": "canicule",
+              "level": "medium"
+            }
+          ]
+        },
+        "17": {
+          "name": "Charente-Maritime",
+          "probability": "medium",
+          "phenomena": [
+            {
+              "phenomenon": "canicule",
+              "level": "medium"
+            }
+          ]
+        },
+        "18": {
+          "name": "Cher",
+          "probability": "none",
+          "phenomena": []
+        },
+        "19": {
+          "name": "Corrèze",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "canicule",
+              "level": "low"
+            }
+          ]
+        },
+        "21": {
+          "name": "Côte-d'Or",
+          "probability": "none",
+          "phenomena": []
+        },
+        "22": {
+          "name": "Côtes-d'Armor",
+          "probability": "none",
+          "phenomena": []
+        },
+        "23": {
+          "name": "Creuse",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "canicule",
+              "level": "low"
+            }
+          ]
+        },
+        "24": {
+          "name": "Dordogne",
+          "probability": "medium",
+          "phenomena": [
+            {
+              "phenomenon": "canicule",
+              "level": "medium"
+            }
+          ]
+        },
+        "25": {
+          "name": "Doubs",
+          "probability": "none",
+          "phenomena": []
+        },
+        "26": {
+          "name": "Drôme",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "canicule",
+              "level": "low"
+            },
+            {
+              "phenomenon": "orages",
+              "level": "low"
+            }
+          ]
+        },
+        "27": {
+          "name": "Eure",
+          "probability": "none",
+          "phenomena": []
+        },
+        "28": {
+          "name": "Eure-et-Loir",
+          "probability": "none",
+          "phenomena": []
+        },
+        "29": {
+          "name": "Finistère",
+          "probability": "none",
+          "phenomena": []
+        },
+        "2A": {
+          "name": "Corse-du-Sud",
+          "probability": "none",
+          "phenomena": []
+        },
+        "2B": {
+          "name": "Haute-Corse",
+          "probability": "none",
+          "phenomena": []
+        },
+        "30": {
+          "name": "Gard",
+          "probability": "medium",
+          "phenomena": [
+            {
+              "phenomenon": "orages",
+              "level": "medium"
+            },
+            {
+              "phenomenon": "orages",
+              "level": "low"
+            }
+          ]
+        },
+        "31": {
+          "name": "Haute-Garonne",
+          "probability": "medium",
+          "phenomena": [
+            {
+              "phenomenon": "canicule",
+              "level": "medium"
+            },
+            {
+              "phenomenon": "orages",
+              "level": "medium"
+            }
+          ]
+        },
+        "32": {
+          "name": "Gers",
+          "probability": "medium",
+          "phenomena": [
+            {
+              "phenomenon": "canicule",
+              "level": "medium"
+            }
+          ]
+        },
+        "33": {
+          "name": "Gironde",
+          "probability": "medium",
+          "phenomena": [
+            {
+              "phenomenon": "canicule",
+              "level": "medium"
+            }
+          ]
+        },
+        "34": {
+          "name": "Hérault",
+          "probability": "medium",
+          "phenomena": [
+            {
+              "phenomenon": "orages",
+              "level": "medium"
+            },
+            {
+              "phenomenon": "orages",
+              "level": "low"
+            }
+          ]
+        },
+        "35": {
+          "name": "Ille-et-Vilaine",
+          "probability": "none",
+          "phenomena": []
+        },
+        "36": {
+          "name": "Indre",
+          "probability": "none",
+          "phenomena": []
+        },
+        "37": {
+          "name": "Indre-et-Loire",
+          "probability": "none",
+          "phenomena": []
+        },
+        "38": {
+          "name": "Isère",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "canicule",
+              "level": "low"
+            },
+            {
+              "phenomenon": "orages",
+              "level": "low"
+            }
+          ]
+        },
+        "39": {
+          "name": "Jura",
+          "probability": "none",
+          "phenomena": []
+        },
+        "40": {
+          "name": "Landes",
+          "probability": "medium",
+          "phenomena": [
+            {
+              "phenomenon": "canicule",
+              "level": "medium"
+            }
+          ]
+        },
+        "41": {
+          "name": "Loir-et-Cher",
+          "probability": "none",
+          "phenomena": []
+        },
+        "42": {
+          "name": "Loire",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "canicule",
+              "level": "low"
+            },
+            {
+              "phenomenon": "orages",
+              "level": "low"
+            }
+          ]
+        },
+        "43": {
+          "name": "Haute-Loire",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "canicule",
+              "level": "low"
+            },
+            {
+              "phenomenon": "orages",
+              "level": "low"
+            }
+          ]
+        },
+        "44": {
+          "name": "Loire-Atlantique",
+          "probability": "none",
+          "phenomena": []
+        },
+        "45": {
+          "name": "Loiret",
+          "probability": "none",
+          "phenomena": []
+        },
+        "46": {
+          "name": "Lot",
+          "probability": "medium",
+          "phenomena": [
+            {
+              "phenomenon": "canicule",
+              "level": "medium"
+            },
+            {
+              "phenomenon": "orages",
+              "level": "medium"
+            }
+          ]
+        },
+        "47": {
+          "name": "Lot-et-Garonne",
+          "probability": "medium",
+          "phenomena": [
+            {
+              "phenomenon": "canicule",
+              "level": "medium"
+            }
+          ]
+        },
+        "48": {
+          "name": "Lozère",
+          "probability": "medium",
+          "phenomena": [
+            {
+              "phenomenon": "orages",
+              "level": "medium"
+            },
+            {
+              "phenomenon": "orages",
+              "level": "low"
+            }
+          ]
+        },
+        "49": {
+          "name": "Maine-et-Loire",
+          "probability": "none",
+          "phenomena": []
+        },
+        "50": {
+          "name": "Manche",
+          "probability": "none",
+          "phenomena": []
+        },
+        "51": {
+          "name": "Marne",
+          "probability": "none",
+          "phenomena": []
+        },
+        "52": {
+          "name": "Haute-Marne",
+          "probability": "none",
+          "phenomena": []
+        },
+        "53": {
+          "name": "Mayenne",
+          "probability": "none",
+          "phenomena": []
+        },
+        "54": {
+          "name": "Meurthe-et-Moselle",
+          "probability": "none",
+          "phenomena": []
+        },
+        "55": {
+          "name": "Meuse",
+          "probability": "none",
+          "phenomena": []
+        },
+        "56": {
+          "name": "Morbihan",
+          "probability": "none",
+          "phenomena": []
+        },
+        "57": {
+          "name": "Moselle",
+          "probability": "none",
+          "phenomena": []
+        },
+        "58": {
+          "name": "Nièvre",
+          "probability": "none",
+          "phenomena": []
+        },
+        "59": {
+          "name": "Nord",
+          "probability": "none",
+          "phenomena": []
+        },
+        "60": {
+          "name": "Oise",
+          "probability": "none",
+          "phenomena": []
+        },
+        "61": {
+          "name": "Orne",
+          "probability": "none",
+          "phenomena": []
+        },
+        "62": {
+          "name": "Pas-de-Calais",
+          "probability": "none",
+          "phenomena": []
+        },
+        "63": {
+          "name": "Puy-de-Dôme",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "canicule",
+              "level": "low"
+            }
+          ]
+        },
+        "64": {
+          "name": "Pyrénées-Atlantiques",
+          "probability": "medium",
+          "phenomena": [
+            {
+              "phenomenon": "canicule",
+              "level": "medium"
+            }
+          ]
+        },
+        "65": {
+          "name": "Hautes Pyrenees",
+          "probability": "medium",
+          "phenomena": [
+            {
+              "phenomenon": "canicule",
+              "level": "medium"
+            }
+          ]
+        },
+        "66": {
+          "name": "Pyrénées-Orientales",
+          "probability": "medium",
+          "phenomena": [
+            {
+              "phenomenon": "canicule",
+              "level": "medium"
+            }
+          ]
+        },
+        "67": {
+          "name": "Bas-Rhin",
+          "probability": "none",
+          "phenomena": []
+        },
+        "68": {
+          "name": "Haut-Rhin",
+          "probability": "none",
+          "phenomena": []
+        },
+        "69": {
+          "name": "Rhône",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "canicule",
+              "level": "low"
+            },
+            {
+              "phenomenon": "orages",
+              "level": "low"
+            }
+          ]
+        },
+        "70": {
+          "name": "Haute-Saône",
+          "probability": "none",
+          "phenomena": []
+        },
+        "71": {
+          "name": "Saône-et-Loire",
+          "probability": "none",
+          "phenomena": []
+        },
+        "72": {
+          "name": "Sarthe",
+          "probability": "none",
+          "phenomena": []
+        },
+        "73": {
+          "name": "Savoy",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "canicule",
+              "level": "low"
+            },
+            {
+              "phenomenon": "orages",
+              "level": "low"
+            }
+          ]
+        },
+        "74": {
+          "name": "Upper Savoy",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "canicule",
+              "level": "low"
+            },
+            {
+              "phenomenon": "orages",
+              "level": "low"
+            }
+          ]
+        },
+        "75": {
+          "name": "Paris",
+          "probability": "none",
+          "phenomena": []
+        },
+        "76": {
+          "name": "Seine-Maritime",
+          "probability": "none",
+          "phenomena": []
+        },
+        "77": {
+          "name": "Seine-et-Marne",
+          "probability": "none",
+          "phenomena": []
+        },
+        "78": {
+          "name": "Yvelines",
+          "probability": "none",
+          "phenomena": []
+        },
+        "79": {
+          "name": "Deux-Sèvres",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "canicule",
+              "level": "low"
+            }
+          ]
+        },
+        "80": {
+          "name": "Somme",
+          "probability": "none",
+          "phenomena": []
+        },
+        "81": {
+          "name": "Tarn",
+          "probability": "medium",
+          "phenomena": [
+            {
+              "phenomenon": "canicule",
+              "level": "medium"
+            },
+            {
+              "phenomenon": "orages",
+              "level": "medium"
+            }
+          ]
+        },
+        "82": {
+          "name": "Tarn-et-Garonne",
+          "probability": "medium",
+          "phenomena": [
+            {
+              "phenomenon": "canicule",
+              "level": "medium"
+            },
+            {
+              "phenomenon": "orages",
+              "level": "medium"
+            }
+          ]
+        },
+        "83": {
+          "name": "Var",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "canicule",
+              "level": "low"
+            },
+            {
+              "phenomenon": "orages",
+              "level": "low"
+            }
+          ]
+        },
+        "84": {
+          "name": "Vaucluse",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "canicule",
+              "level": "low"
+            },
+            {
+              "phenomenon": "orages",
+              "level": "low"
+            }
+          ]
+        },
+        "85": {
+          "name": "Vendée",
+          "probability": "none",
+          "phenomena": []
+        },
+        "86": {
+          "name": "Vienne",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "canicule",
+              "level": "low"
+            }
+          ]
+        },
+        "87": {
+          "name": "Haute-Vienne",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "canicule",
+              "level": "low"
+            }
+          ]
+        },
+        "88": {
+          "name": "Vosges",
+          "probability": "none",
+          "phenomena": []
+        },
+        "89": {
+          "name": "Yonne",
+          "probability": "none",
+          "phenomena": []
+        },
+        "90": {
+          "name": "Territoire-de-Belfort",
+          "probability": "none",
+          "phenomena": []
+        },
+        "91": {
+          "name": "Essonne",
+          "probability": "none",
+          "phenomena": []
+        },
+        "92": {
+          "name": "Hauts-de-Seine",
+          "probability": "none",
+          "phenomena": []
+        },
+        "93": {
+          "name": "Seine-Saint-Denis",
+          "probability": "none",
+          "phenomena": []
+        },
+        "94": {
+          "name": "Val-de-Marne",
+          "probability": "none",
+          "phenomena": []
+        },
+        "95": {
+          "name": "Val-d'Oise",
+          "probability": "none",
+          "phenomena": []
+        }
+      },
+      "risk_summary": [
+        {
+          "phenomenon": "canicule",
+          "level": "medium"
+        },
+        {
+          "phenomenon": "orages",
+          "level": "medium"
+        },
+        {
+          "phenomenon": "canicule",
+          "level": "low"
+        },
+        {
+          "phenomenon": "orages",
+          "level": "low"
+        }
+      ]
+    },
+    {
+      "label": "J+4",
+      "date": "Mardi 25/08/2026",
+      "none": false,
+      "departments": {
+        "01": {
+          "name": "Ain",
+          "probability": "none",
+          "phenomena": []
+        },
+        "02": {
+          "name": "Aisne",
+          "probability": "none",
+          "phenomena": []
+        },
+        "03": {
+          "name": "Allier",
+          "probability": "none",
+          "phenomena": []
+        },
+        "04": {
+          "name": "Alpes-de-Haute-Provence",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "05": {
+          "name": "Hautes-Alpes",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "06": {
+          "name": "Maritime Alps",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "07": {
+          "name": "Ardèche",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "08": {
+          "name": "Ardennes",
+          "probability": "none",
+          "phenomena": []
+        },
+        "09": {
+          "name": "Ariège",
+          "probability": "none",
+          "phenomena": []
+        },
+        "10": {
+          "name": "Aube",
+          "probability": "none",
+          "phenomena": []
+        },
+        "11": {
+          "name": "Aude",
+          "probability": "none",
+          "phenomena": []
+        },
+        "12": {
+          "name": "Aveyron",
+          "probability": "none",
+          "phenomena": []
+        },
+        "13": {
+          "name": "Bouches-du-Rhône",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "14": {
+          "name": "Calvados",
+          "probability": "none",
+          "phenomena": []
+        },
+        "15": {
+          "name": "Cantal",
+          "probability": "none",
+          "phenomena": []
+        },
+        "16": {
+          "name": "Charente",
+          "probability": "none",
+          "phenomena": []
+        },
+        "17": {
+          "name": "Charente-Maritime",
+          "probability": "none",
+          "phenomena": []
+        },
+        "18": {
+          "name": "Cher",
+          "probability": "none",
+          "phenomena": []
+        },
+        "19": {
+          "name": "Corrèze",
+          "probability": "none",
+          "phenomena": []
+        },
+        "21": {
+          "name": "Côte-d'Or",
+          "probability": "none",
+          "phenomena": []
+        },
+        "22": {
+          "name": "Côtes-d'Armor",
+          "probability": "none",
+          "phenomena": []
+        },
+        "23": {
+          "name": "Creuse",
+          "probability": "none",
+          "phenomena": []
+        },
+        "24": {
+          "name": "Dordogne",
+          "probability": "none",
+          "phenomena": []
+        },
+        "25": {
+          "name": "Doubs",
+          "probability": "none",
+          "phenomena": []
+        },
+        "26": {
+          "name": "Drôme",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "27": {
+          "name": "Eure",
+          "probability": "none",
+          "phenomena": []
+        },
+        "28": {
+          "name": "Eure-et-Loir",
+          "probability": "none",
+          "phenomena": []
+        },
+        "29": {
+          "name": "Finistère",
+          "probability": "none",
+          "phenomena": []
+        },
+        "2A": {
+          "name": "Corse-du-Sud",
+          "probability": "none",
+          "phenomena": []
+        },
+        "2B": {
+          "name": "Haute-Corse",
+          "probability": "none",
+          "phenomena": []
+        },
+        "30": {
+          "name": "Gard",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "31": {
+          "name": "Haute-Garonne",
+          "probability": "none",
+          "phenomena": []
+        },
+        "32": {
+          "name": "Gers",
+          "probability": "none",
+          "phenomena": []
+        },
+        "33": {
+          "name": "Gironde",
+          "probability": "none",
+          "phenomena": []
+        },
+        "34": {
+          "name": "Hérault",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "35": {
+          "name": "Ille-et-Vilaine",
+          "probability": "none",
+          "phenomena": []
+        },
+        "36": {
+          "name": "Indre",
+          "probability": "none",
+          "phenomena": []
+        },
+        "37": {
+          "name": "Indre-et-Loire",
+          "probability": "none",
+          "phenomena": []
+        },
+        "38": {
+          "name": "Isère",
+          "probability": "none",
+          "phenomena": []
+        },
+        "39": {
+          "name": "Jura",
+          "probability": "none",
+          "phenomena": []
+        },
+        "40": {
+          "name": "Landes",
+          "probability": "none",
+          "phenomena": []
+        },
+        "41": {
+          "name": "Loir-et-Cher",
+          "probability": "none",
+          "phenomena": []
+        },
+        "42": {
+          "name": "Loire",
+          "probability": "none",
+          "phenomena": []
+        },
+        "43": {
+          "name": "Haute-Loire",
+          "probability": "none",
+          "phenomena": []
+        },
+        "44": {
+          "name": "Loire-Atlantique",
+          "probability": "none",
+          "phenomena": []
+        },
+        "45": {
+          "name": "Loiret",
+          "probability": "none",
+          "phenomena": []
+        },
+        "46": {
+          "name": "Lot",
+          "probability": "none",
+          "phenomena": []
+        },
+        "47": {
+          "name": "Lot-et-Garonne",
+          "probability": "none",
+          "phenomena": []
+        },
+        "48": {
+          "name": "Lozère",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "49": {
+          "name": "Maine-et-Loire",
+          "probability": "none",
+          "phenomena": []
+        },
+        "50": {
+          "name": "Manche",
+          "probability": "none",
+          "phenomena": []
+        },
+        "51": {
+          "name": "Marne",
+          "probability": "none",
+          "phenomena": []
+        },
+        "52": {
+          "name": "Haute-Marne",
+          "probability": "none",
+          "phenomena": []
+        },
+        "53": {
+          "name": "Mayenne",
+          "probability": "none",
+          "phenomena": []
+        },
+        "54": {
+          "name": "Meurthe-et-Moselle",
+          "probability": "none",
+          "phenomena": []
+        },
+        "55": {
+          "name": "Meuse",
+          "probability": "none",
+          "phenomena": []
+        },
+        "56": {
+          "name": "Morbihan",
+          "probability": "none",
+          "phenomena": []
+        },
+        "57": {
+          "name": "Moselle",
+          "probability": "none",
+          "phenomena": []
+        },
+        "58": {
+          "name": "Nièvre",
+          "probability": "none",
+          "phenomena": []
+        },
+        "59": {
+          "name": "Nord",
+          "probability": "none",
+          "phenomena": []
+        },
+        "60": {
+          "name": "Oise",
+          "probability": "none",
+          "phenomena": []
+        },
+        "61": {
+          "name": "Orne",
+          "probability": "none",
+          "phenomena": []
+        },
+        "62": {
+          "name": "Pas-de-Calais",
+          "probability": "none",
+          "phenomena": []
+        },
+        "63": {
+          "name": "Puy-de-Dôme",
+          "probability": "none",
+          "phenomena": []
+        },
+        "64": {
+          "name": "Pyrénées-Atlantiques",
+          "probability": "none",
+          "phenomena": []
+        },
+        "65": {
+          "name": "Hautes Pyrenees",
+          "probability": "none",
+          "phenomena": []
+        },
+        "66": {
+          "name": "Pyrénées-Orientales",
+          "probability": "none",
+          "phenomena": []
+        },
+        "67": {
+          "name": "Bas-Rhin",
+          "probability": "none",
+          "phenomena": []
+        },
+        "68": {
+          "name": "Haut-Rhin",
+          "probability": "none",
+          "phenomena": []
+        },
+        "69": {
+          "name": "Rhône",
+          "probability": "none",
+          "phenomena": []
+        },
+        "70": {
+          "name": "Haute-Saône",
+          "probability": "none",
+          "phenomena": []
+        },
+        "71": {
+          "name": "Saône-et-Loire",
+          "probability": "none",
+          "phenomena": []
+        },
+        "72": {
+          "name": "Sarthe",
+          "probability": "none",
+          "phenomena": []
+        },
+        "73": {
+          "name": "Savoy",
+          "probability": "none",
+          "phenomena": []
+        },
+        "74": {
+          "name": "Upper Savoy",
+          "probability": "none",
+          "phenomena": []
+        },
+        "75": {
+          "name": "Paris",
+          "probability": "none",
+          "phenomena": []
+        },
+        "76": {
+          "name": "Seine-Maritime",
+          "probability": "none",
+          "phenomena": []
+        },
+        "77": {
+          "name": "Seine-et-Marne",
+          "probability": "none",
+          "phenomena": []
+        },
+        "78": {
+          "name": "Yvelines",
+          "probability": "none",
+          "phenomena": []
+        },
+        "79": {
+          "name": "Deux-Sèvres",
+          "probability": "none",
+          "phenomena": []
+        },
+        "80": {
+          "name": "Somme",
+          "probability": "none",
+          "phenomena": []
+        },
+        "81": {
+          "name": "Tarn",
+          "probability": "none",
+          "phenomena": []
+        },
+        "82": {
+          "name": "Tarn-et-Garonne",
+          "probability": "none",
+          "phenomena": []
+        },
+        "83": {
+          "name": "Var",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "84": {
+          "name": "Vaucluse",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "85": {
+          "name": "Vendée",
+          "probability": "none",
+          "phenomena": []
+        },
+        "86": {
+          "name": "Vienne",
+          "probability": "none",
+          "phenomena": []
+        },
+        "87": {
+          "name": "Haute-Vienne",
+          "probability": "none",
+          "phenomena": []
+        },
+        "88": {
+          "name": "Vosges",
+          "probability": "none",
+          "phenomena": []
+        },
+        "89": {
+          "name": "Yonne",
+          "probability": "none",
+          "phenomena": []
+        },
+        "90": {
+          "name": "Territoire-de-Belfort",
+          "probability": "none",
+          "phenomena": []
+        },
+        "91": {
+          "name": "Essonne",
+          "probability": "none",
+          "phenomena": []
+        },
+        "92": {
+          "name": "Hauts-de-Seine",
+          "probability": "none",
+          "phenomena": []
+        },
+        "93": {
+          "name": "Seine-Saint-Denis",
+          "probability": "none",
+          "phenomena": []
+        },
+        "94": {
+          "name": "Val-de-Marne",
+          "probability": "none",
+          "phenomena": []
+        },
+        "95": {
+          "name": "Val-d'Oise",
+          "probability": "none",
+          "phenomena": []
+        }
+      },
+      "risk_summary": [
+        {
+          "phenomenon": "pluie_inondation",
+          "level": "low"
+        }
+      ]
+    },
+    {
+      "label": "J+5",
+      "date": "Mercredi 26/08/2026",
+      "none": false,
+      "departments": {
+        "01": {
+          "name": "Ain",
+          "probability": "none",
+          "phenomena": []
+        },
+        "02": {
+          "name": "Aisne",
+          "probability": "none",
+          "phenomena": []
+        },
+        "03": {
+          "name": "Allier",
+          "probability": "none",
+          "phenomena": []
+        },
+        "04": {
+          "name": "Alpes-de-Haute-Provence",
+          "probability": "none",
+          "phenomena": []
+        },
+        "05": {
+          "name": "Hautes-Alpes",
+          "probability": "none",
+          "phenomena": []
+        },
+        "06": {
+          "name": "Maritime Alps",
+          "probability": "none",
+          "phenomena": []
+        },
+        "07": {
+          "name": "Ardèche",
+          "probability": "none",
+          "phenomena": []
+        },
+        "08": {
+          "name": "Ardennes",
+          "probability": "none",
+          "phenomena": []
+        },
+        "09": {
+          "name": "Ariège",
+          "probability": "none",
+          "phenomena": []
+        },
+        "10": {
+          "name": "Aube",
+          "probability": "none",
+          "phenomena": []
+        },
+        "11": {
+          "name": "Aude",
+          "probability": "none",
+          "phenomena": []
+        },
+        "12": {
+          "name": "Aveyron",
+          "probability": "none",
+          "phenomena": []
+        },
+        "13": {
+          "name": "Bouches-du-Rhône",
+          "probability": "none",
+          "phenomena": []
+        },
+        "14": {
+          "name": "Calvados",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "orages",
+              "level": "low"
+            }
+          ]
+        },
+        "15": {
+          "name": "Cantal",
+          "probability": "none",
+          "phenomena": []
+        },
+        "16": {
+          "name": "Charente",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "orages",
+              "level": "low"
+            }
+          ]
+        },
+        "17": {
+          "name": "Charente-Maritime",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "orages",
+              "level": "low"
+            }
+          ]
+        },
+        "18": {
+          "name": "Cher",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "orages",
+              "level": "low"
+            }
+          ]
+        },
+        "19": {
+          "name": "Corrèze",
+          "probability": "none",
+          "phenomena": []
+        },
+        "21": {
+          "name": "Côte-d'Or",
+          "probability": "none",
+          "phenomena": []
+        },
+        "22": {
+          "name": "Côtes-d'Armor",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "orages",
+              "level": "low"
+            }
+          ]
+        },
+        "23": {
+          "name": "Creuse",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "orages",
+              "level": "low"
+            }
+          ]
+        },
+        "24": {
+          "name": "Dordogne",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "orages",
+              "level": "low"
+            }
+          ]
+        },
+        "25": {
+          "name": "Doubs",
+          "probability": "none",
+          "phenomena": []
+        },
+        "26": {
+          "name": "Drôme",
+          "probability": "none",
+          "phenomena": []
+        },
+        "27": {
+          "name": "Eure",
+          "probability": "none",
+          "phenomena": []
+        },
+        "28": {
+          "name": "Eure-et-Loir",
+          "probability": "none",
+          "phenomena": []
+        },
+        "29": {
+          "name": "Finistère",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "orages",
+              "level": "low"
+            }
+          ]
+        },
+        "2A": {
+          "name": "Corse-du-Sud",
+          "probability": "none",
+          "phenomena": []
+        },
+        "2B": {
+          "name": "Haute-Corse",
+          "probability": "none",
+          "phenomena": []
+        },
+        "30": {
+          "name": "Gard",
+          "probability": "none",
+          "phenomena": []
+        },
+        "31": {
+          "name": "Haute-Garonne",
+          "probability": "none",
+          "phenomena": []
+        },
+        "32": {
+          "name": "Gers",
+          "probability": "none",
+          "phenomena": []
+        },
+        "33": {
+          "name": "Gironde",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "orages",
+              "level": "low"
+            }
+          ]
+        },
+        "34": {
+          "name": "Hérault",
+          "probability": "none",
+          "phenomena": []
+        },
+        "35": {
+          "name": "Ille-et-Vilaine",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "orages",
+              "level": "low"
+            }
+          ]
+        },
+        "36": {
+          "name": "Indre",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "orages",
+              "level": "low"
+            }
+          ]
+        },
+        "37": {
+          "name": "Indre-et-Loire",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "orages",
+              "level": "low"
+            }
+          ]
+        },
+        "38": {
+          "name": "Isère",
+          "probability": "none",
+          "phenomena": []
+        },
+        "39": {
+          "name": "Jura",
+          "probability": "none",
+          "phenomena": []
+        },
+        "40": {
+          "name": "Landes",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "orages",
+              "level": "low"
+            }
+          ]
+        },
+        "41": {
+          "name": "Loir-et-Cher",
+          "probability": "none",
+          "phenomena": []
+        },
+        "42": {
+          "name": "Loire",
+          "probability": "none",
+          "phenomena": []
+        },
+        "43": {
+          "name": "Haute-Loire",
+          "probability": "none",
+          "phenomena": []
+        },
+        "44": {
+          "name": "Loire-Atlantique",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "orages",
+              "level": "low"
+            }
+          ]
+        },
+        "45": {
+          "name": "Loiret",
+          "probability": "none",
+          "phenomena": []
+        },
+        "46": {
+          "name": "Lot",
+          "probability": "none",
+          "phenomena": []
+        },
+        "47": {
+          "name": "Lot-et-Garonne",
+          "probability": "none",
+          "phenomena": []
+        },
+        "48": {
+          "name": "Lozère",
+          "probability": "none",
+          "phenomena": []
+        },
+        "49": {
+          "name": "Maine-et-Loire",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "orages",
+              "level": "low"
+            }
+          ]
+        },
+        "50": {
+          "name": "Manche",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "orages",
+              "level": "low"
+            }
+          ]
+        },
+        "51": {
+          "name": "Marne",
+          "probability": "none",
+          "phenomena": []
+        },
+        "52": {
+          "name": "Haute-Marne",
+          "probability": "none",
+          "phenomena": []
+        },
+        "53": {
+          "name": "Mayenne",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "orages",
+              "level": "low"
+            }
+          ]
+        },
+        "54": {
+          "name": "Meurthe-et-Moselle",
+          "probability": "none",
+          "phenomena": []
+        },
+        "55": {
+          "name": "Meuse",
+          "probability": "none",
+          "phenomena": []
+        },
+        "56": {
+          "name": "Morbihan",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "orages",
+              "level": "low"
+            }
+          ]
+        },
+        "57": {
+          "name": "Moselle",
+          "probability": "none",
+          "phenomena": []
+        },
+        "58": {
+          "name": "Nièvre",
+          "probability": "none",
+          "phenomena": []
+        },
+        "59": {
+          "name": "Nord",
+          "probability": "none",
+          "phenomena": []
+        },
+        "60": {
+          "name": "Oise",
+          "probability": "none",
+          "phenomena": []
+        },
+        "61": {
+          "name": "Orne",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "orages",
+              "level": "low"
+            }
+          ]
+        },
+        "62": {
+          "name": "Pas-de-Calais",
+          "probability": "none",
+          "phenomena": []
+        },
+        "63": {
+          "name": "Puy-de-Dôme",
+          "probability": "none",
+          "phenomena": []
+        },
+        "64": {
+          "name": "Pyrénées-Atlantiques",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "orages",
+              "level": "low"
+            }
+          ]
+        },
+        "65": {
+          "name": "Hautes Pyrenees",
+          "probability": "none",
+          "phenomena": []
+        },
+        "66": {
+          "name": "Pyrénées-Orientales",
+          "probability": "none",
+          "phenomena": []
+        },
+        "67": {
+          "name": "Bas-Rhin",
+          "probability": "none",
+          "phenomena": []
+        },
+        "68": {
+          "name": "Haut-Rhin",
+          "probability": "none",
+          "phenomena": []
+        },
+        "69": {
+          "name": "Rhône",
+          "probability": "none",
+          "phenomena": []
+        },
+        "70": {
+          "name": "Haute-Saône",
+          "probability": "none",
+          "phenomena": []
+        },
+        "71": {
+          "name": "Saône-et-Loire",
+          "probability": "none",
+          "phenomena": []
+        },
+        "72": {
+          "name": "Sarthe",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "orages",
+              "level": "low"
+            }
+          ]
+        },
+        "73": {
+          "name": "Savoy",
+          "probability": "none",
+          "phenomena": []
+        },
+        "74": {
+          "name": "Upper Savoy",
+          "probability": "none",
+          "phenomena": []
+        },
+        "75": {
+          "name": "Paris",
+          "probability": "none",
+          "phenomena": []
+        },
+        "76": {
+          "name": "Seine-Maritime",
+          "probability": "none",
+          "phenomena": []
+        },
+        "77": {
+          "name": "Seine-et-Marne",
+          "probability": "none",
+          "phenomena": []
+        },
+        "78": {
+          "name": "Yvelines",
+          "probability": "none",
+          "phenomena": []
+        },
+        "79": {
+          "name": "Deux-Sèvres",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "orages",
+              "level": "low"
+            }
+          ]
+        },
+        "80": {
+          "name": "Somme",
+          "probability": "none",
+          "phenomena": []
+        },
+        "81": {
+          "name": "Tarn",
+          "probability": "none",
+          "phenomena": []
+        },
+        "82": {
+          "name": "Tarn-et-Garonne",
+          "probability": "none",
+          "phenomena": []
+        },
+        "83": {
+          "name": "Var",
+          "probability": "none",
+          "phenomena": []
+        },
+        "84": {
+          "name": "Vaucluse",
+          "probability": "none",
+          "phenomena": []
+        },
+        "85": {
+          "name": "Vendée",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "orages",
+              "level": "low"
+            }
+          ]
+        },
+        "86": {
+          "name": "Vienne",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "orages",
+              "level": "low"
+            }
+          ]
+        },
+        "87": {
+          "name": "Haute-Vienne",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "orages",
+              "level": "low"
+            }
+          ]
+        },
+        "88": {
+          "name": "Vosges",
+          "probability": "none",
+          "phenomena": []
+        },
+        "89": {
+          "name": "Yonne",
+          "probability": "none",
+          "phenomena": []
+        },
+        "90": {
+          "name": "Territoire-de-Belfort",
+          "probability": "none",
+          "phenomena": []
+        },
+        "91": {
+          "name": "Essonne",
+          "probability": "none",
+          "phenomena": []
+        },
+        "92": {
+          "name": "Hauts-de-Seine",
+          "probability": "none",
+          "phenomena": []
+        },
+        "93": {
+          "name": "Seine-Saint-Denis",
+          "probability": "none",
+          "phenomena": []
+        },
+        "94": {
+          "name": "Val-de-Marne",
+          "probability": "none",
+          "phenomena": []
+        },
+        "95": {
+          "name": "Val-d'Oise",
+          "probability": "none",
+          "phenomena": []
+        }
+      },
+      "risk_summary": [
+        {
+          "phenomenon": "orages",
+          "level": "low"
+        }
+      ]
+    },
+    {
+      "label": "J+6 et J+7",
+      "date": "",
+      "none": false,
+      "departments": {
+        "01": {
+          "name": "Ain",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "02": {
+          "name": "Aisne",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "03": {
+          "name": "Allier",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "04": {
+          "name": "Alpes-de-Haute-Provence",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "05": {
+          "name": "Hautes-Alpes",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "06": {
+          "name": "Maritime Alps",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "07": {
+          "name": "Ardèche",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "08": {
+          "name": "Ardennes",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "09": {
+          "name": "Ariège",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "10": {
+          "name": "Aube",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "11": {
+          "name": "Aude",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "12": {
+          "name": "Aveyron",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "13": {
+          "name": "Bouches-du-Rhône",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "14": {
+          "name": "Calvados",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "15": {
+          "name": "Cantal",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "16": {
+          "name": "Charente",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "17": {
+          "name": "Charente-Maritime",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "18": {
+          "name": "Cher",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "19": {
+          "name": "Corrèze",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "21": {
+          "name": "Côte-d'Or",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "22": {
+          "name": "Côtes-d'Armor",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "23": {
+          "name": "Creuse",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "24": {
+          "name": "Dordogne",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "25": {
+          "name": "Doubs",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "26": {
+          "name": "Drôme",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "27": {
+          "name": "Eure",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "28": {
+          "name": "Eure-et-Loir",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "29": {
+          "name": "Finistère",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "2A": {
+          "name": "Corse-du-Sud",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "2B": {
+          "name": "Haute-Corse",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "30": {
+          "name": "Gard",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "31": {
+          "name": "Haute-Garonne",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "32": {
+          "name": "Gers",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "33": {
+          "name": "Gironde",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "34": {
+          "name": "Hérault",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "35": {
+          "name": "Ille-et-Vilaine",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "36": {
+          "name": "Indre",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "37": {
+          "name": "Indre-et-Loire",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "38": {
+          "name": "Isère",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "39": {
+          "name": "Jura",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "40": {
+          "name": "Landes",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "41": {
+          "name": "Loir-et-Cher",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "42": {
+          "name": "Loire",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "43": {
+          "name": "Haute-Loire",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "44": {
+          "name": "Loire-Atlantique",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "45": {
+          "name": "Loiret",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "46": {
+          "name": "Lot",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "47": {
+          "name": "Lot-et-Garonne",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "48": {
+          "name": "Lozère",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "49": {
+          "name": "Maine-et-Loire",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "50": {
+          "name": "Manche",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "51": {
+          "name": "Marne",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "52": {
+          "name": "Haute-Marne",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "53": {
+          "name": "Mayenne",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "54": {
+          "name": "Meurthe-et-Moselle",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "55": {
+          "name": "Meuse",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "56": {
+          "name": "Morbihan",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "57": {
+          "name": "Moselle",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "58": {
+          "name": "Nièvre",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "59": {
+          "name": "Nord",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "60": {
+          "name": "Oise",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "61": {
+          "name": "Orne",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "62": {
+          "name": "Pas-de-Calais",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "63": {
+          "name": "Puy-de-Dôme",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "64": {
+          "name": "Pyrénées-Atlantiques",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "65": {
+          "name": "Hautes Pyrenees",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "66": {
+          "name": "Pyrénées-Orientales",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "67": {
+          "name": "Bas-Rhin",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "68": {
+          "name": "Haut-Rhin",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "69": {
+          "name": "Rhône",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "70": {
+          "name": "Haute-Saône",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "71": {
+          "name": "Saône-et-Loire",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "72": {
+          "name": "Sarthe",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "73": {
+          "name": "Savoy",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "74": {
+          "name": "Upper Savoy",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "75": {
+          "name": "Paris",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "76": {
+          "name": "Seine-Maritime",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "77": {
+          "name": "Seine-et-Marne",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "78": {
+          "name": "Yvelines",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "79": {
+          "name": "Deux-Sèvres",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "80": {
+          "name": "Somme",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "81": {
+          "name": "Tarn",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "82": {
+          "name": "Tarn-et-Garonne",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "83": {
+          "name": "Var",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "84": {
+          "name": "Vaucluse",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "85": {
+          "name": "Vendée",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "86": {
+          "name": "Vienne",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "87": {
+          "name": "Haute-Vienne",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "88": {
+          "name": "Vosges",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "89": {
+          "name": "Yonne",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "90": {
+          "name": "Territoire-de-Belfort",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "91": {
+          "name": "Essonne",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "92": {
+          "name": "Hauts-de-Seine",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "93": {
+          "name": "Seine-Saint-Denis",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "94": {
+          "name": "Val-de-Marne",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        },
+        "95": {
+          "name": "Val-d'Oise",
+          "probability": "low",
+          "phenomena": [
+            {
+              "phenomenon": "pluie_inondation",
+              "level": "low"
+            }
+          ]
+        }
+      },
+      "risk_summary": [
+        {
+          "phenomenon": "pluie_inondation",
+          "level": "low"
+        }
+      ]
+    }
+  ]
+}
