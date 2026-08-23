@@ -1,7 +1,7 @@
 {
  "schema_version": 3,
  "status": "ok",
- "generated_at": "2026-08-22T14:03:26+02:00",
+ "generated_at": "2026-08-23T13:40:55+02:00",
  "source": {
   "provider": "Météo-France",
   "product": "Prévision des phénomènes dangereux",
@@ -10,8 +10,8 @@
   "retrieval_mode": "pdf"
  },
  "bulletin": {
-  "issued_at": "2026-08-22T12:45:00+02:00",
-  "issued_label": "Émise le samedi 22/08/2026 à 12h45 (heure de Paris)"
+  "issued_at": "2026-08-23T12:47:00+02:00",
+  "issued_label": "Émise le dimanche 23/08/2026 à 12h47 (heure de Paris)"
  },
  "legend": {
   "levels": [
@@ -46,706 +46,12 @@
   ]
  },
  "summaries": {
-  "j2_j3": "Une dégradation orageuse marquée va concerner le pays. Les orages devraient être localement forts, particulièrement dans la moitié sud. Ils seront accompagnés de fortes intensités pluvieuses, de grêle, de rafales de vent et d'une forte activité électrique.",
-  "j4_j7": "Les orages pourraient être assez forts mercredi, avec néanmoins un risque plutôt faible de passer en vigilance orange. Jeudi, une nouvelle dégradation pluvio-orageuse concernera à nouveau tout le pays, avec sur le sud-est un risque plus élevé de précipitations intenses associée à une activité orageuse forte."
+  "j2_j3": "Mardi matin, les orages de la veille finissent de s'évacuer du sud-est de la France. Une nouvelle dégradation orageuse fait son arrivée par l'ouest en fin de journée de mercredi, pouvant localement prendre un caractère intense. La probabilité de passer en vigilance orange, pour ce phénomène, est encore faible pour le moment.",
+  "j4_j7": "Un épisode orageux généralisé est attendu jeudi. Vendredi, c'est l'aspect lié aux forts cumuls de pluie qui prendra le dessus sur la façade est du pays en première partie de journée. A partir de samedi, le temps sera beaucoup moins agité."
  },
  "cards": [
   {
    "label": "J+2",
-   "date_label": "Lundi 24/08/2026",
-   "granularity": "department",
-   "max_level": "medium",
-   "departments": {
-    "01": {
-     "name": "Ain",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "02": {
-     "name": "Aisne",
-     "level": "none",
-     "phenomena": []
-    },
-    "03": {
-     "name": "Allier",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "04": {
-     "name": "Alpes-de-Haute-Provence",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "05": {
-     "name": "Hautes-Alpes",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "06": {
-     "name": "Alpes-Maritimes",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "07": {
-     "name": "Ardèche",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "08": {
-     "name": "Ardennes",
-     "level": "none",
-     "phenomena": []
-    },
-    "09": {
-     "name": "Ariège",
-     "level": "medium",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "10": {
-     "name": "Aube",
-     "level": "none",
-     "phenomena": []
-    },
-    "11": {
-     "name": "Aude",
-     "level": "medium",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "12": {
-     "name": "Aveyron",
-     "level": "medium",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "13": {
-     "name": "Bouches-du-Rhône",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "14": {
-     "name": "Calvados",
-     "level": "none",
-     "phenomena": []
-    },
-    "15": {
-     "name": "Cantal",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "16": {
-     "name": "Charente",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "17": {
-     "name": "Charente-Maritime",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "18": {
-     "name": "Cher",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "19": {
-     "name": "Corrèze",
-     "level": "medium",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "21": {
-     "name": "Côte-d'Or",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "22": {
-     "name": "Côtes-d'Armor",
-     "level": "none",
-     "phenomena": []
-    },
-    "23": {
-     "name": "Creuse",
-     "level": "medium",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "24": {
-     "name": "Dordogne",
-     "level": "medium",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "25": {
-     "name": "Doubs",
-     "level": "none",
-     "phenomena": []
-    },
-    "26": {
-     "name": "Drôme",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "27": {
-     "name": "Eure",
-     "level": "none",
-     "phenomena": []
-    },
-    "28": {
-     "name": "Eure-et-Loir",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "29": {
-     "name": "Finistère",
-     "level": "none",
-     "phenomena": []
-    },
-    "2A": {
-     "name": "Corse-du-Sud",
-     "level": "none",
-     "phenomena": []
-    },
-    "2B": {
-     "name": "Haute-Corse",
-     "level": "none",
-     "phenomena": []
-    },
-    "30": {
-     "name": "Gard",
-     "level": "medium",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "31": {
-     "name": "Haute-Garonne",
-     "level": "medium",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "32": {
-     "name": "Gers",
-     "level": "medium",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "33": {
-     "name": "Gironde",
-     "level": "medium",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "34": {
-     "name": "Hérault",
-     "level": "medium",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "35": {
-     "name": "Ille-et-Vilaine",
-     "level": "none",
-     "phenomena": []
-    },
-    "36": {
-     "name": "Indre",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "37": {
-     "name": "Indre-et-Loire",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "38": {
-     "name": "Isère",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "39": {
-     "name": "Jura",
-     "level": "none",
-     "phenomena": []
-    },
-    "40": {
-     "name": "Landes",
-     "level": "medium",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "41": {
-     "name": "Loir-et-Cher",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "42": {
-     "name": "Loire",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "43": {
-     "name": "Haute-Loire",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "44": {
-     "name": "Loire-Atlantique",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "45": {
-     "name": "Loiret",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "46": {
-     "name": "Lot",
-     "level": "medium",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "47": {
-     "name": "Lot-et-Garonne",
-     "level": "medium",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "48": {
-     "name": "Lozère",
-     "level": "medium",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "49": {
-     "name": "Maine-et-Loire",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "50": {
-     "name": "Manche",
-     "level": "none",
-     "phenomena": []
-    },
-    "51": {
-     "name": "Marne",
-     "level": "none",
-     "phenomena": []
-    },
-    "52": {
-     "name": "Haute-Marne",
-     "level": "none",
-     "phenomena": []
-    },
-    "53": {
-     "name": "Mayenne",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "54": {
-     "name": "Meurthe-et-Moselle",
-     "level": "none",
-     "phenomena": []
-    },
-    "55": {
-     "name": "Meuse",
-     "level": "none",
-     "phenomena": []
-    },
-    "56": {
-     "name": "Morbihan",
-     "level": "none",
-     "phenomena": []
-    },
-    "57": {
-     "name": "Moselle",
-     "level": "none",
-     "phenomena": []
-    },
-    "58": {
-     "name": "Nièvre",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "59": {
-     "name": "Nord",
-     "level": "none",
-     "phenomena": []
-    },
-    "60": {
-     "name": "Oise",
-     "level": "none",
-     "phenomena": []
-    },
-    "61": {
-     "name": "Orne",
-     "level": "none",
-     "phenomena": []
-    },
-    "62": {
-     "name": "Pas-de-Calais",
-     "level": "none",
-     "phenomena": []
-    },
-    "63": {
-     "name": "Puy-de-Dôme",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "64": {
-     "name": "Pyrénées-Atlantiques",
-     "level": "medium",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "65": {
-     "name": "Hautes-Pyrénées",
-     "level": "medium",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "66": {
-     "name": "Pyrénées-Orientales",
-     "level": "medium",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "67": {
-     "name": "Bas-Rhin",
-     "level": "none",
-     "phenomena": []
-    },
-    "68": {
-     "name": "Haut-Rhin",
-     "level": "none",
-     "phenomena": []
-    },
-    "69": {
-     "name": "Rhône",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "70": {
-     "name": "Haute-Saône",
-     "level": "none",
-     "phenomena": []
-    },
-    "71": {
-     "name": "Saône-et-Loire",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "72": {
-     "name": "Sarthe",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "73": {
-     "name": "Savoie",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "74": {
-     "name": "Haute-Savoie",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "75": {
-     "name": "Paris",
-     "level": "none",
-     "phenomena": []
-    },
-    "76": {
-     "name": "Seine-Maritime",
-     "level": "none",
-     "phenomena": []
-    },
-    "77": {
-     "name": "Seine-et-Marne",
-     "level": "none",
-     "phenomena": []
-    },
-    "78": {
-     "name": "Yvelines",
-     "level": "none",
-     "phenomena": []
-    },
-    "79": {
-     "name": "Deux-Sèvres",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "80": {
-     "name": "Somme",
-     "level": "none",
-     "phenomena": []
-    },
-    "81": {
-     "name": "Tarn",
-     "level": "medium",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "82": {
-     "name": "Tarn-et-Garonne",
-     "level": "medium",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "83": {
-     "name": "Var",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "84": {
-     "name": "Vaucluse",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "85": {
-     "name": "Vendée",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "86": {
-     "name": "Vienne",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "87": {
-     "name": "Haute-Vienne",
-     "level": "medium",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "88": {
-     "name": "Vosges",
-     "level": "none",
-     "phenomena": []
-    },
-    "89": {
-     "name": "Yonne",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
-    },
-    "90": {
-     "name": "Territoire de Belfort",
-     "level": "none",
-     "phenomena": []
-    },
-    "91": {
-     "name": "Essonne",
-     "level": "none",
-     "phenomena": []
-    },
-    "92": {
-     "name": "Hauts-de-Seine",
-     "level": "none",
-     "phenomena": []
-    },
-    "93": {
-     "name": "Seine-Saint-Denis",
-     "level": "none",
-     "phenomena": []
-    },
-    "94": {
-     "name": "Val-de-Marne",
-     "level": "none",
-     "phenomena": []
-    },
-    "95": {
-     "name": "Val-d'Oise",
-     "level": "none",
-     "phenomena": []
-    }
-   },
-   "markers": [
-    {
-     "phenomenon": "orages",
-     "x": 0.7135,
-     "y": 0.61789,
-     "svg_x": 398.8461,
-     "svg_y": 34.2956,
-     "level": "low"
-    },
-    {
-     "phenomenon": "orages",
-     "x": 0.77961,
-     "y": 0.75819,
-     "svg_x": 405.0972,
-     "svg_y": 42.7344,
-     "level": "low"
-    },
-    {
-     "phenomenon": "orages",
-     "x": 0.38199,
-     "y": 0.53729,
-     "svg_x": 367.5331,
-     "svg_y": 29.4456,
-     "level": "low"
-    },
-    {
-     "phenomenon": "orages",
-     "x": 0.33884,
-     "y": 0.39699,
-     "svg_x": 363.4509,
-     "svg_y": 21.007,
-     "level": "low"
-    },
-    {
-     "phenomenon": "orages",
-     "x": 0.47934,
-     "y": 0.75819,
-     "svg_x": 376.7374,
-     "svg_y": 42.7322,
-     "level": "medium"
-    },
-    {
-     "phenomenon": "orages",
-     "x": 0.49311,
-     "y": 0.58505,
-     "svg_x": 378.0301,
-     "svg_y": 32.319,
-     "level": "medium"
-    },
-    {
-     "phenomenon": "orages",
-     "x": 0.62259,
-     "y": 0.7552,
-     "svg_x": 390.2667,
-     "svg_y": 42.5537,
-     "level": "medium"
-    },
-    {
-     "phenomenon": "orages",
-     "x": 0.4876,
-     "y": 0.39699,
-     "svg_x": 377.5007,
-     "svg_y": 21.0081,
-     "level": "low"
-    },
-    {
-     "phenomenon": "orages",
-     "x": 0.64738,
-     "y": 0.4358,
-     "svg_x": 392.5931,
-     "svg_y": 23.3432,
-     "level": "low"
-    },
-    {
-     "phenomenon": "orages",
-     "x": 0.58402,
-     "y": 0.58505,
-     "svg_x": 386.616,
-     "svg_y": 32.3197,
-     "level": "low"
-    },
-    {
-     "phenomenon": "orages",
-     "x": 0.34343,
-     "y": 0.68358,
-     "svg_x": 363.8976,
-     "svg_y": 38.2441,
-     "level": "medium"
-    }
-   ]
-  },
-  {
-   "label": "J+3",
    "date_label": "Mardi 25/08/2026",
    "granularity": "department",
    "max_level": "low",
@@ -808,10 +114,8 @@
     },
     "11": {
      "name": "Aude",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "12": {
      "name": "Aveyron",
@@ -912,10 +216,8 @@
     },
     "30": {
      "name": "Gard",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "31": {
      "name": "Haute-Garonne",
@@ -934,10 +236,8 @@
     },
     "34": {
      "name": "Hérault",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "35": {
      "name": "Ille-et-Vilaine",
@@ -1006,10 +306,8 @@
     },
     "48": {
      "name": "Lozère",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "49": {
      "name": "Maine-et-Loire",
@@ -1098,10 +396,8 @@
     },
     "66": {
      "name": "Pyrénées-Orientales",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "67": {
      "name": "Bas-Rhin",
@@ -1256,63 +552,622 @@
    "markers": [
     {
      "phenomenon": "orages",
-     "x": 0.78099,
+     "x": 0.77961,
      "y": 0.75819,
-     "svg_x": 405.2273,
+     "svg_x": 405.0972,
      "svg_y": 42.7344,
+     "level": "low"
+    }
+   ]
+  },
+  {
+   "label": "J+3",
+   "date_label": "Mercredi 26/08/2026",
+   "granularity": "department",
+   "max_level": "low",
+   "departments": {
+    "01": {
+     "name": "Ain",
+     "level": "none",
+     "phenomena": []
+    },
+    "02": {
+     "name": "Aisne",
+     "level": "none",
+     "phenomena": []
+    },
+    "03": {
+     "name": "Allier",
+     "level": "none",
+     "phenomena": []
+    },
+    "04": {
+     "name": "Alpes-de-Haute-Provence",
+     "level": "none",
+     "phenomena": []
+    },
+    "05": {
+     "name": "Hautes-Alpes",
+     "level": "none",
+     "phenomena": []
+    },
+    "06": {
+     "name": "Alpes-Maritimes",
+     "level": "none",
+     "phenomena": []
+    },
+    "07": {
+     "name": "Ardèche",
+     "level": "none",
+     "phenomena": []
+    },
+    "08": {
+     "name": "Ardennes",
+     "level": "none",
+     "phenomena": []
+    },
+    "09": {
+     "name": "Ariège",
+     "level": "none",
+     "phenomena": []
+    },
+    "10": {
+     "name": "Aube",
+     "level": "none",
+     "phenomena": []
+    },
+    "11": {
+     "name": "Aude",
+     "level": "none",
+     "phenomena": []
+    },
+    "12": {
+     "name": "Aveyron",
+     "level": "none",
+     "phenomena": []
+    },
+    "13": {
+     "name": "Bouches-du-Rhône",
+     "level": "none",
+     "phenomena": []
+    },
+    "14": {
+     "name": "Calvados",
+     "level": "low",
+     "phenomena": [
+      "orages"
+     ]
+    },
+    "15": {
+     "name": "Cantal",
+     "level": "none",
+     "phenomena": []
+    },
+    "16": {
+     "name": "Charente",
+     "level": "low",
+     "phenomena": [
+      "orages"
+     ]
+    },
+    "17": {
+     "name": "Charente-Maritime",
+     "level": "low",
+     "phenomena": [
+      "orages"
+     ]
+    },
+    "18": {
+     "name": "Cher",
+     "level": "low",
+     "phenomena": [
+      "orages"
+     ]
+    },
+    "19": {
+     "name": "Corrèze",
+     "level": "low",
+     "phenomena": [
+      "orages"
+     ]
+    },
+    "21": {
+     "name": "Côte-d'Or",
+     "level": "none",
+     "phenomena": []
+    },
+    "22": {
+     "name": "Côtes-d'Armor",
+     "level": "low",
+     "phenomena": [
+      "orages"
+     ]
+    },
+    "23": {
+     "name": "Creuse",
+     "level": "low",
+     "phenomena": [
+      "orages"
+     ]
+    },
+    "24": {
+     "name": "Dordogne",
+     "level": "low",
+     "phenomena": [
+      "orages"
+     ]
+    },
+    "25": {
+     "name": "Doubs",
+     "level": "none",
+     "phenomena": []
+    },
+    "26": {
+     "name": "Drôme",
+     "level": "none",
+     "phenomena": []
+    },
+    "27": {
+     "name": "Eure",
+     "level": "none",
+     "phenomena": []
+    },
+    "28": {
+     "name": "Eure-et-Loir",
+     "level": "low",
+     "phenomena": [
+      "orages"
+     ]
+    },
+    "29": {
+     "name": "Finistère",
+     "level": "low",
+     "phenomena": [
+      "orages"
+     ]
+    },
+    "2A": {
+     "name": "Corse-du-Sud",
+     "level": "none",
+     "phenomena": []
+    },
+    "2B": {
+     "name": "Haute-Corse",
+     "level": "none",
+     "phenomena": []
+    },
+    "30": {
+     "name": "Gard",
+     "level": "none",
+     "phenomena": []
+    },
+    "31": {
+     "name": "Haute-Garonne",
+     "level": "none",
+     "phenomena": []
+    },
+    "32": {
+     "name": "Gers",
+     "level": "none",
+     "phenomena": []
+    },
+    "33": {
+     "name": "Gironde",
+     "level": "low",
+     "phenomena": [
+      "orages"
+     ]
+    },
+    "34": {
+     "name": "Hérault",
+     "level": "none",
+     "phenomena": []
+    },
+    "35": {
+     "name": "Ille-et-Vilaine",
+     "level": "low",
+     "phenomena": [
+      "orages"
+     ]
+    },
+    "36": {
+     "name": "Indre",
+     "level": "low",
+     "phenomena": [
+      "orages"
+     ]
+    },
+    "37": {
+     "name": "Indre-et-Loire",
+     "level": "low",
+     "phenomena": [
+      "orages"
+     ]
+    },
+    "38": {
+     "name": "Isère",
+     "level": "none",
+     "phenomena": []
+    },
+    "39": {
+     "name": "Jura",
+     "level": "none",
+     "phenomena": []
+    },
+    "40": {
+     "name": "Landes",
+     "level": "low",
+     "phenomena": [
+      "orages"
+     ]
+    },
+    "41": {
+     "name": "Loir-et-Cher",
+     "level": "low",
+     "phenomena": [
+      "orages"
+     ]
+    },
+    "42": {
+     "name": "Loire",
+     "level": "none",
+     "phenomena": []
+    },
+    "43": {
+     "name": "Haute-Loire",
+     "level": "none",
+     "phenomena": []
+    },
+    "44": {
+     "name": "Loire-Atlantique",
+     "level": "low",
+     "phenomena": [
+      "orages"
+     ]
+    },
+    "45": {
+     "name": "Loiret",
+     "level": "low",
+     "phenomena": [
+      "orages"
+     ]
+    },
+    "46": {
+     "name": "Lot",
+     "level": "none",
+     "phenomena": []
+    },
+    "47": {
+     "name": "Lot-et-Garonne",
+     "level": "low",
+     "phenomena": [
+      "orages"
+     ]
+    },
+    "48": {
+     "name": "Lozère",
+     "level": "none",
+     "phenomena": []
+    },
+    "49": {
+     "name": "Maine-et-Loire",
+     "level": "low",
+     "phenomena": [
+      "orages"
+     ]
+    },
+    "50": {
+     "name": "Manche",
+     "level": "low",
+     "phenomena": [
+      "orages"
+     ]
+    },
+    "51": {
+     "name": "Marne",
+     "level": "none",
+     "phenomena": []
+    },
+    "52": {
+     "name": "Haute-Marne",
+     "level": "none",
+     "phenomena": []
+    },
+    "53": {
+     "name": "Mayenne",
+     "level": "low",
+     "phenomena": [
+      "orages"
+     ]
+    },
+    "54": {
+     "name": "Meurthe-et-Moselle",
+     "level": "none",
+     "phenomena": []
+    },
+    "55": {
+     "name": "Meuse",
+     "level": "none",
+     "phenomena": []
+    },
+    "56": {
+     "name": "Morbihan",
+     "level": "low",
+     "phenomena": [
+      "orages"
+     ]
+    },
+    "57": {
+     "name": "Moselle",
+     "level": "none",
+     "phenomena": []
+    },
+    "58": {
+     "name": "Nièvre",
+     "level": "none",
+     "phenomena": []
+    },
+    "59": {
+     "name": "Nord",
+     "level": "none",
+     "phenomena": []
+    },
+    "60": {
+     "name": "Oise",
+     "level": "none",
+     "phenomena": []
+    },
+    "61": {
+     "name": "Orne",
+     "level": "low",
+     "phenomena": [
+      "orages"
+     ]
+    },
+    "62": {
+     "name": "Pas-de-Calais",
+     "level": "none",
+     "phenomena": []
+    },
+    "63": {
+     "name": "Puy-de-Dôme",
+     "level": "none",
+     "phenomena": []
+    },
+    "64": {
+     "name": "Pyrénées-Atlantiques",
+     "level": "low",
+     "phenomena": [
+      "orages"
+     ]
+    },
+    "65": {
+     "name": "Hautes-Pyrénées",
+     "level": "none",
+     "phenomena": []
+    },
+    "66": {
+     "name": "Pyrénées-Orientales",
+     "level": "none",
+     "phenomena": []
+    },
+    "67": {
+     "name": "Bas-Rhin",
+     "level": "none",
+     "phenomena": []
+    },
+    "68": {
+     "name": "Haut-Rhin",
+     "level": "none",
+     "phenomena": []
+    },
+    "69": {
+     "name": "Rhône",
+     "level": "none",
+     "phenomena": []
+    },
+    "70": {
+     "name": "Haute-Saône",
+     "level": "none",
+     "phenomena": []
+    },
+    "71": {
+     "name": "Saône-et-Loire",
+     "level": "none",
+     "phenomena": []
+    },
+    "72": {
+     "name": "Sarthe",
+     "level": "low",
+     "phenomena": [
+      "orages"
+     ]
+    },
+    "73": {
+     "name": "Savoie",
+     "level": "none",
+     "phenomena": []
+    },
+    "74": {
+     "name": "Haute-Savoie",
+     "level": "none",
+     "phenomena": []
+    },
+    "75": {
+     "name": "Paris",
+     "level": "none",
+     "phenomena": []
+    },
+    "76": {
+     "name": "Seine-Maritime",
+     "level": "none",
+     "phenomena": []
+    },
+    "77": {
+     "name": "Seine-et-Marne",
+     "level": "none",
+     "phenomena": []
+    },
+    "78": {
+     "name": "Yvelines",
+     "level": "none",
+     "phenomena": []
+    },
+    "79": {
+     "name": "Deux-Sèvres",
+     "level": "low",
+     "phenomena": [
+      "orages"
+     ]
+    },
+    "80": {
+     "name": "Somme",
+     "level": "none",
+     "phenomena": []
+    },
+    "81": {
+     "name": "Tarn",
+     "level": "none",
+     "phenomena": []
+    },
+    "82": {
+     "name": "Tarn-et-Garonne",
+     "level": "none",
+     "phenomena": []
+    },
+    "83": {
+     "name": "Var",
+     "level": "none",
+     "phenomena": []
+    },
+    "84": {
+     "name": "Vaucluse",
+     "level": "none",
+     "phenomena": []
+    },
+    "85": {
+     "name": "Vendée",
+     "level": "low",
+     "phenomena": [
+      "orages"
+     ]
+    },
+    "86": {
+     "name": "Vienne",
+     "level": "low",
+     "phenomena": [
+      "orages"
+     ]
+    },
+    "87": {
+     "name": "Haute-Vienne",
+     "level": "low",
+     "phenomena": [
+      "orages"
+     ]
+    },
+    "88": {
+     "name": "Vosges",
+     "level": "none",
+     "phenomena": []
+    },
+    "89": {
+     "name": "Yonne",
+     "level": "none",
+     "phenomena": []
+    },
+    "90": {
+     "name": "Territoire de Belfort",
+     "level": "none",
+     "phenomena": []
+    },
+    "91": {
+     "name": "Essonne",
+     "level": "none",
+     "phenomena": []
+    },
+    "92": {
+     "name": "Hauts-de-Seine",
+     "level": "none",
+     "phenomena": []
+    },
+    "93": {
+     "name": "Seine-Saint-Denis",
+     "level": "none",
+     "phenomena": []
+    },
+    "94": {
+     "name": "Val-de-Marne",
+     "level": "none",
+     "phenomena": []
+    },
+    "95": {
+     "name": "Val-d'Oise",
+     "level": "none",
+     "phenomena": []
+    }
+   },
+   "markers": [
+    {
+     "phenomenon": "orages",
+     "x": 0.38337,
+     "y": 0.53729,
+     "svg_x": 367.6632,
+     "svg_y": 29.4456,
      "level": "low"
     },
     {
      "phenomenon": "orages",
-     "x": 0.62397,
-     "y": 0.7552,
-     "svg_x": 390.3968,
-     "svg_y": 42.5537,
+     "x": 0.34022,
+     "y": 0.39699,
+     "svg_x": 363.581,
+     "svg_y": 21.007,
+     "level": "low"
+    },
+    {
+     "phenomenon": "orages",
+     "x": 0.49449,
+     "y": 0.58505,
+     "svg_x": 378.1602,
+     "svg_y": 32.319,
+     "level": "low"
+    },
+    {
+     "phenomenon": "orages",
+     "x": 0.48898,
+     "y": 0.39699,
+     "svg_x": 377.6308,
+     "svg_y": 21.0081,
+     "level": "low"
+    },
+    {
+     "phenomenon": "orages",
+     "x": 0.19972,
+     "y": 0.34326,
+     "svg_x": 350.3092,
+     "svg_y": 17.7743,
+     "level": "low"
+    },
+    {
+     "phenomenon": "orages",
+     "x": 0.35307,
+     "y": 0.26565,
+     "svg_x": 364.7882,
+     "svg_y": 13.1074,
+     "level": "low"
+    },
+    {
+     "phenomenon": "orages",
+     "x": 0.3448,
+     "y": 0.68358,
+     "svg_x": 364.0277,
+     "svg_y": 38.2441,
      "level": "low"
     }
    ]
   },
   {
    "label": "J+4",
-   "date_label": "Mercredi 26/08/2026",
-   "granularity": "quadrant",
-   "max_level": "low",
-   "zones": {
-    "NO": {
-     "level": "low",
-     "phenomena": [
-      {
-       "phenomenon": "orages",
-       "level": "low"
-      }
-     ]
-    },
-    "NE": {
-     "level": "low",
-     "phenomena": [
-      {
-       "phenomenon": "orages",
-       "level": "low"
-      }
-     ]
-    },
-    "SO": {
-     "level": "low",
-     "phenomena": [
-      {
-       "phenomenon": "orages",
-       "level": "low"
-      }
-     ]
-    },
-    "SE": {
-     "level": "none",
-     "phenomena": []
-    }
-   }
-  },
-  {
-   "label": "J+5",
    "date_label": "Jeudi 27/08/2026",
    "granularity": "quadrant",
    "max_level": "medium",
@@ -1327,20 +1182,20 @@
      ]
     },
     "NE": {
-     "level": "low",
+     "level": "medium",
      "phenomena": [
       {
        "phenomenon": "orages",
-       "level": "low"
+       "level": "medium"
       }
      ]
     },
     "SO": {
-     "level": "low",
+     "level": "medium",
      "phenomena": [
       {
        "phenomenon": "orages",
-       "level": "low"
+       "level": "medium"
       }
      ]
     },
@@ -1348,11 +1203,45 @@
      "level": "medium",
      "phenomena": [
       {
-       "phenomenon": "pluie_inondation",
+       "phenomenon": "orages",
        "level": "medium"
       },
       {
-       "phenomenon": "orages",
+       "phenomenon": "pluie_inondation",
+       "level": "low"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "label": "J+5",
+   "date_label": "Vendredi 28/08/2026",
+   "granularity": "quadrant",
+   "max_level": "medium",
+   "zones": {
+    "NO": {
+     "level": "none",
+     "phenomena": []
+    },
+    "NE": {
+     "level": "low",
+     "phenomena": [
+      {
+       "phenomenon": "pluie_inondation",
+       "level": "low"
+      }
+     ]
+    },
+    "SO": {
+     "level": "none",
+     "phenomena": []
+    },
+    "SE": {
+     "level": "medium",
+     "phenomena": [
+      {
+       "phenomenon": "pluie_inondation",
        "level": "medium"
       }
      ]
@@ -1361,7 +1250,7 @@
   },
   {
    "label": "J+6 et J+7",
-   "date_label": "Vendredi 28/08/2026 et Samedi 29/08/2026",
+   "date_label": "Samedi 29/08/2026 et Dimanche 30/08/2026",
    "granularity": "national",
    "max_level": "none",
    "national": {
