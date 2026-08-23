@@ -2705,8 +2705,408 @@
       "time": "2026-08-22T12:18:00Z",
       "sea_temp_c": 29.8,
       "source": "NOAA/NDBC"
+    },
+    {
+      "id": "14049",
+      "name": "Bouée 14049",
+      "platform_type": "Bouée",
+      "lat": -12.0,
+      "lon": 65.0,
+      "time": "2026-08-23T01:00:00Z",
+      "sea_temp_c": 26.6,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "41040",
+      "name": "Bouée 41040",
+      "platform_type": "Bouée",
+      "lat": 14.568,
+      "lon": -53.037,
+      "time": "2026-08-23T01:40:00Z",
+      "sea_temp_c": 28.2,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "41043",
+      "name": "Bouée 41043",
+      "platform_type": "Bouée",
+      "lat": 21.09,
+      "lon": -64.864,
+      "time": "2026-08-23T01:40:00Z",
+      "sea_temp_c": 29.8,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "41044",
+      "name": "Bouée 41044",
+      "platform_type": "Bouée",
+      "lat": 21.582,
+      "lon": -58.63,
+      "time": "2026-08-23T01:40:00Z",
+      "sea_temp_c": 29.6,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "41046",
+      "name": "Bouée 41046",
+      "platform_type": "Bouée",
+      "lat": 23.84,
+      "lon": -68.34,
+      "time": "2026-08-23T01:40:00Z",
+      "sea_temp_c": 30.2,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "41115",
+      "name": "Bouée 41115",
+      "platform_type": "Bouée",
+      "lat": 18.376,
+      "lon": -67.28,
+      "time": "2026-08-23T01:26:00Z",
+      "sea_temp_c": 29.5,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "41121",
+      "name": "Bouée 41121",
+      "platform_type": "Bouée",
+      "lat": 18.491,
+      "lon": -66.701,
+      "time": "2026-08-23T01:30:00Z",
+      "sea_temp_c": 29.1,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "42060",
+      "name": "Bouée 42060",
+      "platform_type": "Bouée",
+      "lat": 16.428,
+      "lon": -63.21,
+      "time": "2026-08-23T01:40:00Z",
+      "sea_temp_c": 29.0,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "44008",
+      "name": "Bouée 44008",
+      "platform_type": "Bouée",
+      "lat": 40.5,
+      "lon": -69.254,
+      "time": "2026-08-23T01:40:00Z",
+      "sea_temp_c": 23.2,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "44011",
+      "name": "Bouée 44011",
+      "platform_type": "Bouée",
+      "lat": 41.088,
+      "lon": -66.546,
+      "time": "2026-08-23T01:40:00Z",
+      "sea_temp_c": 17.1,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "44027",
+      "name": "Bouée 44027",
+      "platform_type": "Bouée",
+      "lat": 44.284,
+      "lon": -67.301,
+      "time": "2026-08-23T01:40:00Z",
+      "sea_temp_c": 14.6,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "44033",
+      "name": "Bouée 44033",
+      "platform_type": "Bouée",
+      "lat": 44.055,
+      "lon": -68.996,
+      "time": "2026-08-23T01:30:00Z",
+      "sea_temp_c": 15.3,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "44137",
+      "name": "Bouée 44137",
+      "platform_type": "Bouée",
+      "lat": 42.26,
+      "lon": -62.03,
+      "time": "2026-08-23T01:00:00Z",
+      "sea_temp_c": 21.8,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "44139",
+      "name": "Bouée 44139",
+      "platform_type": "Bouée",
+      "lat": 44.24,
+      "lon": -57.1,
+      "time": "2026-08-23T01:00:00Z",
+      "sea_temp_c": 18.7,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "44150",
+      "name": "Bouée 44150",
+      "platform_type": "Bouée",
+      "lat": 42.5,
+      "lon": -64.02,
+      "time": "2026-08-23T01:00:00Z",
+      "sea_temp_c": 20.7,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "44258",
+      "name": "Bouée 44258",
+      "platform_type": "Bouée",
+      "lat": 44.5,
+      "lon": -63.4,
+      "time": "2026-08-23T01:00:00Z",
+      "sea_temp_c": 19.0,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "44488",
+      "name": "Bouée 44488",
+      "platform_type": "Bouée",
+      "lat": 45.44,
+      "lon": -60.95,
+      "time": "2026-08-23T02:00:00Z",
+      "sea_temp_c": 18.9,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "44489",
+      "name": "Bouée 44489",
+      "platform_type": "Bouée",
+      "lat": 45.49,
+      "lon": -61.14,
+      "time": "2026-08-23T02:00:00Z",
+      "sea_temp_c": 19.3,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "62029",
+      "name": "Bouée 62029",
+      "platform_type": "Bouée",
+      "lat": 48.72,
+      "lon": -12.43,
+      "time": "2026-08-23T01:00:00Z",
+      "sea_temp_c": 19.4,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "62050",
+      "name": "Bouée 62050",
+      "platform_type": "Bouée",
+      "lat": 50.0,
+      "lon": -4.4,
+      "time": "2026-08-23T01:00:00Z",
+      "sea_temp_c": 17.8,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "62081",
+      "name": "Bouée 62081",
+      "platform_type": "Bouée",
+      "lat": 51.0,
+      "lon": -13.55,
+      "time": "2026-08-23T01:00:00Z",
+      "sea_temp_c": 17.6,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "62103",
+      "name": "Bouée 62103",
+      "platform_type": "Bouée",
+      "lat": 49.9,
+      "lon": -2.9,
+      "time": "2026-08-23T01:00:00Z",
+      "sea_temp_c": 17.9,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "62105",
+      "name": "Bouée 62105",
+      "platform_type": "Bouée",
+      "lat": 55.41,
+      "lon": -11.81,
+      "time": "2026-08-23T01:00:00Z",
+      "sea_temp_c": 15.1,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "62107",
+      "name": "Bouée 62107",
+      "platform_type": "Bouée",
+      "lat": 50.102,
+      "lon": -6.1,
+      "time": "2026-08-23T01:00:00Z",
+      "sea_temp_c": 18.8,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "62163",
+      "name": "Bouée 62163",
+      "platform_type": "Bouée",
+      "lat": 47.55,
+      "lon": -8.47,
+      "time": "2026-08-23T01:00:00Z",
+      "sea_temp_c": 20.5,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "62170",
+      "name": "Bouée 62170",
+      "platform_type": "Bouée",
+      "lat": 51.24,
+      "lon": 2.0,
+      "time": "2026-08-23T01:00:00Z",
+      "sea_temp_c": 20.4,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "62304",
+      "name": "Bouée 62304",
+      "platform_type": "Bouée",
+      "lat": 51.102,
+      "lon": 1.8,
+      "time": "2026-08-23T01:00:00Z",
+      "sea_temp_c": 20.1,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "62305",
+      "name": "Bouée 62305",
+      "platform_type": "Bouée",
+      "lat": 50.4,
+      "lon": 0.0,
+      "time": "2026-08-23T01:00:00Z",
+      "sea_temp_c": 19.0,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "62442",
+      "name": "Bouée 62442",
+      "platform_type": "Bouée",
+      "lat": 49.0,
+      "lon": -16.5,
+      "time": "2026-08-23T01:00:00Z",
+      "sea_temp_c": 18.5,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "64045",
+      "name": "Bouée 64045",
+      "platform_type": "Bouée",
+      "lat": 59.15,
+      "lon": -11.79,
+      "time": "2026-08-23T01:00:00Z",
+      "sea_temp_c": 13.8,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "64046",
+      "name": "Bouée 64046",
+      "platform_type": "Bouée",
+      "lat": 60.483,
+      "lon": -4.167,
+      "time": "2026-08-23T01:00:00Z",
+      "sea_temp_c": 13.2,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "ATGM1",
+      "name": "Bateau / station ATGM1",
+      "platform_type": "Bateau / station marine",
+      "lat": 44.392,
+      "lon": -68.204,
+      "time": "2026-08-23T01:30:00Z",
+      "sea_temp_c": 15.2,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "CFWM1",
+      "name": "Bateau / station CFWM1",
+      "platform_type": "Bateau / station marine",
+      "lat": 44.657,
+      "lon": -67.205,
+      "time": "2026-08-23T01:30:00Z",
+      "sea_temp_c": 11.8,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "CHSV3",
+      "name": "Bateau / station CHSV3",
+      "platform_type": "Bateau / station marine",
+      "lat": 17.748,
+      "lon": -64.699,
+      "time": "2026-08-23T01:30:00Z",
+      "sea_temp_c": 29.7,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "CLBP4",
+      "name": "Bateau / station CLBP4",
+      "platform_type": "Bateau / station marine",
+      "lat": 18.301,
+      "lon": -65.302,
+      "time": "2026-08-23T01:30:00Z",
+      "sea_temp_c": 30.4,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "LAMV3",
+      "name": "Bateau / station LAMV3",
+      "platform_type": "Bateau / station marine",
+      "lat": 18.318,
+      "lon": -64.724,
+      "time": "2026-08-23T01:30:00Z",
+      "sea_temp_c": 29.9,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "LTBV3",
+      "name": "Bateau / station LTBV3",
+      "platform_type": "Bateau / station marine",
+      "lat": 17.695,
+      "lon": -64.754,
+      "time": "2026-08-23T01:30:00Z",
+      "sea_temp_c": 30.2,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "MGZP4",
+      "name": "Bateau / station MGZP4",
+      "platform_type": "Bateau / station marine",
+      "lat": 18.218,
+      "lon": -67.159,
+      "time": "2026-08-23T01:30:00Z",
+      "sea_temp_c": 28.9,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "PSBM1",
+      "name": "Bateau / station PSBM1",
+      "platform_type": "Bateau / station marine",
+      "lat": 44.905,
+      "lon": -66.983,
+      "time": "2026-08-23T01:30:00Z",
+      "sea_temp_c": 12.1,
+      "source": "NOAA/NDBC"
+    },
+    {
+      "id": "SJNP4",
+      "name": "Bateau / station SJNP4",
+      "platform_type": "Bateau / station marine",
+      "lat": 18.459,
+      "lon": -66.116,
+      "time": "2026-08-23T01:30:00Z",
+      "sea_temp_c": 30.0,
+      "source": "NOAA/NDBC"
     }
   ],
-  "generated_at": "2026-08-22T13:10:40Z",
-  "latest_observation_at": "2026-08-22T12:40:00Z"
+  "generated_at": "2026-08-23T02:10:12Z",
+  "latest_observation_at": "2026-08-23T02:00:00Z"
 }
