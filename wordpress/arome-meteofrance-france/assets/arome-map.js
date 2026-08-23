@@ -72,40 +72,50 @@
         var reducedMotion = window.matchMedia &&
             window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-        var menuToggle = app.querySelector('[data-hkm-menu-toggle]');
-        var menuClose = app.querySelector('[data-hkm-menu-close]');
-        var layerMenu = app.querySelector('[data-hkm-layer-menu]');
-        var layerGrid = app.querySelector('[data-hkm-layer-grid]');
-        var currentLayerText = app.querySelector('[data-hkm-current-layer]');
-        var previousButton = app.querySelector('[data-hkm-previous]');
-        var playButton = app.querySelector('[data-hkm-play]');
-        var nextButton = app.querySelector('[data-hkm-next]');
-        var validity = app.querySelector('[data-hkm-validity]');
-        var lead = app.querySelector('[data-hkm-lead]');
-        var run = app.querySelector('[data-hkm-run]');
-        var generated = app.querySelector('[data-hkm-generated]');
-        var stale = app.querySelector('[data-hkm-stale]');
-        var viewport = app.querySelector('[data-hkm-viewport]');
-        var weatherCanvas = app.querySelector('[data-hkm-weather]');
-        var vectorCanvas = app.querySelector('[data-hkm-vectors]');
-        var labelsCanvas = app.querySelector('[data-hkm-labels]');
+        var menuToggle = app.querySelector('[data-amfm-menu-toggle]');
+        var menuClose = app.querySelector('[data-amfm-menu-close]');
+        var layerMenu = app.querySelector('[data-amfm-layer-menu]');
+        var layerGrid = app.querySelector('[data-amfm-layer-grid]');
+        var currentLayerText = app.querySelector('[data-amfm-current-layer]');
+        var previousButton = app.querySelector('[data-amfm-previous]');
+        var playButton = app.querySelector('[data-amfm-play]');
+        var nextButton = app.querySelector('[data-amfm-next]');
+        var validity = app.querySelector('[data-amfm-validity]');
+        var lead = app.querySelector('[data-amfm-lead]');
+        var run = app.querySelector('[data-amfm-run]');
+        var generated = app.querySelector('[data-amfm-generated]');
+        var stale = app.querySelector('[data-amfm-stale]');
+        var viewport = app.querySelector('[data-amfm-viewport]');
+        var weatherCanvas = app.querySelector('[data-amfm-weather]');
+        var vectorCanvas = app.querySelector('[data-amfm-vectors]');
+        var labelsCanvas = app.querySelector('[data-amfm-labels]');
         var vectorContext = vectorCanvas ? vectorCanvas.getContext('2d') : null;
         var labelsContext = labelsCanvas ? labelsCanvas.getContext('2d') : null;
-        var mapTitle = app.querySelector('[data-hkm-map-title]');
-        var mapRun = app.querySelector('[data-hkm-map-run]');
-        var mapDate = app.querySelector('[data-hkm-map-date]');
-        var loading = app.querySelector('[data-hkm-loading]');
-        var errorBox = app.querySelector('[data-hkm-error]');
-        var slider = app.querySelector('[data-hkm-slider]');
-        var legend = app.querySelector('[data-hkm-legend]');
-        var zoomIn = app.querySelector('[data-hkm-zoom-in]');
-        var zoomOut = app.querySelector('[data-hkm-zoom-out]');
-        var reset = app.querySelector('[data-hkm-reset]');
-        var fullscreen = app.querySelector('[data-hkm-fullscreen]');
-        var zoomLevel = app.querySelector('[data-hkm-zoom-level]');
-        var probe = app.querySelector('[data-hkm-probe]');
-        var probeValue = app.querySelector('[data-hkm-probe-value]');
-        var probeLabel = app.querySelector('[data-hkm-probe-label]');
+        var mapTitle = app.querySelector('[data-amfm-map-title]');
+        var mapRun = app.querySelector('[data-amfm-map-run]');
+        var mapDate = app.querySelector('[data-amfm-map-date]');
+        var loading = app.querySelector('[data-amfm-loading]');
+        var errorBox = app.querySelector('[data-amfm-error]');
+        var slider = app.querySelector('[data-amfm-slider]');
+        var legend = app.querySelector('[data-amfm-legend]');
+        var zoomIn = app.querySelector('[data-amfm-zoom-in]');
+        var zoomOut = app.querySelector('[data-amfm-zoom-out]');
+        var reset = app.querySelector('[data-amfm-reset]');
+        var fullscreen = app.querySelector('[data-amfm-fullscreen]');
+        var zoomLevel = app.querySelector('[data-amfm-zoom-level]');
+        var probe = app.querySelector('[data-amfm-probe]');
+        var probeValue = app.querySelector('[data-amfm-probe-value]');
+        var probeLabel = app.querySelector('[data-amfm-probe-label]');
+        var toolButtons = app.querySelectorAll('[data-amfm-tool]');
+        var toolHint = app.querySelector('[data-amfm-tool-hint]');
+        var advancedTools = app.querySelector('[data-amfm-advanced-tools]');
+        var captureButton = app.querySelector('[data-amfm-capture]');
+        var pinButton = app.querySelector('[data-amfm-pin]');
+        var diagramPopup = app.querySelector('[data-amfm-diagram-popup]');
+        var diagramTitle = app.querySelector('[data-amfm-diagram-title]');
+        var diagramBody = app.querySelector('[data-amfm-diagram-body]');
+        var diagramStatus = app.querySelector('[data-amfm-diagram-status]');
+        var diagramClose = app.querySelector('[data-amfm-diagram-close]');
 
         var manifest = null;
         var currentLayer = requestedLayer;
@@ -133,6 +143,12 @@
         var fallbackContext = null;
         var maxScale = 64;
         var pendingFocus = null;
+        var toolMode = null;
+        var pinnedEnabled = false;
+        var pinnedPoint = null;
+        var tapStart = null;
+        var departmentCache = new Map();
+        var diagramLoadToken = 0;
 
         var validityFormat;
         var runFormat;
@@ -481,6 +497,428 @@
             probe.style.top = Math.max(8, top) + 'px';
         }
 
+        var pinnedElement = null;
+
+        function clearPinned() {
+            if (pinnedElement && pinnedElement.parentNode) {
+                pinnedElement.parentNode.removeChild(pinnedElement);
+            }
+            pinnedElement = null;
+            pinnedPoint = null;
+        }
+
+        function positionPinned() {
+            if (!pinnedElement || !pinnedPoint) {
+                return;
+            }
+            var box = viewport.getBoundingClientRect();
+            var mapX = pinnedPoint.u * box.width;
+            var mapY = pinnedPoint.v * box.height;
+            var screenX = (mapX - box.width / 2) * transform.scale + transform.x + box.width / 2;
+            var screenY = (mapY - box.height / 2) * transform.scale + transform.y + box.height / 2;
+            if (screenX < -40 || screenX > box.width + 40 || screenY < -40 || screenY > box.height + 40) {
+                pinnedElement.style.display = 'none';
+                return;
+            }
+            pinnedElement.style.display = '';
+            var width = pinnedElement.offsetWidth || 170;
+            var height = pinnedElement.offsetHeight || 54;
+            var left = screenX + 14;
+            var top = screenY - height - 14;
+            if (left + width > box.width - 8) {
+                left = screenX - width - 14;
+            }
+            if (top < 8) {
+                top = screenY + 14;
+            }
+            pinnedElement.style.left = Math.max(8, Math.min(left, box.width - width - 8)) + 'px';
+            pinnedElement.style.top = Math.max(8, Math.min(top, box.height - height - 8)) + 'px';
+        }
+
+        function pinProbeAt(clientX, clientY) {
+            if (!manifest || !currentWeatherImage) {
+                return;
+            }
+            var position = pointerMapPosition(clientX, clientY);
+            var layer = manifest.layers[currentLayer];
+            if (!position || !layer) {
+                return;
+            }
+            var value = sampleProbe(currentProbe, position.u, position.v);
+            var estimated = false;
+            if (value === null) {
+                value = samplePalette(position.u, position.v, layer);
+                estimated = value !== null;
+            }
+            if (value === null || !Number.isFinite(value)) {
+                return;
+            }
+            clearPinned();
+            var decimals = clamp(Number(layer.decimals) || 0, 0, 2);
+            var formatted = Number(value).toLocaleString('fr-FR', {
+                minimumFractionDigits: decimals,
+                maximumFractionDigits: decimals
+            });
+            pinnedElement = document.createElement('div');
+            pinnedElement.className = 'amfm-probe amfm-probe-pinned';
+            var strong = document.createElement('strong');
+            strong.textContent = (estimated ? '≈ ' : '') + formatted + (layer.unit ? ' ' + layer.unit : '');
+            var label = document.createElement('span');
+            label.textContent = layer.label || currentLayer;
+            var close = document.createElement('button');
+            close.type = 'button';
+            close.className = 'amfm-probe-pin-close';
+            close.setAttribute('aria-label', 'Retirer l’épingle');
+            close.textContent = '×';
+            close.addEventListener('click', function (event) {
+                event.stopPropagation();
+                clearPinned();
+            });
+            pinnedElement.appendChild(strong);
+            pinnedElement.appendChild(label);
+            pinnedElement.appendChild(close);
+            viewport.appendChild(pinnedElement);
+            pinnedPoint = { u: position.u, v: position.v };
+            positionPinned();
+        }
+
+        function screenToLatLon(clientX, clientY) {
+            if (!manifest || !manifest.bounds) {
+                return null;
+            }
+            var position = pointerMapPosition(clientX, clientY);
+            if (!position) {
+                return null;
+            }
+            var bounds = manifest.bounds;
+            var west = Number(bounds.west);
+            var east = Number(bounds.east);
+            var northY = mercator(Number(bounds.north));
+            var southY = mercator(Number(bounds.south));
+            return {
+                latitude: inverseMercator(northY - position.v * (northY - southY)),
+                longitude: west + position.u * (east - west)
+            };
+        }
+
+        function nearestPlace(latitude, longitude) {
+            if (!placeBuckets.size) {
+                return null;
+            }
+            var baseLat = Math.floor(latitude);
+            var baseLon = Math.floor(longitude);
+            var best = null;
+            var bestDistance = Infinity;
+            for (var dLat = -2; dLat <= 2; dLat += 1) {
+                for (var dLon = -2; dLon <= 2; dLon += 1) {
+                    var bucket = placeBuckets.get((baseLat + dLat) + '|' + (baseLon + dLon));
+                    if (!bucket) {
+                        continue;
+                    }
+                    for (var index = 0; index < bucket.length; index += 1) {
+                        var place = bucket[index];
+                        var placeLat = Number(place[2]);
+                        var placeLon = Number(place[3]);
+                        var dy = placeLat - latitude;
+                        var dx = (placeLon - longitude) * Math.cos(latitude * Math.PI / 180);
+                        var distance = dx * dx + dy * dy;
+                        if (distance < bestDistance) {
+                            bestDistance = distance;
+                            best = place;
+                        }
+                    }
+                }
+            }
+            return best;
+        }
+
+        function setToolHint(message) {
+            if (!toolHint) {
+                return;
+            }
+            toolHint.textContent = message || '';
+            toolHint.hidden = !message;
+        }
+
+        function setToolMode(mode) {
+            toolMode = toolMode === mode ? null : mode;
+            toolButtons.forEach(function (button) {
+                var active = button.dataset.amfmTool === toolMode;
+                button.classList.toggle('is-active', active);
+                button.setAttribute('aria-pressed', active ? 'true' : 'false');
+            });
+            if (advancedTools) {
+                advancedTools.hidden = toolMode !== 'zoom';
+            }
+            if (toolMode !== 'zoom' && pinnedEnabled) {
+                pinnedEnabled = false;
+                if (pinButton) {
+                    pinButton.setAttribute('aria-pressed', 'false');
+                }
+                clearPinned();
+            }
+            if (toolMode === 'diagram') {
+                setToolHint('Cliquez sur la carte pour afficher le diagramme AROME du point choisi.');
+            } else {
+                setToolHint('');
+                closeDiagram();
+            }
+        }
+
+        function composeCaptureCanvas() {
+            if (!weatherCanvas || !weatherCanvas.width) {
+                return null;
+            }
+            var output = document.createElement('canvas');
+            output.width = weatherCanvas.width;
+            output.height = weatherCanvas.height;
+            var context = output.getContext('2d');
+            [weatherCanvas, vectorCanvas, labelsCanvas].forEach(function (source) {
+                if (source && source.width === output.width && source.height === output.height) {
+                    context.drawImage(source, 0, 0);
+                }
+            });
+            return output;
+        }
+
+        function captureImage() {
+            var canvas = composeCaptureCanvas();
+            if (!canvas || !canvas.toBlob) {
+                setToolHint('Capture indisponible pour ce navigateur.');
+                return;
+            }
+            canvas.toBlob(function (blob) {
+                if (!blob) {
+                    return;
+                }
+                var url = URL.createObjectURL(blob);
+                var link = document.createElement('a');
+                var layerLabel = manifest && manifest.layers && manifest.layers[currentLayer]
+                    ? manifest.layers[currentLayer].label
+                    : currentLayer;
+                var slug = String(layerLabel || 'arome').toLowerCase()
+                    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+                    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+                link.href = url;
+                link.download = 'arome-' + (slug || 'carte') + '-' + Date.now() + '.png';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                window.setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+            }, 'image/png');
+        }
+
+        function closeDiagram() {
+            if (diagramPopup) {
+                diagramPopup.hidden = true;
+            }
+            diagramLoadToken += 1;
+        }
+
+        function fetchDepartmentForDiagram(code) {
+            if (departmentCache.has(code)) {
+                return departmentCache.get(code);
+            }
+            var promise = fetchJson(baseUrl + '/departements/' + code + '.json')
+                .catch(function (error) {
+                    departmentCache.delete(code);
+                    throw error;
+                });
+            departmentCache.set(code, promise);
+            return promise;
+        }
+
+        function positionDiagramPopup(clientX, clientY) {
+            if (!diagramPopup) {
+                return;
+            }
+            var box = viewport.getBoundingClientRect();
+            var left = clientX - box.left + 14;
+            var top = clientY - box.top + 14;
+            var width = diagramPopup.offsetWidth || 320;
+            var height = diagramPopup.offsetHeight || 220;
+            if (left + width > box.width - 8) {
+                left = clientX - box.left - width - 14;
+            }
+            if (top + height > box.height - 8) {
+                top = clientY - box.top - height - 14;
+            }
+            diagramPopup.style.left = Math.max(8, left) + 'px';
+            diagramPopup.style.top = Math.max(8, top) + 'px';
+        }
+
+        function renderDiagramChart(name, forecastRows, columnIndex, pointIndex) {
+            if (!diagramBody) {
+                return;
+            }
+            diagramBody.replaceChildren();
+            var temperatures = [];
+            var rains = [];
+            var hourLabels = [];
+            forecastRows.slice(0, 30).forEach(function (row) {
+                var values = row[1] && row[1][pointIndex];
+                if (!values) {
+                    return;
+                }
+                var date = new Date(row[0]);
+                var tempIndex = columnIndex.temperature_c;
+                var rainIndex = columnIndex.precipitation_mm;
+                temperatures.push(typeof tempIndex === 'number' ? Number(values[tempIndex]) : null);
+                rains.push(typeof rainIndex === 'number' ? Number(values[rainIndex]) : 0);
+                hourLabels.push(String(date.getHours()).padStart(2, '0') + 'h');
+            });
+            var validTemps = temperatures.filter(function (value) { return Number.isFinite(value); });
+            if (!validTemps.length) {
+                diagramBody.appendChild(document.createTextNode('Aucune donnée exploitable pour ce point.'));
+                return;
+            }
+            var width = 320;
+            var height = 150;
+            var margin = { left: 30, right: 10, top: 14, bottom: 20 };
+            var innerWidth = width - margin.left - margin.right;
+            var innerHeight = height - margin.top - margin.bottom;
+            var minTemp = Math.min.apply(null, validTemps);
+            var maxTemp = Math.max.apply(null, validTemps);
+            if (minTemp === maxTemp) {
+                minTemp -= 1;
+                maxTemp += 1;
+            }
+            var maxRain = Math.max(1, Math.max.apply(null, rains.map(function (value) {
+                return Number.isFinite(value) ? value : 0;
+            })));
+            var svgNs = 'http://www.w3.org/2000/svg';
+            var svg = document.createElementNS(svgNs, 'svg');
+            svg.setAttribute('viewBox', '0 0 ' + width + ' ' + height);
+            svg.setAttribute('class', 'amfm-diagram-svg');
+            svg.setAttribute('role', 'img');
+            svg.setAttribute('aria-label', 'Diagramme AROME pour ' + name);
+            var count = temperatures.length;
+            var stepX = count > 1 ? innerWidth / (count - 1) : 0;
+
+            rains.forEach(function (value, index) {
+                if (!Number.isFinite(value) || value <= 0) {
+                    return;
+                }
+                var barHeight = value / maxRain * innerHeight * 0.55;
+                var rect = document.createElementNS(svgNs, 'rect');
+                rect.setAttribute('x', (margin.left + index * stepX - stepX * 0.3).toFixed(1));
+                rect.setAttribute('y', (margin.top + innerHeight - barHeight).toFixed(1));
+                rect.setAttribute('width', Math.max(1.5, stepX * 0.6).toFixed(1));
+                rect.setAttribute('height', barHeight.toFixed(1));
+                rect.setAttribute('class', 'amfm-diagram-rain');
+                svg.appendChild(rect);
+            });
+
+            var points = temperatures.map(function (value, index) {
+                if (!Number.isFinite(value)) {
+                    return null;
+                }
+                var x = margin.left + index * stepX;
+                var y = margin.top + innerHeight * (maxTemp - value) / (maxTemp - minTemp);
+                return x.toFixed(1) + ',' + y.toFixed(1);
+            }).filter(Boolean);
+            if (points.length > 1) {
+                var polyline = document.createElementNS(svgNs, 'polyline');
+                polyline.setAttribute('points', points.join(' '));
+                polyline.setAttribute('class', 'amfm-diagram-temp');
+                svg.appendChild(polyline);
+            }
+
+            [0, count - 1].forEach(function (index) {
+                if (index < 0 || !hourLabels[index]) {
+                    return;
+                }
+                var text = document.createElementNS(svgNs, 'text');
+                text.setAttribute('x', (margin.left + index * stepX).toFixed(1));
+                text.setAttribute('y', (height - 5).toFixed(1));
+                text.setAttribute('text-anchor', index === 0 ? 'start' : 'end');
+                text.setAttribute('class', 'amfm-diagram-axis');
+                text.textContent = hourLabels[index];
+                svg.appendChild(text);
+            });
+
+            [minTemp, maxTemp].forEach(function (value) {
+                var y = margin.top + innerHeight * (maxTemp - value) / (maxTemp - minTemp);
+                var text = document.createElementNS(svgNs, 'text');
+                text.setAttribute('x', (margin.left - 4).toFixed(1));
+                text.setAttribute('y', (y + 3).toFixed(1));
+                text.setAttribute('text-anchor', 'end');
+                text.setAttribute('class', 'amfm-diagram-axis');
+                text.textContent = Math.round(value) + '°';
+                svg.appendChild(text);
+            });
+
+            diagramBody.appendChild(svg);
+            var caption = document.createElement('p');
+            caption.className = 'amfm-diagram-caption';
+            caption.textContent = 'Température (ligne) et précipitations horaires (barres) — prochaines échéances AROME.';
+            diagramBody.appendChild(caption);
+        }
+
+        function openDiagramAt(clientX, clientY) {
+            var point = screenToLatLon(clientX, clientY);
+            if (!point || !diagramPopup) {
+                return;
+            }
+            var place = nearestPlace(point.latitude, point.longitude);
+            if (!place || place.length < 6) {
+                setToolHint('Aucune commune identifiée à cet endroit — essayez un point plus proche d’une ville.');
+                return;
+            }
+            setToolHint('Cliquez sur la carte pour afficher le diagramme AROME du point choisi.');
+            var name = String(place[0]);
+            var communeCode = String(place[4]);
+            var departmentCode = String(place[5]);
+            var token = ++diagramLoadToken;
+            diagramTitle.textContent = name;
+            diagramPopup.hidden = false;
+            diagramBody.replaceChildren();
+            if (diagramStatus) {
+                diagramStatus.hidden = false;
+                diagramStatus.textContent = 'Chargement du diagramme…';
+                diagramBody.appendChild(diagramStatus);
+            }
+            positionDiagramPopup(clientX, clientY);
+            fetchDepartmentForDiagram(departmentCode)
+                .then(function (departmentData) {
+                    if (token !== diagramLoadToken) {
+                        return;
+                    }
+                    var communes = departmentData.communes || [];
+                    var commune = null;
+                    for (var index = 0; index < communes.length; index += 1) {
+                        if (String(communes[index][0]) === communeCode) {
+                            commune = communes[index];
+                            break;
+                        }
+                    }
+                    if (!commune) {
+                        diagramBody.replaceChildren(document.createTextNode('Commune introuvable dans les données du département.'));
+                        return;
+                    }
+                    var columns = departmentData.columns && Array.isArray(departmentData.columns.values)
+                        ? departmentData.columns.values
+                        : [];
+                    var columnIndex = {};
+                    columns.forEach(function (columnName, columnPosition) {
+                        columnIndex[columnName] = columnPosition;
+                    });
+                    var pointIndex = Number(commune[6]);
+                    var lowerTime = Date.now() - 3600000;
+                    var forecastRows = (departmentData.forecast || []).filter(function (step) {
+                        return Array.isArray(step) && new Date(step[0]).getTime() >= lowerTime;
+                    });
+                    renderDiagramChart(name, forecastRows, columnIndex, pointIndex);
+                    positionDiagramPopup(clientX, clientY);
+                })
+                .catch(function () {
+                    if (token !== diagramLoadToken) {
+                        return;
+                    }
+                    diagramBody.replaceChildren(document.createTextNode('Impossible de charger ce diagramme pour le moment.'));
+                });
+        }
+
         function availableSteps() {
             if (!manifest || !Array.isArray(manifest.steps)) {
                 return [];
@@ -509,8 +947,8 @@
         function refreshLayerMenu() {
             var current = manifest.layers[currentLayer];
             currentLayerText.textContent = current ? current.label : 'Choisir une carte';
-            layerGrid.querySelectorAll('[data-hkm-layer-key]').forEach(function (button) {
-                var active = button.dataset.hkmLayerKey === currentLayer;
+            layerGrid.querySelectorAll('[data-amfm-layer-key]').forEach(function (button) {
+                var active = button.dataset.amfmLayerKey === currentLayer;
                 button.classList.toggle('is-active', active);
                 button.setAttribute('aria-pressed', active ? 'true' : 'false');
             });
@@ -545,15 +983,15 @@
                     return;
                 }
                 var section = document.createElement('section');
-                section.className = 'hkm-layer-group';
+                section.className = 'amfm-layer-group';
                 var title = document.createElement('h3');
                 title.textContent = group;
                 section.appendChild(title);
                 grouped[group].forEach(function (entry) {
                     var button = document.createElement('button');
                     button.type = 'button';
-                    button.className = 'hkm-layer-option';
-                    button.dataset.hkmLayerKey = entry.key;
+                    button.className = 'amfm-layer-option';
+                    button.dataset.amfmLayerKey = entry.key;
                     button.setAttribute('aria-pressed', 'false');
                     var label = document.createElement('span');
                     label.textContent = entry.layer.label || entry.key;
@@ -582,10 +1020,10 @@
             }
             legend.classList.toggle('is-dense', layer.stops.length > 16);
             var strip = document.createElement('div');
-            strip.className = 'hkm-legend-strip';
+            strip.className = 'amfm-legend-strip';
             layer.stops.forEach(function (stop) {
                 var item = document.createElement('div');
-                item.className = 'hkm-legend-stop';
+                item.className = 'amfm-legend-stop';
                 item.style.backgroundColor = stop.color;
                 var label = document.createElement('span');
                 label.textContent = stop.value;
@@ -1169,6 +1607,7 @@
             if (lastHover) {
                 updateProbe(lastHover.x, lastHover.y);
             }
+            positionPinned();
         }
 
         function changeZoom(nextScale, clientX, clientY) {
@@ -1220,7 +1659,7 @@
             applyTransform();
         }
 
-        app.addEventListener('hkm:focus-location', function (event) {
+        app.addEventListener('amfm:focus-location', function (event) {
             focusLocation(event.detail);
         });
 
@@ -1267,6 +1706,26 @@
         document.addEventListener('fullscreenchange', function () {
             window.setTimeout(applyTransform, 50);
         });
+        toolButtons.forEach(function (button) {
+            button.addEventListener('click', function () {
+                setToolMode(button.dataset.amfmTool);
+            });
+        });
+        if (captureButton) {
+            captureButton.addEventListener('click', captureImage);
+        }
+        if (pinButton) {
+            pinButton.addEventListener('click', function () {
+                pinnedEnabled = !pinnedEnabled;
+                pinButton.setAttribute('aria-pressed', pinnedEnabled ? 'true' : 'false');
+                if (!pinnedEnabled) {
+                    clearPinned();
+                }
+            });
+        }
+        if (diagramClose) {
+            diagramClose.addEventListener('click', closeDiagram);
+        }
         viewport.addEventListener('wheel', function (event) {
             event.preventDefault();
             changeZoom(
@@ -1341,10 +1800,16 @@
         viewport.addEventListener('pointerleave', hideProbe);
 
         viewport.addEventListener('pointerdown', function (event) {
-            if (event.target.closest('button')) {
+            if (event.target.closest('button, .amfm-diagram-popup, .amfm-probe-pinned')) {
                 return;
             }
             hideProbe();
+            tapStart = {
+                x: event.clientX,
+                y: event.clientY,
+                time: Date.now(),
+                pointerId: event.pointerId
+            };
             activePointers.set(event.pointerId, {
                 x: event.clientX,
                 y: event.clientY
@@ -1390,6 +1855,7 @@
             applyTransform();
         });
         function endPointer(event) {
+            var wasMultiTouch = activePointers.size > 1;
             if (activePointers.has(event.pointerId)) {
                 activePointers.delete(event.pointerId);
                 if (activePointers.size) {
@@ -1400,6 +1866,19 @@
             }
             if (!activePointers.size) {
                 viewport.classList.remove('is-dragging');
+            }
+            if (tapStart && tapStart.pointerId === event.pointerId) {
+                var dx = event.clientX - tapStart.x;
+                var dy = event.clientY - tapStart.y;
+                var dt = Date.now() - tapStart.time;
+                tapStart = null;
+                if (!wasMultiTouch && Math.hypot(dx, dy) < 6 && dt < 600) {
+                    if (toolMode === 'diagram') {
+                        openDiagramAt(event.clientX, event.clientY);
+                    } else if (pinnedEnabled) {
+                        pinProbeAt(event.clientX, event.clientY);
+                    }
+                }
             }
         }
         viewport.addEventListener('pointerup', endPointer);
@@ -1455,6 +1934,6 @@
     }
 
     whenReady(function () {
-        document.querySelectorAll('[data-hkm-app]').forEach(initMap);
+        document.querySelectorAll('[data-amfm-app]').forEach(initMap);
     });
 }());

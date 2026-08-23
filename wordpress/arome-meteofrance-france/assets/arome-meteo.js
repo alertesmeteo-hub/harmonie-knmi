@@ -104,38 +104,38 @@
 
     function temperatureClass(value) {
         if (!finite(value)) { return ''; }
-        if (value >= 35) { return 'hkw-temp-extreme'; }
-        if (value >= 30) { return 'hkw-temp-hot'; }
-        if (value >= 22) { return 'hkw-temp-warm'; }
-        if (value >= 12) { return 'hkw-temp-mild'; }
-        if (value >= 4) { return 'hkw-temp-cool'; }
-        return 'hkw-temp-cold';
+        if (value >= 35) { return 'amf-temp-extreme'; }
+        if (value >= 30) { return 'amf-temp-hot'; }
+        if (value >= 22) { return 'amf-temp-warm'; }
+        if (value >= 12) { return 'amf-temp-mild'; }
+        if (value >= 4) { return 'amf-temp-cool'; }
+        return 'amf-temp-cold';
     }
 
     function gustClass(value) {
         if (!finite(value)) { return ''; }
-        if (value >= 80) { return 'hkw-gust-danger'; }
-        if (value >= 60) { return 'hkw-gust-strong'; }
-        if (value >= 40) { return 'hkw-gust-moderate'; }
+        if (value >= 80) { return 'amf-gust-danger'; }
+        if (value >= 60) { return 'amf-gust-strong'; }
+        if (value >= 40) { return 'amf-gust-moderate'; }
         return '';
     }
 
     function windForceClass(value) {
-        if (!finite(value)) { return 'hkw-wind-calm'; }
-        if (value >= 80) { return 'hkw-wind-violent'; }
-        if (value >= 60) { return 'hkw-wind-strong'; }
-        if (value >= 40) { return 'hkw-wind-fresh'; }
-        if (value >= 20) { return 'hkw-wind-moderate'; }
-        return 'hkw-wind-light';
+        if (!finite(value)) { return 'amf-wind-calm'; }
+        if (value >= 80) { return 'amf-wind-violent'; }
+        if (value >= 60) { return 'amf-wind-strong'; }
+        if (value >= 40) { return 'amf-wind-fresh'; }
+        if (value >= 20) { return 'amf-wind-moderate'; }
+        return 'amf-wind-light';
     }
 
     function rainClass(value) {
         if (!finite(value) || value < 0.1) { return ''; }
-        if (value >= 15) { return 'hkw-rain hkw-rain-intense'; }
-        if (value >= 5) { return 'hkw-rain hkw-rain-strong'; }
-        if (value >= 2) { return 'hkw-rain hkw-rain-moderate'; }
-        if (value >= 0.5) { return 'hkw-rain hkw-rain-light'; }
-        return 'hkw-rain hkw-rain-trace';
+        if (value >= 15) { return 'amf-rain amf-rain-intense'; }
+        if (value >= 5) { return 'amf-rain amf-rain-strong'; }
+        if (value >= 2) { return 'amf-rain amf-rain-moderate'; }
+        if (value >= 0.5) { return 'amf-rain amf-rain-light'; }
+        return 'amf-rain amf-rain-trace';
     }
 
     function svgElement(name, attributes, text) {
@@ -257,7 +257,7 @@
                 y: margin.top,
                 width: Math.max(0, endX - startX),
                 height: innerHeight,
-                class: 'hkw-chart-day-band hkw-dayband-' + token
+                class: 'amf-chart-day-band amf-dayband-' + token
             }));
 
             // Bandeau supérieur beaucoup plus visible pour identifier la journée.
@@ -266,7 +266,7 @@
                 y: margin.top,
                 width: Math.max(0, endX - startX),
                 height: 46,
-                class: 'hkw-chart-day-strip hkw-daystrip-' + token
+                class: 'amf-chart-day-strip amf-daystrip-' + token
             }));
 
             // Séparation verticale nette entre deux journées.
@@ -276,7 +276,7 @@
                     y1: margin.top,
                     x2: startX,
                     y2: margin.top + innerHeight,
-                    class: 'hkw-chart-day-separator hkw-dayseparator-' + token
+                    class: 'amf-chart-day-separator amf-dayseparator-' + token
                 }));
             }
 
@@ -286,7 +286,7 @@
                     x: (startX + endX) / 2,
                     y: margin.top + 31,
                     'text-anchor': 'middle',
-                    class: 'hkw-chart-day-label hkw-daylabel-' + token
+                    class: 'amf-chart-day-label amf-daylabel-' + token
                 }, dayLabel));
             }
             start = end + 1;
@@ -312,12 +312,12 @@
         var valid = (metrics || []).filter(function (metric) { return metric && metric.value !== '—'; });
         if (!valid.length) { return; }
         var block = document.createElement('div');
-        block.className = 'hkw-chart-metrics';
+        block.className = 'amf-chart-metrics';
         valid.forEach(function (metric) {
             var item = document.createElement('span');
-            item.className = 'hkw-chart-metric';
-            item.appendChild(textSpan(metric.label, 'hkw-chart-metric-label'));
-            item.appendChild(textSpan(metric.value, 'hkw-chart-metric-value'));
+            item.className = 'amf-chart-metric';
+            item.appendChild(textSpan(metric.label, 'amf-chart-metric-label'));
+            item.appendChild(textSpan(metric.value, 'amf-chart-metric-value'));
             block.appendChild(item);
         });
         container.appendChild(block);
@@ -325,16 +325,16 @@
 
     function appendChartViewport(container, svg) {
         var viewport = document.createElement('div');
-        viewport.className = 'hkw-chart-viewport';
+        viewport.className = 'amf-chart-viewport';
         var tooltip = document.createElement('div');
-        tooltip.className = 'hkw-chart-tooltip';
+        tooltip.className = 'amf-chart-tooltip';
         tooltip.hidden = true;
         tooltip.setAttribute('role', 'status');
         tooltip.setAttribute('aria-live', 'polite');
 
         function tooltipTarget(node) {
             if (!node || typeof node.closest !== 'function') { return null; }
-            return node.closest('[data-hkw-tooltip]');
+            return node.closest('[data-amf-tooltip]');
         }
 
         function placeTooltip(clientX, clientY) {
@@ -348,7 +348,7 @@
         viewport.addEventListener('pointerover', function (event) {
             var target = tooltipTarget(event.target);
             if (!target) { return; }
-            tooltip.textContent = target.getAttribute('data-hkw-tooltip') || '';
+            tooltip.textContent = target.getAttribute('data-amf-tooltip') || '';
             tooltip.hidden = false;
             placeTooltip(event.clientX, event.clientY);
         });
@@ -356,7 +356,7 @@
             if (tooltip.hidden) { return; }
             var target = tooltipTarget(event.target);
             if (!target) { return; }
-            tooltip.textContent = target.getAttribute('data-hkw-tooltip') || '';
+            tooltip.textContent = target.getAttribute('data-amf-tooltip') || '';
             placeTooltip(event.clientX, event.clientY);
         });
         viewport.addEventListener('pointerout', function (event) {
@@ -367,7 +367,7 @@
         viewport.addEventListener('focusin', function (event) {
             var target = tooltipTarget(event.target);
             if (!target) { return; }
-            tooltip.textContent = target.getAttribute('data-hkw-tooltip') || '';
+            tooltip.textContent = target.getAttribute('data-amf-tooltip') || '';
             tooltip.hidden = false;
             var targetRect = target.getBoundingClientRect();
             placeTooltip(targetRect.left + targetRect.width / 2, targetRect.top);
@@ -408,7 +408,7 @@
                 x: point.x,
                 y: y,
                 'text-anchor': 'middle',
-                class: 'hkw-chart-value-label ' + className
+                class: 'amf-chart-value-label ' + className
             }, formatter(values[index])));
         });
     }
@@ -421,7 +421,7 @@
         series.forEach(function (item) { all = all.concat(item.values); });
         var scale = chartScale(all, Boolean(options.forceZero), options.targetTicks || 5, options.paddingSteps || 0);
         if (!scale) {
-            container.appendChild(textSpan('Données indisponibles pour ce diagramme.', 'hkw-chart-empty'));
+            container.appendChild(textSpan('Données indisponibles pour ce diagramme.', 'amf-chart-empty'));
             return;
         }
 
@@ -458,7 +458,7 @@
             'aria-label': options.ariaLabel || 'Diagramme',
             preserveAspectRatio: 'xMidYMid meet'
         });
-        svg.classList.add('hkw-chart-svg');
+        svg.classList.add('amf-chart-svg');
         chartDayBands(svg, labels.length, margin, innerWidth, innerHeight, options.meta);
 
         var tickValue = Math.ceil((scale.max - scale.min) / scale.step);
@@ -470,13 +470,13 @@
                 x2: width - margin.right,
                 y1: gy,
                 y2: gy,
-                class: 'hkw-chart-grid'
+                class: 'amf-chart-grid'
             }));
             svg.appendChild(svgElement('text', {
                 x: margin.left - 9,
                 y: gy + 4,
                 'text-anchor': 'end',
-                class: 'hkw-chart-axis'
+                class: 'amf-chart-axis'
             }, formatNumber(value, options.decimals || 0)));
         }
 
@@ -491,13 +491,13 @@
                 x2: x,
                 y1: margin.top,
                 y2: margin.top + innerHeight,
-                class: 'hkw-chart-grid hkw-chart-grid-vertical'
+                class: 'amf-chart-grid amf-chart-grid-vertical'
             }));
             svg.appendChild(svgElement('text', {
                 x: x,
                 y: height - 18,
                 'text-anchor': index === 0 ? 'start' : (index === n - 1 ? 'end' : 'middle'),
-                class: 'hkw-chart-axis hkw-chart-xaxis'
+                class: 'amf-chart-axis amf-chart-xaxis'
             }, axisLabel));
         });
 
@@ -535,7 +535,7 @@
                         + ' Z';
                     svg.appendChild(svgElement('path', {
                         d: d,
-                        class: 'hkw-chart-area ' + item.className
+                        class: 'amf-chart-area ' + item.className
                     }));
                 });
             }
@@ -543,7 +543,7 @@
             segments.forEach(function (segment) {
                 svg.appendChild(svgElement('path', {
                     d: smoothPath(segment),
-                    class: 'hkw-chart-line ' + item.className,
+                    class: 'amf-chart-line ' + item.className,
                     fill: 'none'
                 }));
             });
@@ -557,10 +557,10 @@
                     cx: point.x,
                     cy: point.y,
                     r: options.showPoints === false ? 10 : 5.4,
-                    class: (options.showPoints === false ? 'hkw-chart-hitpoint ' : 'hkw-chart-point ') + item.className,
+                    class: (options.showPoints === false ? 'amf-chart-hitpoint ' : 'amf-chart-point ') + item.className,
                     tabindex: 0,
                     'aria-label': tooltipLabel,
-                    'data-hkw-tooltip': tooltipLabel
+                    'data-amf-tooltip': tooltipLabel
                 };
                 if (options.showPoints === false) {
                     attrs.fill = 'transparent';
@@ -605,16 +605,16 @@
                 area += ' Z';
                 var envelope = svgElement('path', {
                     d: area,
-                    class: 'hkw-chart-wind-envelope'
+                    class: 'amf-chart-wind-envelope'
                 });
-                var firstLine = svg.querySelector('.hkw-chart-line');
+                var firstLine = svg.querySelector('.amf-chart-line');
                 if (firstLine) { svg.insertBefore(envelope, firstLine); }
                 else { svg.appendChild(envelope); }
             }
         }
 
         if (series.length > 1) {
-            var legend = svgElement('g', { class: 'hkw-chart-legend' });
+            var legend = svgElement('g', { class: 'amf-chart-legend' });
             series.forEach(function (item, index) {
                 var x = margin.left + index * 165;
                 legend.appendChild(svgElement('line', {
@@ -622,12 +622,12 @@
                     x2: x + 28,
                     y1: 17,
                     y2: 17,
-                    class: 'hkw-chart-line ' + item.className
+                    class: 'amf-chart-line ' + item.className
                 }));
                 legend.appendChild(svgElement('text', {
                     x: x + 36,
                     y: 21,
-                    class: 'hkw-chart-axis hkw-chart-legend-text'
+                    class: 'amf-chart-axis amf-chart-legend-text'
                 }, item.label));
             });
             svg.appendChild(legend);
@@ -636,12 +636,12 @@
     }
 
     function rainVisualClass(value) {
-        if (!finite(value) || value < 0.1) { return 'hkw-chart-rain-zero'; }
-        if (value >= 15) { return 'hkw-chart-rain-intense'; }
-        if (value >= 5) { return 'hkw-chart-rain-strong'; }
-        if (value >= 2) { return 'hkw-chart-rain-moderate'; }
-        if (value >= 0.5) { return 'hkw-chart-rain-light'; }
-        return 'hkw-chart-rain-trace';
+        if (!finite(value) || value < 0.1) { return 'amf-chart-rain-zero'; }
+        if (value >= 15) { return 'amf-chart-rain-intense'; }
+        if (value >= 5) { return 'amf-chart-rain-strong'; }
+        if (value >= 2) { return 'amf-chart-rain-moderate'; }
+        if (value >= 0.5) { return 'amf-chart-rain-light'; }
+        return 'amf-chart-rain-trace';
     }
 
     function renderRainChart(container, labels, rainValues, cumulativeValues, options) {
@@ -651,7 +651,7 @@
         var rainClean = finiteValues(rainValues);
         var cumulativeClean = finiteValues(cumulativeValues);
         if (!rainClean.length && !cumulativeClean.length) {
-            container.appendChild(textSpan('Données indisponibles pour ce diagramme.', 'hkw-chart-empty'));
+            container.appendChild(textSpan('Données indisponibles pour ce diagramme.', 'amf-chart-empty'));
             return;
         }
 
@@ -676,7 +676,7 @@
             'aria-label': 'Diagramme des précipitations et du cumul',
             preserveAspectRatio: 'xMidYMid meet'
         });
-        svg.classList.add('hkw-chart-svg');
+        svg.classList.add('amf-chart-svg');
         chartDayBands(svg, labels.length, margin, innerWidth, innerHeight, options.meta);
 
         var rainTickCount = Math.round((rainScale.max - rainScale.min) / rainScale.step);
@@ -688,13 +688,13 @@
                 x2: width - margin.right,
                 y1: y,
                 y2: y,
-                class: 'hkw-chart-grid'
+                class: 'amf-chart-grid'
             }));
             svg.appendChild(svgElement('text', {
                 x: margin.left - 9,
                 y: y + 5,
                 'text-anchor': 'end',
-                class: 'hkw-chart-axis'
+                class: 'amf-chart-axis'
             }, formatNumber(rainAxis, rainScale.step < 1 ? 1 : 0)));
         }
 
@@ -706,7 +706,7 @@
                 x: width - margin.right + 9,
                 y: cy + 5,
                 'text-anchor': 'start',
-                class: 'hkw-chart-axis hkw-chart-axis-cumulative'
+                class: 'amf-chart-axis amf-chart-axis-cumulative'
             }, formatNumber(cumAxis, cumScale.step < 1 ? 1 : 0)));
         }
 
@@ -725,10 +725,10 @@
                 width: Math.max(3, slot * 0.68),
                 height: barHeight,
                 rx: Math.min(6, slot * 0.18),
-                class: 'hkw-chart-rain-bar ' + rainVisualClass(value),
+                class: 'amf-chart-rain-bar ' + rainVisualClass(value),
                 tabindex: 0,
                 'aria-label': rainTooltip,
-                'data-hkw-tooltip': rainTooltip
+                'data-amf-tooltip': rainTooltip
             });
             svg.appendChild(bar);
         });
@@ -746,7 +746,7 @@
         if (cleanPoints.length) {
             svg.appendChild(svgElement('path', {
                 d: smoothPath(cleanPoints),
-                class: 'hkw-chart-line hkw-series-rain-cumulative',
+                class: 'amf-chart-line amf-series-rain-cumulative',
                 fill: 'none'
             }));
             cumulativePoints.forEach(function (point, index) {
@@ -756,10 +756,10 @@
                     cx: point.x,
                     cy: point.y,
                     r: 11,
-                    class: 'hkw-chart-hitpoint hkw-series-rain-cumulative',
+                    class: 'amf-chart-hitpoint amf-series-rain-cumulative',
                     tabindex: 0,
                     'aria-label': cumulativeTooltip,
-                    'data-hkw-tooltip': cumulativeTooltip,
+                    'data-amf-tooltip': cumulativeTooltip,
                     fill: 'transparent',
                     stroke: 'none',
                     opacity: '0'
@@ -777,35 +777,35 @@
                 x: x,
                 y: height - 18,
                 'text-anchor': index === 0 ? 'start' : (index === n - 1 ? 'end' : 'middle'),
-                class: 'hkw-chart-axis hkw-chart-xaxis'
+                class: 'amf-chart-axis amf-chart-xaxis'
             }, axisLabel));
         });
 
-        var legend = svgElement('g', { class: 'hkw-chart-legend' });
+        var legend = svgElement('g', { class: 'amf-chart-legend' });
         legend.appendChild(svgElement('rect', {
             x: margin.left,
             y: 10,
             width: 20,
             height: 11,
             rx: 4,
-            class: 'hkw-chart-rain-bar hkw-chart-rain-light'
+            class: 'amf-chart-rain-bar amf-chart-rain-light'
         }));
         legend.appendChild(svgElement('text', {
             x: margin.left + 28,
             y: 21,
-            class: 'hkw-chart-axis hkw-chart-legend-text'
+            class: 'amf-chart-axis amf-chart-legend-text'
         }, 'Pluie horaire'));
         legend.appendChild(svgElement('line', {
             x1: margin.left + 142,
             x2: margin.left + 172,
             y1: 17,
             y2: 17,
-            class: 'hkw-chart-line hkw-series-rain-cumulative'
+            class: 'amf-chart-line amf-series-rain-cumulative'
         }));
         legend.appendChild(svgElement('text', {
             x: margin.left + 180,
             y: 21,
-            class: 'hkw-chart-axis hkw-chart-legend-text'
+            class: 'amf-chart-axis amf-chart-legend-text'
         }, 'Cumul'));
         svg.appendChild(legend);
         appendChartViewport(container, svg);
@@ -849,37 +849,37 @@
         var timezone = app.dataset.timezone || 'Europe/Paris';
         var titlePrefix = app.dataset.titlePrefix || 'Prévisions AROME';
 
-        var input = app.querySelector('.hkw-city-input');
-        var locateButton = app.querySelector('[data-hkw-locate]');
-        var results = app.querySelector('.hkw-search-results');
-        var status = app.querySelector('.hkw-search-status');
-        var generalBody = app.querySelector('[data-hkw-body-general]');
-        var stormBody = app.querySelector('[data-hkw-body-storms]');
-        var stormSummary = app.querySelector('[data-hkw-storm-summary]');
-        var snowBody = app.querySelector('[data-hkw-body-snow]');
-        var snowSummary = app.querySelector('[data-hkw-snow-summary]');
-        var tabs = Array.prototype.slice.call(app.querySelectorAll('[data-hkw-tab]'));
-        var panels = Array.prototype.slice.call(app.querySelectorAll('[data-hkw-panel]'));
-        var title = app.querySelector('[data-hkw-title]');
-        var altitudeLine = app.querySelector('[data-hkw-altitude]');
-        var meta = app.querySelector('[data-hkw-meta]');
-        var generated = app.querySelector('[data-hkw-generated]');
-        var stale = app.querySelector('[data-hkw-stale]');
-        var stormTopScroll = app.querySelector('[data-hkw-top-scroll="storms"]');
-        var stormScrollWrap = app.querySelector('[data-hkw-scroll-wrap="storms"]');
-        var stormTable = app.querySelector('.hkw-storm-table');
-        var snowTopScroll = app.querySelector('[data-hkw-top-scroll="snow"]');
-        var snowScrollWrap = app.querySelector('[data-hkw-scroll-wrap="snow"]');
-        var snowTable = app.querySelector('.hkw-snow-table');
-        var chartTemperature = app.querySelector('[data-hkw-chart-temperature]');
-        var chartPressure = app.querySelector('[data-hkw-chart-pressure]');
-        var chartRain = app.querySelector('[data-hkw-chart-rain]');
-        var chartWind = app.querySelector('[data-hkw-chart-wind]');
-        var chartTitleTemperature = app.querySelector('[data-hkw-chart-title-temperature]');
-        var chartTitlePressure = app.querySelector('[data-hkw-chart-title-pressure]');
-        var chartTitleRain = app.querySelector('[data-hkw-chart-title-rain]');
-        var chartTitleWind = app.querySelector('[data-hkw-chart-title-wind]');
-        var rainTotal = app.querySelector('[data-hkw-rain-total]');
+        var input = app.querySelector('.amf-city-input');
+        var locateButton = app.querySelector('[data-amf-locate]');
+        var results = app.querySelector('.amf-search-results');
+        var status = app.querySelector('.amf-search-status');
+        var generalBody = app.querySelector('[data-amf-body-general]');
+        var stormBody = app.querySelector('[data-amf-body-storms]');
+        var stormSummary = app.querySelector('[data-amf-storm-summary]');
+        var snowBody = app.querySelector('[data-amf-body-snow]');
+        var snowSummary = app.querySelector('[data-amf-snow-summary]');
+        var tabs = Array.prototype.slice.call(app.querySelectorAll('[data-amf-tab]'));
+        var panels = Array.prototype.slice.call(app.querySelectorAll('[data-amf-panel]'));
+        var title = app.querySelector('[data-amf-title]');
+        var altitudeLine = app.querySelector('[data-amf-altitude]');
+        var meta = app.querySelector('[data-amf-meta]');
+        var generated = app.querySelector('[data-amf-generated]');
+        var stale = app.querySelector('[data-amf-stale]');
+        var stormTopScroll = app.querySelector('[data-amf-top-scroll="storms"]');
+        var stormScrollWrap = app.querySelector('[data-amf-scroll-wrap="storms"]');
+        var stormTable = app.querySelector('.amf-storm-table');
+        var snowTopScroll = app.querySelector('[data-amf-top-scroll="snow"]');
+        var snowScrollWrap = app.querySelector('[data-amf-scroll-wrap="snow"]');
+        var snowTable = app.querySelector('.amf-snow-table');
+        var chartTemperature = app.querySelector('[data-amf-chart-temperature]');
+        var chartPressure = app.querySelector('[data-amf-chart-pressure]');
+        var chartRain = app.querySelector('[data-amf-chart-rain]');
+        var chartWind = app.querySelector('[data-amf-chart-wind]');
+        var chartTitleTemperature = app.querySelector('[data-amf-chart-title-temperature]');
+        var chartTitlePressure = app.querySelector('[data-amf-chart-title-pressure]');
+        var chartTitleRain = app.querySelector('[data-amf-chart-title-rain]');
+        var chartTitleWind = app.querySelector('[data-amf-chart-title-wind]');
+        var rainTotal = app.querySelector('[data-amf-rain-total]');
 
         var indexData = null;
         var departmentCache = new Map();
@@ -917,11 +917,11 @@
         }
 
         function makeDayCell(date, rowSpan) {
-            var cell = createCell('th', 'Date', 'hkw-day-cell hkw-day-' + weekdayToken(date));
+            var cell = createCell('th', 'Date', 'amf-day-cell amf-day-' + weekdayToken(date));
             cell.scope = 'rowgroup';
             cell.rowSpan = rowSpan;
-            cell.appendChild(textSpan(weekdayFormat.format(date), 'hkw-day-weekday'));
-            cell.appendChild(textSpan(shortDateFormat.format(date), 'hkw-day-date'));
+            cell.appendChild(textSpan(weekdayFormat.format(date), 'amf-day-weekday'));
+            cell.appendChild(textSpan(shortDateFormat.format(date), 'amf-day-date'));
             return cell;
         }
 
@@ -957,26 +957,26 @@
 
         function setStatus(message, error) {
             status.textContent = message;
-            status.classList.toggle('hkw-search-error', Boolean(error));
+            status.classList.toggle('amf-search-error', Boolean(error));
         }
 
         function setActiveView(view) {
             tabs.forEach(function (button) {
-                var active = button.dataset.hkwTab === view;
+                var active = button.dataset.amfTab === view;
                 button.classList.toggle('is-active', active);
                 button.setAttribute('aria-selected', active ? 'true' : 'false');
             });
             panels.forEach(function (panel) {
-                panel.hidden = panel.dataset.hkwPanel !== view;
+                panel.hidden = panel.dataset.amfPanel !== view;
             });
             app.dataset.activeView = view;
             if (view === 'storms') { window.requestAnimationFrame(updateStormTopScroll); }
             if (view === 'snow') { window.requestAnimationFrame(updateSnowTopScroll); }
             if (view === 'map' && selectedMapFocus) {
                 window.requestAnimationFrame(function () {
-                    var mapApp = app.querySelector('[data-hkm-app]');
+                    var mapApp = app.querySelector('[data-amfm-app]');
                     if (mapApp) {
-                        mapApp.dispatchEvent(new CustomEvent('hkm:focus-location', {
+                        mapApp.dispatchEvent(new CustomEvent('amfm:focus-location', {
                             detail: selectedMapFocus
                         }));
                     }
@@ -986,7 +986,7 @@
 
         tabs.forEach(function (button) {
             button.addEventListener('click', function () {
-                setActiveView(button.dataset.hkwTab || 'general');
+                setActiveView(button.dataset.amfTab || 'general');
             });
         });
         app.dataset.activeView = 'map';
@@ -995,7 +995,7 @@
             if (!body) { return; }
             body.replaceChildren();
             var row = document.createElement('tr');
-            var cell = createCell('td', '', error ? 'hkw-loading hkw-load-error' : 'hkw-loading');
+            var cell = createCell('td', '', error ? 'amf-loading amf-load-error' : 'amf-loading');
             cell.colSpan = colspan;
             cell.textContent = message;
             row.appendChild(cell);
@@ -1008,11 +1008,11 @@
             putMessage(snowBody, message, error, 13);
             if (stormSummary) {
                 stormSummary.textContent = message;
-                stormSummary.classList.toggle('hkw-storm-summary-warning', Boolean(error));
+                stormSummary.classList.toggle('amf-storm-summary-warning', Boolean(error));
             }
             if (snowSummary) {
                 snowSummary.textContent = message;
-                snowSummary.classList.toggle('hkw-snow-summary-warning', Boolean(error));
+                snowSummary.classList.toggle('amf-snow-summary-warning', Boolean(error));
             }
         }
 
@@ -1114,7 +1114,7 @@
             }
             function appendHazard(row, label, code) {
                 var numeric = finite(code) ? Number(code) : null;
-                var cell = createCell('td', label, numeric === null ? '' : 'hkw-hazard hkw-hazard-' + numeric);
+                var cell = createCell('td', label, numeric === null ? '' : 'amf-hazard amf-hazard-' + numeric);
                 cell.textContent = numeric === null ? '—' : (HAZARD_RISKS[numeric] || '—');
                 row.appendChild(cell);
             }
@@ -1185,23 +1185,23 @@
                 // Tableau 1 — prévisions générales.
                 var row = document.createElement('tr');
                 if (dayKey !== previousGeneralDay) {
-                    row.classList.add('hkw-new-day');
+                    row.classList.add('amf-new-day');
                     row.appendChild(makeDayCell(date, dayCounts[dayKey]));
                     previousGeneralDay = dayKey;
                 }
 
-                var hourCell = createCell('td', 'Heure', 'hkw-hour hkw-hour-' + weekdayToken(date));
+                var hourCell = createCell('td', 'Heure', 'amf-hour amf-hour-' + weekdayToken(date));
                 hourCell.textContent = hourFormat.format(date);
                 row.appendChild(hourCell);
 
                 var conditionCode = value(values, 'condition_code', 9);
                 var condition = CONDITIONS[Number(conditionCode)] || CONDITIONS[0];
-                var conditionCell = createCell('td', 'Temps', 'hkw-condition');
-                conditionCell.appendChild(textSpan(condition.icon, 'hkw-icon'));
+                var conditionCell = createCell('td', 'Temps', 'amf-condition');
+                conditionCell.appendChild(textSpan(condition.icon, 'amf-icon'));
                 conditionCell.appendChild(textSpan(condition.label));
                 row.appendChild(conditionCell);
 
-                var temperatureCell = createCell('td', 'Température', 'hkw-temperature ' + temperatureClass(temp));
+                var temperatureCell = createCell('td', 'Température', 'amf-temperature ' + temperatureClass(temp));
                 temperatureCell.textContent = formatNumber(temp, 0) + (finite(temp) ? ' °C' : '');
                 row.appendChild(temperatureCell);
 
@@ -1209,7 +1209,7 @@
                 appendNumber(row, 'Pluie', rain, 1, ' mm', rainClass(rain));
                 appendNumber(row, 'Nuages', value(values, 'cloud_cover_pct', 3), 0, ' %');
 
-                var windCell = createCell('td', 'Vent', 'hkw-wind-cell ' + windForceClass(windDisplay));
+                var windCell = createCell('td', 'Vent', 'amf-wind-cell ' + windForceClass(windDisplay));
                 var windStrong = document.createElement('strong');
                 windStrong.textContent = formatNumber(windDisplay, 0) + (finite(windDisplay) ? ' km/h' : '');
                 windCell.appendChild(windStrong);
@@ -1217,12 +1217,12 @@
                 var direction = windDirection(directionDegrees);
                 if (direction) {
                     var directionBadge = document.createElement('span');
-                    directionBadge.className = 'hkw-direction ' + windForceClass(windDisplay);
+                    directionBadge.className = 'amf-direction ' + windForceClass(windDisplay);
                     directionBadge.title = 'Vent de ' + direction + ' • ' + formatNumber(directionDegrees, 0) + '°';
-                    var arrow = textSpan('➜', 'hkw-wind-arrow');
+                    var arrow = textSpan('➜', 'amf-wind-arrow');
                     arrow.style.transform = 'rotate(' + ((Number(directionDegrees) + 180) % 360) + 'deg)';
                     directionBadge.appendChild(arrow);
-                    directionBadge.appendChild(textSpan(direction, 'hkw-wind-label'));
+                    directionBadge.appendChild(textSpan(direction, 'amf-wind-label'));
                     windCell.appendChild(directionBadge);
                 }
                 row.appendChild(windCell);
@@ -1238,11 +1238,11 @@
                 // Tableau 2 — diagnostic orageux.
                 var stormRow = document.createElement('tr');
                 if (dayKey !== previousStormDay) {
-                    stormRow.classList.add('hkw-new-day');
+                    stormRow.classList.add('amf-new-day');
                     stormRow.appendChild(makeDayCell(date, dayCounts[dayKey]));
                     previousStormDay = dayKey;
                 }
-                var stormHour = createCell('td', 'Heure', 'hkw-hour hkw-hour-' + weekdayToken(date));
+                var stormHour = createCell('td', 'Heure', 'amf-hour amf-hour-' + weekdayToken(date));
                 stormHour.textContent = hourFormat.format(date);
                 stormRow.appendChild(stormHour);
 
@@ -1251,44 +1251,44 @@
                     maxThunderRisk = maxThunderRisk === null ? Number(thunderCode) : Math.max(maxThunderRisk, Number(thunderCode));
                 }
                 var thunder = finite(thunderCode) ? THUNDER_RISKS[Number(thunderCode)] : null;
-                var thunderCell = createCell('td', 'Risque orage', thunder ? 'hkw-thunder-risk hkw-thunder-' + Number(thunderCode) : '');
+                var thunderCell = createCell('td', 'Risque orage', thunder ? 'amf-thunder-risk amf-thunder-' + Number(thunderCode) : '');
                 if (thunder) {
-                    thunderCell.appendChild(textSpan(thunder.icon + ' ', 'hkw-risk-icon'));
-                    thunderCell.appendChild(textSpan(thunder.label, 'hkw-risk-label'));
+                    thunderCell.appendChild(textSpan(thunder.icon + ' ', 'amf-risk-icon'));
+                    thunderCell.appendChild(textSpan(thunder.label, 'amf-risk-label'));
                 } else {
                     thunderCell.textContent = '—';
                 }
                 stormRow.appendChild(thunderCell);
 
                 var cape = value(values, 'cape_jkg');
-                var capeCell = createCell('td', 'CAPE', finite(cape) && cape >= 1500 ? 'hkw-cape-high' : (finite(cape) && cape >= 500 ? 'hkw-cape-mid' : ''));
+                var capeCell = createCell('td', 'CAPE', finite(cape) && cape >= 1500 ? 'amf-cape-high' : (finite(cape) && cape >= 500 ? 'amf-cape-mid' : ''));
                 capeCell.textContent = finite(cape) && Number(cape) >= 25 ? formatNumber(cape, 0) + ' J/kg' : '—';
                 capeCell.title = 'MUCAPE instantanée directement produite par AROME ; les valeurs quasi nulles ne sont pas affichées.';
                 stormRow.appendChild(capeCell);
                 appendNumber(stormRow, 'LCL', value(values, 'lcl_m'), 0, ' m');
 
                 var lightning = value(values, 'lightning_score');
-                appendNumber(stormRow, 'Foudre', lightning, 0, '/100', finite(lightning) && lightning >= 60 ? 'hkw-lightning-high' : '');
+                appendNumber(stormRow, 'Foudre', lightning, 0, '/100', finite(lightning) && lightning >= 60 ? 'amf-lightning-high' : '');
                 appendHazard(stormRow, 'Grêle', value(values, 'hail_risk_code'));
                 appendNumber(stormRow, 'Pluie conv.', value(values, 'convective_precipitation_mm'), 1, ' mm');
                 appendNumber(stormRow, 'Graupel', value(values, 'graupel_mm'), 2, ' mm');
                 appendNumber(stormRow, 'Pluie 1 h', rain, 1, ' mm', rainClass(rain));
                 appendNumber(stormRow, 'Rafales', gustDisplay, 0, ' km/h', gustClass(gustDisplay));
                 var stormTypeCode = value(values, 'storm_type_code');
-                var stormTypeCell = createCell('td', 'Type d’orage', 'hkw-storm-type');
+                var stormTypeCell = createCell('td', 'Type d’orage', 'amf-storm-type');
                 stormTypeCell.textContent = finite(stormTypeCode) ? (STORM_TYPES[Number(stormTypeCode)] || 'Indéterminé') : '—';
                 stormRow.appendChild(stormTypeCell);
 
-                var detailsCell = createCell('td', 'Détails', 'hkw-details-cell');
+                var detailsCell = createCell('td', 'Détails', 'amf-details-cell');
                 var detailsButton = document.createElement('button');
                 detailsButton.type = 'button';
-                detailsButton.className = 'hkw-details-button';
+                detailsButton.className = 'amf-details-button';
                 detailsButton.textContent = 'Afficher';
                 detailsButton.setAttribute('aria-expanded', 'false');
                 detailsCell.appendChild(detailsButton);
 
                 var advanced = document.createElement('div');
-                advanced.className = 'hkw-advanced-list hkw-details-inline';
+                advanced.className = 'amf-advanced-list amf-details-inline';
                 advanced.hidden = true;
                 [
                     ['MUCAPE directe', value(values, 'cape_jkg'), 0, ' J/kg'],
@@ -1300,9 +1300,9 @@
                     ['Nuages élevés', value(values, 'cloud_high_pct'), 0, ' %']
                 ].forEach(function (item) {
                     var box = document.createElement('div');
-                    box.className = 'hkw-advanced-item';
-                    box.appendChild(textSpan(item[0], 'hkw-advanced-label'));
-                    box.appendChild(textSpan(finite(item[1]) ? formatNumber(item[1], item[2]) + item[3] : '—', 'hkw-advanced-value'));
+                    box.className = 'amf-advanced-item';
+                    box.appendChild(textSpan(item[0], 'amf-advanced-label'));
+                    box.appendChild(textSpan(finite(item[1]) ? formatNumber(item[1], item[2]) + item[3] : '—', 'amf-advanced-value'));
                     advanced.appendChild(box);
                 });
                 detailsCell.appendChild(advanced);
@@ -1320,11 +1320,11 @@
                 // Tableau 3 — risque de neige.
                 var snowRow = document.createElement('tr');
                 if (dayKey !== previousSnowDay) {
-                    snowRow.classList.add('hkw-new-day');
+                    snowRow.classList.add('amf-new-day');
                     snowRow.appendChild(makeDayCell(date, dayCounts[dayKey]));
                     previousSnowDay = dayKey;
                 }
-                var snowHour = createCell('td', 'Heure', 'hkw-hour hkw-hour-' + weekdayToken(date));
+                var snowHour = createCell('td', 'Heure', 'amf-hour amf-hour-' + weekdayToken(date));
                 snowHour.textContent = hourFormat.format(date);
                 snowRow.appendChild(snowHour);
 
@@ -1333,10 +1333,10 @@
                     maxSnowRisk = maxSnowRisk === null ? Number(snowRiskCode) : Math.max(maxSnowRisk, Number(snowRiskCode));
                 }
                 var snowRisk = finite(snowRiskCode) ? SNOW_RISKS[Number(snowRiskCode)] : null;
-                var snowRiskCell = createCell('td', 'Risque neige', snowRisk ? 'hkw-snow-risk hkw-snow-' + Number(snowRiskCode) : '');
+                var snowRiskCell = createCell('td', 'Risque neige', snowRisk ? 'amf-snow-risk amf-snow-' + Number(snowRiskCode) : '');
                 if (snowRisk) {
-                    snowRiskCell.appendChild(textSpan(snowRisk.icon + ' ', 'hkw-risk-icon'));
-                    snowRiskCell.appendChild(textSpan(snowRisk.label, 'hkw-risk-label'));
+                    snowRiskCell.appendChild(textSpan(snowRisk.icon + ' ', 'amf-risk-icon'));
+                    snowRiskCell.appendChild(textSpan(snowRisk.label, 'amf-risk-label'));
                 } else { snowRiskCell.textContent = '—'; }
                 snowRow.appendChild(snowRiskCell);
 
@@ -1362,14 +1362,14 @@
                 appendNumber(snowRow, 'Neige 6 h', forwardSnowSum(currentIndex, 6), 1, ' cm');
 
                 var stickCode = value(values, 'snow_stick_risk_code');
-                var stickCell = createCell('td', 'Tenue', finite(stickCode) ? 'hkw-stick hkw-stick-' + Number(stickCode) : '');
+                var stickCell = createCell('td', 'Tenue', finite(stickCode) ? 'amf-stick amf-stick-' + Number(stickCode) : '');
                 stickCell.textContent = finite(stickCode) ? (SNOW_STICK[Number(stickCode)] || '—') : '—';
                 snowRow.appendChild(stickCell);
 
                 appendNumber(snowRow, 'Pression', value(values, 'pressure_hpa', 7), 0, ' hPa');
                 appendNumber(snowRow, 'Humidité', value(values, 'humidity_pct', 1), 0, ' %');
 
-                var snowWindCell = createCell('td', 'Vent moyen / rafales', 'hkw-snow-wind ' + windForceClass(gustDisplay));
+                var snowWindCell = createCell('td', 'Vent moyen / rafales', 'amf-snow-wind ' + windForceClass(gustDisplay));
                 var snowWindValues = document.createElement('strong');
                 snowWindValues.textContent = (finite(windDisplay) ? formatNumber(windDisplay, 0) : '—') + ' / ' + (finite(gustDisplay) ? formatNumber(gustDisplay, 0) : '—') + ' km/h';
                 snowWindCell.appendChild(snowWindValues);
@@ -1377,40 +1377,40 @@
                 var snowDirection = windDirection(snowDirectionDegrees);
                 if (snowDirection) {
                     var snowDirectionBadge = document.createElement('span');
-                    snowDirectionBadge.className = 'hkw-direction ' + windForceClass(gustDisplay);
+                    snowDirectionBadge.className = 'amf-direction ' + windForceClass(gustDisplay);
                     snowDirectionBadge.title = 'Vent de ' + snowDirection + ' • ' + formatNumber(snowDirectionDegrees, 0) + '°';
-                    var snowArrow = textSpan('➜', 'hkw-wind-arrow');
+                    var snowArrow = textSpan('➜', 'amf-wind-arrow');
                     snowArrow.style.transform = 'rotate(' + ((Number(snowDirectionDegrees) + 180) % 360) + 'deg)';
                     snowDirectionBadge.appendChild(snowArrow);
-                    snowDirectionBadge.appendChild(textSpan(snowDirection, 'hkw-wind-label'));
+                    snowDirectionBadge.appendChild(textSpan(snowDirection, 'amf-wind-label'));
                     snowWindCell.appendChild(snowDirectionBadge);
                 }
                 snowRow.appendChild(snowWindCell);
                 appendNumber(snowRow, 'Cumul neige fraîche', value(values, 'snow_depth_cm'), 1, ' cm');
 
-                var snowDetailsCell = createCell('td', 'Détails', 'hkw-details-cell hkw-snow-details-cell');
+                var snowDetailsCell = createCell('td', 'Détails', 'amf-details-cell amf-snow-details-cell');
                 var snowDetailsButton = document.createElement('button');
                 snowDetailsButton.type = 'button';
-                snowDetailsButton.className = 'hkw-details-button';
+                snowDetailsButton.className = 'amf-details-button';
                 snowDetailsButton.textContent = 'Afficher';
                 snowDetailsButton.setAttribute('aria-expanded', 'false');
                 snowDetailsCell.appendChild(snowDetailsButton);
 
                 var snowAdvanced = document.createElement('div');
-                snowAdvanced.className = 'hkw-snow-profile hkw-details-inline';
+                snowAdvanced.className = 'amf-snow-profile amf-details-inline';
                 snowAdvanced.hidden = true;
 
                 function appendProfileSection(titleText, items) {
                     var section = document.createElement('section');
-                    section.className = 'hkw-profile-section';
-                    section.appendChild(textSpan(titleText, 'hkw-profile-title'));
+                    section.className = 'amf-profile-section';
+                    section.appendChild(textSpan(titleText, 'amf-profile-title'));
                     var list = document.createElement('div');
-                    list.className = 'hkw-profile-list';
+                    list.className = 'amf-profile-list';
                     items.forEach(function (item) {
                         var profileItem = document.createElement('div');
-                        profileItem.className = 'hkw-profile-item';
-                        profileItem.appendChild(textSpan(item[0], 'hkw-profile-label'));
-                        profileItem.appendChild(textSpan(finite(item[1]) ? formatNumber(item[1], item[2]) + item[3] : '—', 'hkw-profile-value'));
+                        profileItem.className = 'amf-profile-item';
+                        profileItem.appendChild(textSpan(item[0], 'amf-profile-label'));
+                        profileItem.appendChild(textSpan(finite(item[1]) ? formatNumber(item[1], item[2]) + item[3] : '—', 'amf-profile-value'));
                         list.appendChild(profileItem);
                     });
                     section.appendChild(list);
@@ -1441,7 +1441,7 @@
             });
 
             if (stormSummary) {
-                stormSummary.classList.toggle('hkw-storm-summary-warning', !hasStormColumns);
+                stormSummary.classList.toggle('amf-storm-summary-warning', !hasStormColumns);
                 if (!hasStormColumns) {
                     stormSummary.textContent = 'Le run publié utilise encore l’ancien format : relancez le workflow GitHub après avoir remplacé les scripts pour activer le tableau Orages.';
                 } else if (maxThunderRisk === null) {
@@ -1452,7 +1452,7 @@
                 }
             }
             if (snowSummary) {
-                snowSummary.classList.toggle('hkw-snow-summary-warning', !hasSnowColumns);
+                snowSummary.classList.toggle('amf-snow-summary-warning', !hasSnowColumns);
                 if (!hasSnowColumns) {
                     snowSummary.textContent = 'Le run publié utilise encore l’ancien format : relancez le workflow GitHub pour activer le tableau Neige.';
                 } else if (maxSnowRisk === null) {
@@ -1472,17 +1472,17 @@
                 altitudeLine.textContent = finite(altitude)
                     ? 'Altitude de ' + cityName + ' : ≈ ' + formatNumber(altitude, 0) + ' m (point de grille AROME)'
                     : 'Altitude de ' + cityName + ' : — (relancez le workflow GitHub AROME v1.0.0)';
-                altitudeLine.classList.toggle('hkw-altitude-missing', !finite(altitude));
+                altitudeLine.classList.toggle('amf-altitude-missing', !finite(altitude));
             }
             selectedMapFocus = {
                 latitude: Number(commune[4]),
                 longitude: Number(commune[5]),
                 scale: 32
             };
-            var mapApp = app.querySelector('[data-hkm-app]');
+            var mapApp = app.querySelector('[data-amfm-app]');
             if (mapApp) {
                 window.requestAnimationFrame(function () {
-                    mapApp.dispatchEvent(new CustomEvent('hkm:focus-location', {
+                    mapApp.dispatchEvent(new CustomEvent('amfm:focus-location', {
                         detail: selectedMapFocus
                     }));
                 });
@@ -1503,7 +1503,7 @@
                 dayLabels: chartDayLabels,
                 hourLabels: chartHourLabels
             };
-            renderLineChart(chartTemperature, chartLabels, [{ label: 'Température', values: chartTemps, className: 'hkw-series-temperature' }], {
+            renderLineChart(chartTemperature, chartLabels, [{ label: 'Température', values: chartTemps, className: 'amf-series-temperature' }], {
                 decimals: 0,
                 unit: '°C',
                 fillArea: false,
@@ -1515,7 +1515,7 @@
                 paddingSteps: 1,
                 ariaLabel: 'Températures prévues pour ' + cityName
             });
-            renderLineChart(chartPressure, chartLabels, [{ label: 'Pression', values: chartPressures, className: 'hkw-series-pressure' }], {
+            renderLineChart(chartPressure, chartLabels, [{ label: 'Pression', values: chartPressures, className: 'amf-series-pressure' }], {
                 decimals: 0,
                 unit: 'hPa',
                 fillArea: false,
@@ -1529,8 +1529,8 @@
             });
             renderRainChart(chartRain, chartLabels, chartRainValues, chartRainCumulative, { meta: chartMeta, targetTicks: 6 });
             renderLineChart(chartWind, chartLabels, [
-                { label: 'Vent moyen', values: chartWindValues, className: 'hkw-series-wind' },
-                { label: 'Rafales', values: chartGustValues, className: 'hkw-series-gust' }
+                { label: 'Vent moyen', values: chartWindValues, className: 'amf-series-wind' },
+                { label: 'Rafales', values: chartGustValues, className: 'amf-series-gust' }
             ], {
                 decimals: 0,
                 unit: 'km/h',
@@ -1582,19 +1582,19 @@
             candidates.forEach(function (candidate, position) {
                 var button = document.createElement('button');
                 button.type = 'button';
-                button.className = 'hkw-search-result';
+                button.className = 'amf-search-result';
                 button.id = input.id + '-option-' + position;
                 button.setAttribute('role', 'option');
                 button.setAttribute('aria-selected', 'false');
 
-                var name = textSpan(candidate.nom, 'hkw-result-name');
+                var name = textSpan(candidate.nom, 'amf-result-name');
                 var postals = Array.isArray(candidate.codesPostaux)
                     ? candidate.codesPostaux.join(', ')
                     : '';
                 var details = textSpan(
                     (postals ? postals + ' • ' : '') +
                     'département ' + candidate.codeDepartement,
-                    'hkw-result-details'
+                    'amf-result-details'
                 );
                 button.appendChild(name);
                 button.appendChild(details);
@@ -1778,6 +1778,6 @@
     }
 
     whenReady(function () {
-        document.querySelectorAll('[data-hkw-app]').forEach(initApp);
+        document.querySelectorAll('[data-amf-app]').forEach(initApp);
     });
 }());

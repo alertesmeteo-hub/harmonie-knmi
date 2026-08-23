@@ -58,7 +58,7 @@ class Element {
     querySelectorAll(selector) {
         const found = [];
         const visit = element => {
-            if (selector === '[data-hkm-layer-key]' && element.dataset.hkmLayerKey) {
+            if (selector === '[data-amfm-layer-key]' && element.dataset.amfmLayerKey) {
                 found.push(element);
             }
             for (const child of element.children || []) visit(child);
@@ -68,7 +68,7 @@ class Element {
     }
 }
 
-const expectWebgl = process.env.HKM_DISABLE_WEBGL !== '1';
+const expectWebgl = process.env.AMFM_DISABLE_WEBGL !== '1';
 const counters = { draws: 0, textures: 0, fallbackImages: 0, strokes: 0, labels: 0 };
 
 function make2dContext() {
@@ -155,14 +155,14 @@ app.dataset = {
     timezone: 'Europe/Paris', moduleVersion: '1.0.0', animation: '1'
 };
 app.querySelector = selector => {
-    const match = selector.match(/^\[data-hkm-([^\]]+)\]$/);
+    const match = selector.match(/^\[data-amfm-([^\]]+)\]$/);
     return match ? elements[match[1]] : null;
 };
 
 const documentListeners = {};
 const documentMock = {
     readyState: 'complete', fullscreenElement: null,
-    querySelectorAll(selector) { return selector === '[data-hkm-app]' ? [app] : []; },
+    querySelectorAll(selector) { return selector === '[data-amfm-app]' ? [app] : []; },
     createElement(tagName) {
         return String(tagName).toLowerCase() === 'canvas'
             ? new Canvas('sampler') : new Element(tagName);
@@ -316,7 +316,7 @@ vm.runInNewContext(fs.readFileSync(scriptPath, 'utf8'), context, { filename: scr
     elements.viewport.dispatch('pointerleave', { pointerId: 0, pointerType: 'mouse' });
     assert.equal(elements.probe.hidden, true);
 
-    app.dispatch('hkm:focus-location', {
+    app.dispatch('amfm:focus-location', {
         detail: { latitude: 42.699, longitude: 2.9045, scale: 32 }
     });
     await new Promise(resolve => setTimeout(resolve, 20));

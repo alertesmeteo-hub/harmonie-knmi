@@ -39,7 +39,7 @@ from arome_maps import DEFAULT_BOUNDS, AromeMapRenderer
 
 
 LOGGER = logging.getLogger("arome.france")
-PIPELINE_VERSION = "1.0.1"
+PIPELINE_VERSION = "1.0.2"
 DATASET_API = (
     "https://www.data.gouv.fr/api/1/datasets/"
     "paquets-arome-resolution-0-01deg/"
@@ -1053,6 +1053,8 @@ def write_map_places(catalog: NationalCatalog, destination: Path) -> int:
             int(commune[3]),
             round(float(commune[4]), 5),
             round(float(commune[5]), 5),
+            str(commune[0]),
+            department.code,
         ]
         for department in catalog.departments.values()
         for commune in department.communes
@@ -1063,8 +1065,15 @@ def write_map_places(catalog: NationalCatalog, destination: Path) -> int:
     with destination.open("w", encoding="utf-8") as handle:
         json.dump(
             {
-                "schema_version": 1,
-                "columns": ["name", "population", "latitude", "longitude"],
+                "schema_version": 2,
+                "columns": [
+                    "name",
+                    "population",
+                    "latitude",
+                    "longitude",
+                    "code_insee",
+                    "department",
+                ],
                 "count": len(places),
                 "places": places,
             },
