@@ -3,14 +3,14 @@
   "module_version": "1.2.1",
   "build_id": "vent-rafales-api-mf-cache-72h-20260821",
   "status": "ok",
-  "generated_at": "2026-08-25T13:14:01Z",
-  "latest_observation_at": "2026-08-25T13:00:00Z",
+  "generated_at": "2026-08-25T14:08:23Z",
+  "latest_observation_at": "2026-08-25T14:00:00Z",
   "title": "Vent et rafales",
   "unit": "km/h",
   "coverage": {
     "mode": "cache_glissant_72h",
     "api_packages_this_run": 1,
-    "samples_cached": 46348,
+    "samples_cached": 45520,
     "cache_history_hours": 72,
     "first_run_note": "Lors du premier lancement, les vues 24 h / 72 h se remplissent progressivement. Après 24 h puis 72 h, elles disposent de la fenêtre complète."
   },
@@ -417,9 +417,9 @@
       "mean_wind_24h_max_kmh": 45.7,
       "mean_wind_24h_direction_deg": 290,
       "mean_wind_24h_time": "2026-08-25T10:00:00Z",
-      "mean_wind_72h_max_kmh": 47.5,
+      "mean_wind_72h_max_kmh": 47.2,
       "mean_wind_72h_direction_deg": 280,
-      "mean_wind_72h_time": "2026-08-22T14:00:00Z"
+      "mean_wind_72h_time": "2026-08-22T15:00:00Z"
     },
     {
       "id": "20041001",
@@ -1201,9 +1201,9 @@
       "mean_wind_24h_max_kmh": 27.0,
       "mean_wind_24h_direction_deg": 250,
       "mean_wind_24h_time": "2026-08-25T11:00:00Z",
-      "mean_wind_72h_max_kmh": 30.6,
+      "mean_wind_72h_max_kmh": 27.0,
       "mean_wind_72h_direction_deg": 250,
-      "mean_wind_72h_time": "2026-08-22T14:00:00Z"
+      "mean_wind_72h_time": "2026-08-25T11:00:00Z"
     },
     {
       "id": "20096008",
@@ -1444,9 +1444,9 @@
       "gust_24h_kmh": 46.8,
       "gust_24h_direction_deg": 110,
       "gust_24h_time": "2026-08-25T04:00:00Z",
-      "gust_72h_kmh": 47.9,
-      "gust_72h_direction_deg": 100,
-      "gust_72h_time": "2026-08-22T14:00:00Z",
+      "gust_72h_kmh": 46.8,
+      "gust_72h_direction_deg": 110,
+      "gust_72h_time": "2026-08-25T04:00:00Z",
       "latest_mean_wind_kmh": 24.1,
       "latest_mean_wind_direction_deg": 100,
       "latest_mean_wind_time": "2026-08-25T13:00:00Z",
@@ -1733,9 +1733,9 @@
       "mean_wind_24h_max_kmh": 17.6,
       "mean_wind_24h_direction_deg": 290,
       "mean_wind_24h_time": "2026-08-25T13:00:00Z",
-      "mean_wind_72h_max_kmh": 18.7,
-      "mean_wind_72h_direction_deg": 270,
-      "mean_wind_72h_time": "2026-08-22T14:00:00Z"
+      "mean_wind_72h_max_kmh": 17.6,
+      "mean_wind_72h_direction_deg": 290,
+      "mean_wind_72h_time": "2026-08-25T13:00:00Z"
     },
     {
       "id": "82178002",
@@ -2825,9 +2825,9 @@
       "mean_wind_24h_max_kmh": 25.6,
       "mean_wind_24h_direction_deg": 250,
       "mean_wind_24h_time": "2026-08-24T22:00:00Z",
-      "mean_wind_72h_max_kmh": 29.9,
-      "mean_wind_72h_direction_deg": 230,
-      "mean_wind_72h_time": "2026-08-22T14:00:00Z"
+      "mean_wind_72h_max_kmh": 25.6,
+      "mean_wind_72h_direction_deg": 250,
+      "mean_wind_72h_time": "2026-08-24T22:00:00Z"
     },
     {
       "id": "97121002",
@@ -3245,9 +3245,9 @@
       "mean_wind_24h_max_kmh": 18.4,
       "mean_wind_24h_direction_deg": 170,
       "mean_wind_24h_time": "2026-08-25T13:00:00Z",
-      "mean_wind_72h_max_kmh": 23.4,
-      "mean_wind_72h_direction_deg": 270,
-      "mean_wind_72h_time": "2026-08-22T14:00:00Z"
+      "mean_wind_72h_max_kmh": 19.1,
+      "mean_wind_72h_direction_deg": 280,
+      "mean_wind_72h_time": "2026-08-22T15:00:00Z"
     },
     {
       "id": "11221004",
@@ -6036,18 +6036,18 @@
       "gust_24h_kmh": 46.4,
       "gust_24h_direction_deg": 310,
       "gust_24h_time": "2026-08-24T23:00:00Z",
-      "gust_72h_kmh": 52.9,
-      "gust_72h_direction_deg": 40,
-      "gust_72h_time": "2026-08-22T14:00:00Z",
+      "gust_72h_kmh": 46.4,
+      "gust_72h_direction_deg": 310,
+      "gust_72h_time": "2026-08-24T23:00:00Z",
       "latest_mean_wind_kmh": 14.0,
       "latest_mean_wind_direction_deg": 340,
       "latest_mean_wind_time": "2026-08-25T13:00:00Z",
       "mean_wind_24h_max_kmh": 22.3,
       "mean_wind_24h_direction_deg": 310,
       "mean_wind_24h_time": "2026-08-24T23:00:00Z",
-      "mean_wind_72h_max_kmh": 25.9,
-      "mean_wind_72h_direction_deg": 30,
-      "mean_wind_72h_time": "2026-08-22T14:00:00Z"
+      "mean_wind_72h_max_kmh": 22.3,
+      "mean_wind_72h_direction_deg": 310,
+      "mean_wind_72h_time": "2026-08-24T23:00:00Z"
     },
     {
       "id": "20232002",
@@ -6241,9 +6241,9 @@
       "mean_wind_24h_max_kmh": 25.9,
       "mean_wind_24h_direction_deg": 240,
       "mean_wind_24h_time": "2026-08-24T20:00:00Z",
-      "mean_wind_72h_max_kmh": 36.0,
-      "mean_wind_72h_direction_deg": 300,
-      "mean_wind_72h_time": "2026-08-22T14:00:00Z"
+      "mean_wind_72h_max_kmh": 35.6,
+      "mean_wind_72h_direction_deg": 290,
+      "mean_wind_72h_time": "2026-08-22T16:00:00Z"
     },
     {
       "id": "45340002",
@@ -7940,9 +7940,9 @@
       "gust_24h_kmh": 40.0,
       "gust_24h_direction_deg": 80,
       "gust_24h_time": "2026-08-24T15:00:00Z",
-      "gust_72h_kmh": 42.8,
-      "gust_72h_direction_deg": 310,
-      "gust_72h_time": "2026-08-22T14:00:00Z",
+      "gust_72h_kmh": 40.0,
+      "gust_72h_direction_deg": 80,
+      "gust_72h_time": "2026-08-24T15:00:00Z",
       "latest_mean_wind_kmh": 17.3,
       "latest_mean_wind_direction_deg": 90,
       "latest_mean_wind_time": "2026-08-25T13:00:00Z",
@@ -9239,7 +9239,7 @@
       "mean_wind_24h_time": "2026-08-25T03:00:00Z",
       "mean_wind_72h_max_kmh": 27.4,
       "mean_wind_72h_direction_deg": 110,
-      "mean_wind_72h_time": "2026-08-22T14:00:00Z"
+      "mean_wind_72h_time": "2026-08-25T03:00:00Z"
     },
     {
       "id": "55443001",
@@ -10273,9 +10273,9 @@
       "mean_wind_24h_max_kmh": 13.0,
       "mean_wind_24h_direction_deg": 40,
       "mean_wind_24h_time": "2026-08-25T10:00:00Z",
-      "mean_wind_72h_max_kmh": 22.3,
+      "mean_wind_72h_max_kmh": 20.9,
       "mean_wind_72h_direction_deg": 10,
-      "mean_wind_72h_time": "2026-08-22T14:00:00Z"
+      "mean_wind_72h_time": "2026-08-22T15:00:00Z"
     },
     {
       "id": "29276001",
@@ -10656,9 +10656,9 @@
       "gust_24h_kmh": 28.4,
       "gust_24h_direction_deg": 110,
       "gust_24h_time": "2026-08-24T16:00:00Z",
-      "gust_72h_kmh": 32.8,
-      "gust_72h_direction_deg": 340,
-      "gust_72h_time": "2026-08-22T14:00:00Z",
+      "gust_72h_kmh": 31.0,
+      "gust_72h_direction_deg": 80,
+      "gust_72h_time": "2026-08-24T13:00:00Z",
       "latest_mean_wind_kmh": 12.2,
       "latest_mean_wind_direction_deg": 100,
       "latest_mean_wind_time": "2026-08-25T13:00:00Z",
@@ -14614,8 +14614,8 @@
       "mean_wind_24h_direction_deg": 150,
       "mean_wind_24h_time": "2026-08-24T16:00:00Z",
       "mean_wind_72h_max_kmh": 18.7,
-      "mean_wind_72h_direction_deg": 290,
-      "mean_wind_72h_time": "2026-08-22T14:00:00Z"
+      "mean_wind_72h_direction_deg": 150,
+      "mean_wind_72h_time": "2026-08-24T16:00:00Z"
     },
     {
       "id": "51237002",
@@ -15584,9 +15584,9 @@
       "gust_24h_kmh": 38.9,
       "gust_24h_direction_deg": 60,
       "gust_24h_time": "2026-08-24T16:00:00Z",
-      "gust_72h_kmh": 42.5,
-      "gust_72h_direction_deg": 260,
-      "gust_72h_time": "2026-08-22T14:00:00Z",
+      "gust_72h_kmh": 38.9,
+      "gust_72h_direction_deg": 60,
+      "gust_72h_time": "2026-08-24T16:00:00Z",
       "latest_mean_wind_kmh": 10.8,
       "latest_mean_wind_direction_deg": 40,
       "latest_mean_wind_time": "2026-08-25T13:00:00Z",
@@ -19700,9 +19700,9 @@
       "gust_24h_kmh": 32.0,
       "gust_24h_direction_deg": 200,
       "gust_24h_time": "2026-08-24T19:00:00Z",
-      "gust_72h_kmh": 32.4,
-      "gust_72h_direction_deg": 320,
-      "gust_72h_time": "2026-08-22T14:00:00Z",
+      "gust_72h_kmh": 32.0,
+      "gust_72h_direction_deg": 200,
+      "gust_72h_time": "2026-08-24T19:00:00Z",
       "latest_mean_wind_kmh": 10.4,
       "latest_mean_wind_direction_deg": 190,
       "latest_mean_wind_time": "2026-08-25T13:00:00Z",
@@ -21613,9 +21613,9 @@
       "mean_wind_24h_max_kmh": 28.1,
       "mean_wind_24h_direction_deg": 140,
       "mean_wind_24h_time": "2026-08-24T16:00:00Z",
-      "mean_wind_72h_max_kmh": 30.2,
-      "mean_wind_72h_direction_deg": 250,
-      "mean_wind_72h_time": "2026-08-22T14:00:00Z"
+      "mean_wind_72h_max_kmh": 28.1,
+      "mean_wind_72h_direction_deg": 140,
+      "mean_wind_72h_time": "2026-08-24T16:00:00Z"
     },
     {
       "id": "98729009",
@@ -22388,9 +22388,9 @@
       "gust_24h_kmh": 16.6,
       "gust_24h_direction_deg": 270,
       "gust_24h_time": "2026-08-25T10:00:00Z",
-      "gust_72h_kmh": 28.8,
+      "gust_72h_kmh": 20.9,
       "gust_72h_direction_deg": 230,
-      "gust_72h_time": "2026-08-22T14:00:00Z",
+      "gust_72h_time": "2026-08-24T10:00:00Z",
       "latest_mean_wind_kmh": 4.0,
       "latest_mean_wind_direction_deg": 230,
       "latest_mean_wind_time": "2026-08-25T13:00:00Z",
@@ -22892,9 +22892,9 @@
       "gust_24h_kmh": 16.9,
       "gust_24h_direction_deg": 110,
       "gust_24h_time": "2026-08-25T01:00:00Z",
-      "gust_72h_kmh": 19.4,
-      "gust_72h_direction_deg": 250,
-      "gust_72h_time": "2026-08-22T14:00:00Z",
+      "gust_72h_kmh": 18.4,
+      "gust_72h_direction_deg": 310,
+      "gust_72h_time": "2026-08-24T07:00:00Z",
       "latest_mean_wind_kmh": 2.2,
       "latest_mean_wind_direction_deg": 350,
       "latest_mean_wind_time": "2026-08-25T13:00:00Z",
@@ -23069,9 +23069,9 @@
       "mean_wind_24h_max_kmh": 5.8,
       "mean_wind_24h_direction_deg": 80,
       "mean_wind_24h_time": "2026-08-24T15:00:00Z",
-      "mean_wind_72h_max_kmh": 7.2,
+      "mean_wind_72h_max_kmh": 6.8,
       "mean_wind_72h_direction_deg": null,
-      "mean_wind_72h_time": "2026-08-22T14:00:00Z"
+      "mean_wind_72h_time": "2026-08-22T16:00:00Z"
     },
     {
       "id": "18015003",
