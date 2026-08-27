@@ -454,6 +454,14 @@
         hourly.sort(function (left, right) {
             return (asTimestamp(right.utc || right.local) || 0) - (asTimestamp(left.utc || left.local) || 0);
         });
+        // Météo-France publie parfois l'heure la plus récente avant qu'elle soit
+        // remplie (rows vide en tout début d'heure) : on prend comme "valeur
+        // actuelle" la première heure non vide, pas systématiquement l'index 0,
+        // sinon toutes les stations perdent leur valeur courante le temps que
+        // l'heure se remplisse.
+        var currentHourIndex = hourly.findIndex(function (hour) {
+            return hour && Array.isArray(hour.rows) && hour.rows.length > 0;
+        });
         hourly.forEach(function (hour, hourIndex) {
             var rows = hour && Array.isArray(hour.rows) ? hour.rows : [];
             rows.forEach(function (row) {
@@ -477,7 +485,7 @@
                     record_absolute_tmin: row.record_absolute_tmin
                 };
                 var currentValues = {};
-                if (hourIndex === 0) {
+                if (hourIndex === currentHourIndex) {
                     Object.keys(observationValues).forEach(function (key) {
                         currentValues[key] = observationValues[key];
                         currentValues[key + '_time'] = observationTime;
