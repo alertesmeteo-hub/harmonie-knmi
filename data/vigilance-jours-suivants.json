@@ -1,7 +1,7 @@
 {
  "schema_version": 3,
  "status": "ok",
- "generated_at": "2026-08-26T13:50:18+02:00",
+ "generated_at": "2026-08-27T18:34:59+02:00",
  "source": {
   "provider": "Météo-France",
   "product": "Prévision des phénomènes dangereux",
@@ -10,8 +10,8 @@
   "retrieval_mode": "pdf"
  },
  "bulletin": {
-  "issued_at": "2026-08-26T13:03:00+02:00",
-  "issued_label": "Émise le mercredi 26/08/2026 à 13h03 (heure de Paris)"
+  "issued_at": "2026-08-27T12:53:00+02:00",
+  "issued_label": "Émise le jeudi 27/08/2026 à 12h53 (heure de Paris)"
  },
  "legend": {
   "levels": [
@@ -46,23 +46,20 @@
   ]
  },
  "summaries": {
-  "j2_j3": "Vendredi, des fortes pluies pouvant être accompagnées d'orages violents concernent le centre-est et le sud-est du pays. Le risque de fortes précipitations est plus marqué du sud de la Franche-Comté à la région Rhône-Alpes. En Corse, le risque de canicule persiste vendredi, voire samedi.",
-  "j4_j7": "À ce stade, le risque de passage en vigilance orange est quasi nul pour la période."
+  "j2_j3": "Samedi dans la nuit, la Corse restera en vigilance orange Canicule. Par la suite, aucun risque particulier n'est identifié à ce jour.",
+  "j4_j7": "Mardi, des orages se forment dans le sud du pays. Les conditions peuvent localement favoriser le développement de cellules dynamiques. Pour le moment, le risque de passer en vigilance orange pour cet épisode est faible. Le reste de la période est calme, aucun passage en vigilance orange n'est actuellement prévu."
  },
  "cards": [
   {
    "label": "J+2",
-   "date_label": "Vendredi 28/08/2026",
+   "date_label": "Samedi 29/08/2026",
    "granularity": "department",
-   "max_level": "high",
+   "max_level": "none",
    "departments": {
     "01": {
      "name": "Ain",
-     "level": "medium",
-     "phenomena": [
-      "pluie_inondation",
-      "orages"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "02": {
      "name": "Aisne",
@@ -76,35 +73,23 @@
     },
     "04": {
      "name": "Alpes-de-Haute-Provence",
-     "level": "low",
-     "phenomena": [
-      "pluie_inondation",
-      "orages"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "05": {
      "name": "Hautes-Alpes",
-     "level": "low",
-     "phenomena": [
-      "pluie_inondation",
-      "orages"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "06": {
      "name": "Alpes-Maritimes",
-     "level": "low",
-     "phenomena": [
-      "pluie_inondation",
-      "orages"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "07": {
      "name": "Ardèche",
-     "level": "medium",
-     "phenomena": [
-      "pluie_inondation",
-      "orages"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "08": {
      "name": "Ardennes",
@@ -133,11 +118,8 @@
     },
     "13": {
      "name": "Bouches-du-Rhône",
-     "level": "low",
-     "phenomena": [
-      "pluie_inondation",
-      "orages"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "14": {
      "name": "Calvados",
@@ -171,10 +153,8 @@
     },
     "21": {
      "name": "Côte-d'Or",
-     "level": "low",
-     "phenomena": [
-      "pluie_inondation"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "22": {
      "name": "Côtes-d'Armor",
@@ -193,19 +173,13 @@
     },
     "25": {
      "name": "Doubs",
-     "level": "medium",
-     "phenomena": [
-      "pluie_inondation",
-      "orages"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "26": {
      "name": "Drôme",
-     "level": "medium",
-     "phenomena": [
-      "pluie_inondation",
-      "orages"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "27": {
      "name": "Eure",
@@ -224,17 +198,13 @@
     },
     "2A": {
      "name": "Corse-du-Sud",
-     "level": "high",
-     "phenomena": [
-      "canicule"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "2B": {
      "name": "Haute-Corse",
-     "level": "high",
-     "phenomena": [
-      "canicule"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "30": {
      "name": "Gard",
@@ -278,19 +248,13 @@
     },
     "38": {
      "name": "Isère",
-     "level": "medium",
-     "phenomena": [
-      "pluie_inondation",
-      "orages"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "39": {
      "name": "Jura",
-     "level": "medium",
-     "phenomena": [
-      "pluie_inondation",
-      "orages"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "40": {
      "name": "Landes",
@@ -304,11 +268,8 @@
     },
     "42": {
      "name": "Loire",
-     "level": "medium",
-     "phenomena": [
-      "pluie_inondation",
-      "orages"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "43": {
      "name": "Haute-Loire",
@@ -387,10 +348,8 @@
     },
     "58": {
      "name": "Nièvre",
-     "level": "low",
-     "phenomena": [
-      "pluie_inondation"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "59": {
      "name": "Nord",
@@ -444,26 +403,18 @@
     },
     "69": {
      "name": "Rhône",
-     "level": "medium",
-     "phenomena": [
-      "pluie_inondation",
-      "orages"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "70": {
      "name": "Haute-Saône",
-     "level": "medium",
-     "phenomena": [
-      "pluie_inondation",
-      "orages"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "71": {
      "name": "Saône-et-Loire",
-     "level": "low",
-     "phenomena": [
-      "pluie_inondation"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "72": {
      "name": "Sarthe",
@@ -472,19 +423,13 @@
     },
     "73": {
      "name": "Savoie",
-     "level": "medium",
-     "phenomena": [
-      "pluie_inondation",
-      "orages"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "74": {
      "name": "Haute-Savoie",
-     "level": "medium",
-     "phenomena": [
-      "pluie_inondation",
-      "orages"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "75": {
      "name": "Paris",
@@ -528,19 +473,13 @@
     },
     "83": {
      "name": "Var",
-     "level": "low",
-     "phenomena": [
-      "pluie_inondation",
-      "orages"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "84": {
      "name": "Vaucluse",
-     "level": "low",
-     "phenomena": [
-      "pluie_inondation",
-      "orages"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "85": {
      "name": "Vendée",
@@ -564,18 +503,13 @@
     },
     "89": {
      "name": "Yonne",
-     "level": "low",
-     "phenomena": [
-      "pluie_inondation"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "90": {
      "name": "Territoire de Belfort",
-     "level": "medium",
-     "phenomena": [
-      "pluie_inondation",
-      "orages"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "91": {
      "name": "Essonne",
@@ -603,78 +537,13 @@
      "phenomena": []
     }
    },
-   "markers": [
-    {
-     "phenomenon": "pluie_inondation",
-     "x": 0.7135,
-     "y": 0.59359,
-     "svg_x": 398.845,
-     "svg_y": 32.834,
-     "level": "medium"
-    },
-    {
-     "phenomenon": "pluie_inondation",
-     "x": 0.77961,
-     "y": 0.73389,
-     "svg_x": 405.096,
-     "svg_y": 41.2728,
-     "level": "low"
-    },
-    {
-     "phenomenon": "pluie_inondation",
-     "x": 0.76584,
-     "y": 0.4115,
-     "svg_x": 403.7797,
-     "svg_y": 21.8825,
-     "level": "medium"
-    },
-    {
-     "phenomenon": "pluie_inondation",
-     "x": 0.64738,
-     "y": 0.4354,
-     "svg_x": 392.5931,
-     "svg_y": 23.3194,
-     "level": "low"
-    },
-    {
-     "phenomenon": "orages",
-     "x": 0.7135,
-     "y": 0.63986,
-     "svg_x": 398.8472,
-     "svg_y": 35.6169,
-     "level": "medium"
-    },
-    {
-     "phenomenon": "orages",
-     "x": 0.77961,
-     "y": 0.78015,
-     "svg_x": 405.0982,
-     "svg_y": 44.0556,
-     "level": "low"
-    },
-    {
-     "phenomenon": "orages",
-     "x": 0.76584,
-     "y": 0.45777,
-     "svg_x": 403.7819,
-     "svg_y": 24.6654,
-     "level": "medium"
-    },
-    {
-     "phenomenon": "canicule",
-     "x": 0.95592,
-     "y": 0.92535,
-     "svg_x": 421.7568,
-     "svg_y": 52.7898,
-     "level": "high"
-    }
-   ]
+   "markers": []
   },
   {
    "label": "J+3",
-   "date_label": "Samedi 29/08/2026",
+   "date_label": "Dimanche 30/08/2026",
    "granularity": "department",
-   "max_level": "medium",
+   "max_level": "none",
    "departments": {
     "01": {
      "name": "Ain",
@@ -818,17 +687,13 @@
     },
     "2A": {
      "name": "Corse-du-Sud",
-     "level": "medium",
-     "phenomena": [
-      "canicule"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "2B": {
      "name": "Haute-Corse",
-     "level": "medium",
-     "phenomena": [
-      "canicule"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "30": {
      "name": "Gard",
@@ -1161,43 +1026,10 @@
      "phenomena": []
     }
    },
-   "markers": [
-    {
-     "phenomenon": "canicule",
-     "x": 0.9573,
-     "y": 0.92535,
-     "svg_x": 421.8869,
-     "svg_y": 52.7898,
-     "level": "medium"
-    }
-   ]
+   "markers": []
   },
   {
    "label": "J+4",
-   "date_label": "Dimanche 30/08/2026",
-   "granularity": "quadrant",
-   "max_level": "none",
-   "zones": {
-    "NO": {
-     "level": "none",
-     "phenomena": []
-    },
-    "NE": {
-     "level": "none",
-     "phenomena": []
-    },
-    "SO": {
-     "level": "none",
-     "phenomena": []
-    },
-    "SE": {
-     "level": "none",
-     "phenomena": []
-    }
-   }
-  },
-  {
-   "label": "J+5",
    "date_label": "Lundi 31/08/2026",
    "granularity": "quadrant",
    "max_level": "none",
@@ -1221,8 +1053,42 @@
    }
   },
   {
+   "label": "J+5",
+   "date_label": "Mardi 01/09/2026",
+   "granularity": "quadrant",
+   "max_level": "low",
+   "zones": {
+    "NO": {
+     "level": "none",
+     "phenomena": []
+    },
+    "NE": {
+     "level": "none",
+     "phenomena": []
+    },
+    "SO": {
+     "level": "low",
+     "phenomena": [
+      {
+       "phenomenon": "orages",
+       "level": "low"
+      }
+     ]
+    },
+    "SE": {
+     "level": "low",
+     "phenomena": [
+      {
+       "phenomenon": "orages",
+       "level": "low"
+      }
+     ]
+    }
+   }
+  },
+  {
    "label": "J+6 et J+7",
-   "date_label": "Mardi 01/09/2026 et Mercredi 02/09/2026",
+   "date_label": "Mercredi 02/09/2026 et Jeudi 03/09/2026",
    "granularity": "national",
    "max_level": "none",
    "national": {
