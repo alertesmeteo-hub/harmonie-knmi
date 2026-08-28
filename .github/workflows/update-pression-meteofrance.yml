@@ -1,0 +1,167 @@
+name: Update Pression Atmosphérique API Météo-France
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '24 * * * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pression-api-meteofrance
+  cancel-in-progress: true
+
+jobs:
+  generate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Installer Requests
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests==2.33.0
+
+      - name: Tests du générateur
+        run: |
+          python tests/test_generer_pression.py
+
+      - name: Récupérer cache 72h
+        shell: bash
+        run: |
+          git fetch origin observations || true
+
+          git show \
+            origin/observations:cache_pression_72h.json \
+            > cache_pression_72h.json 2>/dev/null || true
+
+          if [ -s cache_pression_72h.json ]; then
+            echo "Cache 72 h récupéré."
+          else
+            echo "Premier lancement : aucun cache existant."
+            rm -f cache_pression_72h.json
+          fi
+
+      - name: Générer la pression atmosphérique
+        env:
+          METEOFRANCE_PACKAGE_OBS_KEY: ${{ secrets.METEOFRANCE_PACKAGE_OBS_KEY }}
+          METEOFRANCE_OBS_TOKEN: ${{ secrets.METEOFRANCE_OBS_TOKEN }}
+          MF_PACKAGE_DELAY: "1.50"
+        run: |
+          python generer_pression_meteofrance.py
+
+      - name: Contrôler JSON
+        shell: bash
+        run: |
+          test -s observations_pression.json
+          test -s cache_pression_72h.json
+
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          data = json.loads(
+              Path("observations_pression.json").read_text(
+                  encoding="utf-8"
+              )
+          )
+
+          print("=== JSON ===")
+          print("Status :", data.get("status"))
+          print("Version :", data.get("module_version"))
+          print("Schema :", data.get("schema_version"))
+          print("Build :", data.get("build_id"))
+          print("Stations :", data.get("stations_total"))
+
+          if data.get("status") != "ok":
+              raise SystemExit("ERREUR : status JSON != ok")
+
+          if data.get("module_version") != "1.0.0":
+              raise SystemExit("ERREUR : module_version != 1.0.0")
+
+          metrics = data.get("metrics") or {}
+          pressure = metrics.get("pressure") or {}
+
+          print(
+              "pressure :",
+              pressure.get("stations"),
+              "station(s) ; min",
+              pressure.get("min"),
+              "; max",
+              pressure.get("max"),
+          )
+
+          if not pressure.get("stations"):
+              raise SystemExit("ERREUR : aucune pression actuelle.")
+
+          if pressure.get("min") is not None and not (800 <= pressure["min"] <= 1100):
+              raise SystemExit("ERREUR : pression min hors plage plausible.")
+
+          if pressure.get("max") is not None and not (800 <= pressure["max"] <= 1100):
+              raise SystemExit("ERREUR : pression max hors plage plausible.")
+
+          print("OK : JSON pression généré.")
+          PY
+
+      - name: Préparer publication
+        shell: bash
+        run: |
+          mkdir -p /tmp/pression-publish
+
+          cp observations_pression.json \
+            /tmp/pression-publish/
+
+          cp cache_pression_72h.json \
+            /tmp/pression-publish/
+
+          rm -f observations_pression.json
+          rm -f cache_pression_72h.json
+
+      - name: Publier branche observations
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if git ls-remote --exit-code --heads origin observations >/dev/null 2>&1; then
+            git fetch origin observations
+            git switch -C observations origin/observations
+          else
+            git switch --orphan observations
+            git rm -rf . || true
+          fi
+
+          cp /tmp/pression-publish/observations_pression.json .
+          cp /tmp/pression-publish/cache_pression_72h.json .
+
+          git add \
+            observations_pression.json \
+            cache_pression_72h.json
+
+          if git diff --cached --quiet; then
+            echo "Aucun changement."
+            exit 0
+          fi
+
+          git commit -m "Pression atmosphérique API Météo-France v1.0.0"
+
+          if ! git push origin observations; then
+            echo "Push concurrent détecté, nouvel essai..."
+
+            git fetch origin observations
+            git rebase origin/observations
+            git push origin observations
+          fi
