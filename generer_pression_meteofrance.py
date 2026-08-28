@@ -346,7 +346,7 @@ def load_station_meta(
         print(
             "[WARN] liste-stations HTTP",
             response.status_code,
-       ")
+        )
         return {}
 
     content_type = (
