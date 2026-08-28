@@ -12,11 +12,17 @@ Version 2.6.0
 - Entretien du cache à chaque exécution avec Package Observations V2.
 - Mois, saison, année, records et normales conservés.
 - Exclusion SAPC et repères départementaux conservés.
+- (2026-08-28) Ajout du champ rr1 en sortie : pluie de la dernière heure
+  Météo-France disponible par station (déjà utilisé en interne pour
+  construire rr24/48/72, mais pas publié jusqu'ici). Numéro de version
+  volontairement inchangé : la CI du workflow vérifie une correspondance
+  exacte "2.6.0" à plusieurs endroits (voir update-carte-pluie.yml).
 
 Produit :
   observations_pluie.json
 
 Vues :
+  - rr1                : pluie de la dernière heure disponible
   - rr24               : cumul des 24 dernières heures à partir de RR1
   - rr48               : cumul des 48 dernières heures à partir de RR1
   - rr72               : cumul des 72 dernières heures à partir de RR1
@@ -586,6 +592,7 @@ def load_package_history(
         "rr72_sum": 0.0, "rr72_hours": 0,
         "today_sum": 0.0, "today_hours": 0,
         "latest_date": None,
+        "latest_rr1": None,
         "day_sums": defaultdict(float), "day_hours": defaultdict(int),
     })
     latest_day = latest_hour.date()
@@ -615,6 +622,7 @@ def load_package_history(
             old_dt = parse_iso(item["latest_date"])
             if old_dt is None or hdt > old_dt:
                 item["latest_date"] = iso(hdt)
+                item["latest_rr1"] = rr1
 
     for item in agg.values():
         item["day_sums"] = {k: round(v, 3) for k, v in item["day_sums"].items()}
@@ -1531,6 +1539,11 @@ def main() -> int:
             "lat": geo["lat"],
             "lon": geo["lon"],
             "date": h.get("latest_date"),
+            "rr1": (
+                round(float(h.get("latest_rr1")), 1)
+                if h.get("latest_rr1") is not None
+                else None
+            ),
             "rr24": rr24,
             "rr24_hours": valid_hours,
             "rr24_complete": valid_hours == 24,
