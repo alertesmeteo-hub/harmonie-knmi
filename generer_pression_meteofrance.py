@@ -237,6 +237,19 @@ def hpa(value_pa: Any) -> Optional[float]:
 def extract_pressure(row: dict) -> Tuple[Optional[float], Optional[float]]:
     pmer = hpa(first(row, ("pmer", "PMER")))
     pres = hpa(first(row, ("pres", "PRES")))
+
+    # Pour de nombreux postes d'altitude, Météo-France ne calcule pas de
+    # vraie réduction au niveau de la mer et recopie simplement la pression
+    # station brute dans le champ pmer (constaté : Mende, Embrun, Bourg St
+    # Maurice, Le Puy, Mont Aigoual, Villar St Pancrace -> pmer == pres au
+    # dixième de hPa près). Une vraie réduction niveau mer n'est jamais
+    # identique à la pression station sauf à altitude quasi nulle, où
+    # l'écart réel observé (postes côtiers) est toujours >= ~0.3 hPa. On
+    # traite donc une pmer strictement égale à pres comme absente plutôt
+    # que de publier une fausse "dépression" à 850-920 hPa.
+    if pmer is not None and pres is not None and abs(pmer - pres) < 0.3:
+        pmer = None
+
     return pmer, pres
 
 
