@@ -346,7 +346,7 @@ def load_station_meta(
         print(
             "[WARN] liste-stations HTTP",
             response.status_code,
-        )
+       ")
         return {}
 
     content_type = (
@@ -668,9 +668,13 @@ def main() -> int:
         latest_sample = samples[-1]
         current_sample = latest_candidates[-1] if latest_candidates else {}
 
+        # Uniquement la pression mer (pmer) : la pression station brute d'un
+        # poste d'altitude (ex. Mende 932 m -> ~913 hPa, Embrun 873 m ->
+        # ~917 hPa) n'est pas comparable à une pression mer et créait de
+        # fausses dépressions extrêmes sur la carte si on la substituait.
+        # Un poste sans pmer est donc exclu de cette carte (sa pression
+        # station reste disponible séparément dans pressure_station_hpa).
         current_pressure = current_sample.get("pressure_msl_hpa")
-        if current_pressure is None:
-            current_pressure = current_sample.get("pressure_station_hpa")
 
         if current_pressure is None:
             continue
@@ -685,8 +689,6 @@ def main() -> int:
                 continue
 
             past_pressure = past.get("pressure_msl_hpa")
-            if past_pressure is None:
-                past_pressure = past.get("pressure_station_hpa")
 
             if past_pressure is None:
                 continue
