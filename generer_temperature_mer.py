@@ -821,6 +821,15 @@ def parse_ndbc(
         if temp is None:
             continue
 
+        # Rafales en mer : latest_obs NDBC fournit aussi WDIR/WSPD/GST
+        # (vent moyen et rafale, m/s) sur la même ligne que la température
+        # de l'eau — jusqu'ici récupérées mais jamais publiées.
+        wspd_ms = fnum(row.get("WSPD"))
+        gst_ms = fnum(row.get("GST"))
+        wdir_deg = fnum(row.get("WDIR"))
+        wind_speed_kmh = round(wspd_ms * 3.6, 1) if wspd_ms is not None else None
+        wind_gust_kmh = round(gst_ms * 3.6, 1) if gst_ms is not None else None
+
         try:
             dt = datetime(
                 int(row["YYYY"]),
@@ -841,6 +850,9 @@ def parse_ndbc(
             "lon": round(lon, 5),
             "time": iso(dt),
             "sea_temp_c": temp,
+            "wind_speed_kmh": wind_speed_kmh,
+            "wind_gust_kmh": wind_gust_kmh,
+            "wind_direction_deg": wdir_deg,
             "source": "NOAA/NDBC",
         })
 
@@ -1196,6 +1208,10 @@ def main() -> int:
                 "time"
             ),
             "age_minutes": age_minutes,
+
+            "wind_speed_kmh": latest.get("wind_speed_kmh"),
+            "wind_gust_kmh": latest.get("wind_gust_kmh"),
+            "wind_direction_deg": latest.get("wind_direction_deg"),
 
             "temp_24h_ago_c": (
                 round(old_temp, 1)
