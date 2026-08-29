@@ -532,9 +532,6 @@ def add_latest_package_to_cache(
     rows = parse_csv(response.content)
     added = 0
 
-    if rows:
-        print("DIAG CHAMPS BRUTS PACKAGE OBS:", sorted(rows[0].keys()))
-
     # Supprime les éventuels samples de la même heure avant réinsertion.
     latest_iso = iso(latest_hour)
 
