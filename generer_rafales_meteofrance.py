@@ -277,6 +277,20 @@ def extract_mean_wind(
     )
 
 
+def extract_cloud_cover(row: dict) -> Optional[int]:
+    # Champ "n" du Package Observations : nébulosité totale, code WMO 2700
+    # (octas 0 à 8 ; 9 = ciel non observable/obscurci, à ignorer plutôt que
+    # deviner une valeur).
+    value = fnum(first(row, ("n", "N")))
+
+    if value is None:
+        return None
+
+    octas = round(value)
+
+    return octas if 0 <= octas <= 8 else None
+
+
 def package_request(
     key: str,
     hour: datetime,
@@ -571,6 +585,7 @@ def add_latest_package_to_cache(
 
         gust, gust_dir, gust_source = extract_gust(row)
         mean_wind, mean_dir = extract_mean_wind(row)
+        cloud_cover_octas = extract_cloud_cover(row)
 
         if gust is None and mean_wind is None:
             continue
@@ -587,6 +602,8 @@ def add_latest_package_to_cache(
 
             "mean_wind_kmh": mean_wind,
             "mean_wind_direction_deg": mean_dir,
+
+            "cloud_cover_octas": cloud_cover_octas,
         })
 
         added += 1
@@ -817,6 +834,8 @@ def main() -> int:
             "mean_wind_72h_max_kmh": mean72,
             "mean_wind_72h_direction_deg": mean72dir,
             "mean_wind_72h_time": mean72time,
+
+            "cloud_cover_octas": current_sample.get("cloud_cover_octas"),
         })
 
     stations.sort(
