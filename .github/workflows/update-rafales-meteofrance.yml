@@ -3,7 +3,7 @@ name: Update Vent et Rafales API Météo-France
 on:
   workflow_dispatch:
   schedule:
-    - cron: '14 * * * *'
+    - cron: '14,34,54 * * * *'
 
 permissions:
   contents: write
