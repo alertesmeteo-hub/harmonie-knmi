@@ -3,7 +3,7 @@ name: Update Pression Atmosphérique API Météo-France
 on:
   workflow_dispatch:
   schedule:
-    - cron: '24 * * * *'
+    - cron: '4,24,44 * * * *'
 
 permissions:
   contents: write
