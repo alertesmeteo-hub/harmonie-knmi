@@ -14064,11 +14064,15 @@
     "97415557": {
       "current_month_txab": 21.7,
       "current_month_txab_date": "20260804"
+    },
+    "97401520": {
+      "current_month_txab": 22.0,
+      "current_month_txab_date": "20260820"
     }
   },
   "record_baseline_month_id": "2026-08",
   "records_generated_at": "2026-08-20T04:51:55Z",
   "current_month_id": "2026-08",
-  "current_month_generated_at": "2026-08-29T08:59:07Z",
+  "current_month_generated_at": "2026-08-29T16:33:56Z",
   "module_version": "1.2.0"
 }
