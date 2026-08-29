@@ -515,6 +515,16 @@ def load_live_history(
             if tx_today_sample else None
         )
 
+        tn_today_sample = min_sample(today_vals)
+        item["tn_today"] = (
+            tn_today_sample["temperature"]
+            if tn_today_sample else None
+        )
+        item["tn_today_time"] = (
+            iso(tn_today_sample["dt"])
+            if tn_today_sample else None
+        )
+
         # H-24 : point le plus proche dans une tolérance de 90 min.
         old_sample = None
         best_delta = None
@@ -963,6 +973,7 @@ def main() -> int:
         current_month_date = clim.get("current_month_txab_date")
 
         tx_today = fnum(obs.get("tx_today"))
+        tn_today = fnum(obs.get("tn_today"))
         if (
             tx_today is not None
             and (
@@ -1055,6 +1066,8 @@ def main() -> int:
             # Max du jour
             "tx_today": tx_today,
             "tx_today_time": obs.get("tx_today_time"),
+            "tn_today": tn_today,
+            "tn_today_time": obs.get("tn_today_time"),
 
             # Records
             "month_current_max": current_month_value,
@@ -1129,6 +1142,12 @@ def main() -> int:
                 "long_label": "Température maximale observée depuis 00 UTC",
                 "max": vmax("tx_today"),
                 "stations": count("tx_today"),
+            },
+            "tn_today": {
+                "label": "Min du jour",
+                "long_label": "Température minimale observée depuis 00 UTC",
+                "min": vmin("tn_today"),
+                "stations": count("tn_today"),
             },
             "humidex": {
                 "label": "Humidex",
