@@ -1,7 +1,7 @@
 {
  "schema_version": 3,
  "status": "ok",
- "generated_at": "2026-08-29T13:42:32+02:00",
+ "generated_at": "2026-08-30T17:23:31+02:00",
  "source": {
   "provider": "Météo-France",
   "product": "Prévision des phénomènes dangereux",
@@ -10,8 +10,8 @@
   "retrieval_mode": "pdf"
  },
  "bulletin": {
-  "issued_at": "2026-08-29T12:50:00+02:00",
-  "issued_label": "Émise le samedi 29/08/2026 à 12h50 (heure de Paris)"
+  "issued_at": "2026-08-30T12:48:00+02:00",
+  "issued_label": "Émise le dimanche 30/08/2026 à 12h48 (heure de Paris)"
  },
  "legend": {
   "levels": [
@@ -46,13 +46,13 @@
   ]
  },
  "summaries": {
-  "j2_j3": "Aucun passage en vigilance orange n'est prévu le lundi 31 aout . Le temps sera tout de même perturbé par des averses localement orageuses sur le nord. Les cumuls de pluie pourront être modérés sur Sommes et Pas-de-Calais. Des orages sont attendus dans le sud-ouest de la France mardi et pourraient occasionner un faible risque de passage en vigilance orange.",
-  "j4_j7": "Période calme. A partir de jeudi, la chaleur s'accentuera l'après-midi sur les régions méridionales et restera sans doute d'actualité par la suite"
+  "j2_j3": "Quelques orages sont toujours attendus dans le sud-ouest de la France mardi, mais ceux-ci devraient se cantonner au relief pyrénéen, n'impliquant plus de risque de passage en vigilance orange.",
+  "j4_j7": "Situation relativement calme. Un pic de chaleur est toutefois attendu entre vendredi et dimanche sur le sud du pays avec une intensité encore incertaine."
  },
  "cards": [
   {
    "label": "J+2",
-   "date_label": "Lundi 31/08/2026",
+   "date_label": "Mardi 01/09/2026",
    "granularity": "department",
    "max_level": "none",
    "departments": {
@@ -541,9 +541,9 @@
   },
   {
    "label": "J+3",
-   "date_label": "Mardi 01/09/2026",
+   "date_label": "Mercredi 02/09/2026",
    "granularity": "department",
-   "max_level": "low",
+   "max_level": "none",
    "departments": {
     "01": {
      "name": "Ain",
@@ -587,10 +587,8 @@
     },
     "09": {
      "name": "Ariège",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "10": {
      "name": "Aube",
@@ -604,10 +602,8 @@
     },
     "12": {
      "name": "Aveyron",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "13": {
      "name": "Bouches-du-Rhône",
@@ -661,10 +657,8 @@
     },
     "24": {
      "name": "Dordogne",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "25": {
      "name": "Doubs",
@@ -708,24 +702,18 @@
     },
     "31": {
      "name": "Haute-Garonne",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "32": {
      "name": "Gers",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "33": {
      "name": "Gironde",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "34": {
      "name": "Hérault",
@@ -759,10 +747,8 @@
     },
     "40": {
      "name": "Landes",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "41": {
      "name": "Loir-et-Cher",
@@ -791,17 +777,13 @@
     },
     "46": {
      "name": "Lot",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "47": {
      "name": "Lot-et-Garonne",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "48": {
      "name": "Lozère",
@@ -885,17 +867,13 @@
     },
     "64": {
      "name": "Pyrénées-Atlantiques",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "65": {
      "name": "Hautes-Pyrénées",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "66": {
      "name": "Pyrénées-Orientales",
@@ -974,17 +952,13 @@
     },
     "81": {
      "name": "Tarn",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "82": {
      "name": "Tarn-et-Garonne",
-     "level": "low",
-     "phenomena": [
-      "orages"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "83": {
      "name": "Var",
@@ -1052,51 +1026,10 @@
      "phenomena": []
     }
    },
-   "markers": [
-    {
-     "phenomenon": "orages",
-     "x": 0.48072,
-     "y": 0.75819,
-     "svg_x": 376.8675,
-     "svg_y": 42.7322,
-     "level": "low"
-    },
-    {
-     "phenomenon": "orages",
-     "x": 0.3448,
-     "y": 0.68358,
-     "svg_x": 364.0277,
-     "svg_y": 38.2441,
-     "level": "low"
-    }
-   ]
+   "markers": []
   },
   {
    "label": "J+4",
-   "date_label": "Mercredi 02/09/2026",
-   "granularity": "quadrant",
-   "max_level": "none",
-   "zones": {
-    "NO": {
-     "level": "none",
-     "phenomena": []
-    },
-    "NE": {
-     "level": "none",
-     "phenomena": []
-    },
-    "SO": {
-     "level": "none",
-     "phenomena": []
-    },
-    "SE": {
-     "level": "none",
-     "phenomena": []
-    }
-   }
-  },
-  {
-   "label": "J+5",
    "date_label": "Jeudi 03/09/2026",
    "granularity": "quadrant",
    "max_level": "none",
@@ -1120,13 +1053,52 @@
    }
   },
   {
+   "label": "J+5",
+   "date_label": "Vendredi 04/09/2026",
+   "granularity": "quadrant",
+   "max_level": "low",
+   "zones": {
+    "NO": {
+     "level": "none",
+     "phenomena": []
+    },
+    "NE": {
+     "level": "none",
+     "phenomena": []
+    },
+    "SO": {
+     "level": "low",
+     "phenomena": [
+      {
+       "phenomenon": "canicule",
+       "level": "low"
+      }
+     ]
+    },
+    "SE": {
+     "level": "low",
+     "phenomena": [
+      {
+       "phenomenon": "canicule",
+       "level": "low"
+      }
+     ]
+    }
+   }
+  },
+  {
    "label": "J+6 et J+7",
-   "date_label": "Vendredi 04/09/2026 et Samedi 05/09/2026",
+   "date_label": "Samedi 05/09/2026 et Dimanche 06/09/2026",
    "granularity": "national",
-   "max_level": "none",
+   "max_level": "low",
    "national": {
-    "level": "none",
-    "phenomena": []
+    "level": "low",
+    "phenomena": [
+     {
+      "phenomenon": "canicule",
+      "level": "low"
+     }
+    ]
    }
   }
  ]
