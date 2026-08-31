@@ -3,14 +3,14 @@
   "module_version": "1.0.0",
   "build_id": "pression-api-mf-cache-72h-20260828",
   "status": "ok",
-  "generated_at": "2026-08-31T08:57:00Z",
-  "latest_observation_at": "2026-08-31T08:00:00Z",
+  "generated_at": "2026-08-31T11:21:19Z",
+  "latest_observation_at": "2026-08-31T11:00:00Z",
   "title": "Pression atmosphérique",
   "unit": "hPa",
   "coverage": {
     "mode": "cache_glissant_72h",
     "api_packages_this_run": 1,
-    "samples_cached": 4762,
+    "samples_cached": 4987,
     "cache_history_hours": 72,
     "first_run_note": "Lors du premier lancement, les variations 3 h / 12 h / 24 h se remplissent progressivement au fil des runs suivants."
   },
@@ -18,14 +18,14 @@
     "pressure": {
       "label": "Pression atmosphérique",
       "min": 1007.7,
-      "max": 1029.1,
-      "stations": 214
+      "max": 1029.0,
+      "stations": 212
     },
     "var3": {
       "label": "Variation 3 h",
-      "min": -1.6,
-      "max": 3.0,
-      "stations": 214
+      "min": -3.1,
+      "max": 2.7,
+      "stations": 210
     },
     "var12": {
       "label": "Variation 12 h",
@@ -35,12 +35,12 @@
     },
     "var24": {
       "label": "Variation 24 h",
-      "min": null,
-      "max": null,
-      "stations": 0
+      "min": -8.5,
+      "max": 17.4,
+      "stations": 207
     }
   },
-  "stations_total": 214,
+  "stations_total": 212,
   "source": {
     "provider": "Météo-France",
     "api": "Package Observations V2",
@@ -56,12 +56,12 @@
       "altitude_m": 69.0,
       "lat": 50.136,
       "lon": 1.834,
-      "pressure": 1011.2,
-      "pressure_station_hpa": 1002.8,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.6,
+      "pressure": 1013.7,
+      "pressure_station_hpa": 1005.3,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 2.5,
       "var12": null,
-      "var24": null
+      "var24": 0.8
     },
     {
       "id": "57251001",
@@ -70,12 +70,12 @@
       "altitude_m": 260.0,
       "lat": 48.979333,
       "lon": 6.243167,
-      "pressure": 1016.3,
+      "pressure": 1015.9,
       "pressure_station_hpa": 986.2,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.4,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -0.4,
       "var12": null,
-      "var24": null
+      "var24": 0.6
     },
     {
       "id": "47091001",
@@ -85,11 +85,11 @@
       "lat": 44.172167,
       "lon": 0.594667,
       "pressure": 1022.2,
-      "pressure_station_hpa": 1014.1,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.0,
+      "pressure_station_hpa": 1014.2,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.0,
       "var12": null,
-      "var24": null
+      "var24": 5.2
     },
     {
       "id": "20004002",
@@ -100,10 +100,10 @@
       "lon": 8.792667,
       "pressure": 1017.1,
       "pressure_station_hpa": 1016.5,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.4,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.0,
       "var12": null,
-      "var24": null
+      "var24": 1.1
     },
     {
       "id": "81284001",
@@ -112,12 +112,12 @@
       "altitude_m": 172.0,
       "lat": 43.914667,
       "lon": 2.116333,
-      "pressure": 1022.0,
-      "pressure_station_hpa": 1002.1,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.2,
+      "pressure": 1022.1,
+      "pressure_station_hpa": 1002.4,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.1,
       "var12": null,
-      "var24": null
+      "var24": 5.9
     },
     {
       "id": "61001001",
@@ -126,12 +126,12 @@
       "altitude_m": 143.0,
       "lat": 48.4455,
       "lon": 0.110167,
-      "pressure": 1016.1,
-      "pressure_station_hpa": 999.1,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.8,
+      "pressure": 1017.4,
+      "pressure_station_hpa": 1000.5,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.3,
       "var12": null,
-      "var24": null
+      "var24": 3.2
     },
     {
       "id": "20303002",
@@ -141,11 +141,11 @@
       "lat": 42.259667,
       "lon": 9.5415,
       "pressure": 1016.1,
-      "pressure_station_hpa": 1007.7,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.6,
+      "pressure_station_hpa": 1007.8,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.0,
       "var12": null,
-      "var24": null
+      "var24": 1.3
     },
     {
       "id": "01089001",
@@ -154,12 +154,12 @@
       "altitude_m": 250.0,
       "lat": 45.9765,
       "lon": 5.329333,
-      "pressure": 1020.7,
+      "pressure": 1020.4,
       "pressure_station_hpa": 991.6,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.0,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -0.3,
       "var12": null,
-      "var24": null
+      "var24": 4.7
     },
     {
       "id": "80379002",
@@ -168,12 +168,12 @@
       "altitude_m": 60.0,
       "lat": 49.872,
       "lon": 2.3825,
-      "pressure": 1012.0,
-      "pressure_station_hpa": 1005.0,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.8,
+      "pressure": 1013.8,
+      "pressure_station_hpa": 1006.8,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.8,
       "var12": null,
-      "var24": null
+      "var24": 0.6
     },
     {
       "id": "98711002",
@@ -182,12 +182,12 @@
       "altitude_m": 3.0,
       "lat": -17.357,
       "lon": -145.508333,
-      "pressure": 1020.1,
-      "pressure_station_hpa": 1019.6,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.7,
+      "pressure": 1019.0,
+      "pressure_station_hpa": 1018.5,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -1.1,
       "var12": null,
-      "var24": null
+      "var24": -0.7
     },
     {
       "id": "16078001",
@@ -196,12 +196,12 @@
       "altitude_m": 124.0,
       "lat": 45.728,
       "lon": 0.220667,
-      "pressure": 1021.2,
-      "pressure_station_hpa": 1005.8,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.4,
+      "pressure": 1021.5,
+      "pressure_station_hpa": 1006.3,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.3,
       "var12": null,
-      "var24": null
+      "var24": 4.1
     },
     {
       "id": "32013005",
@@ -210,12 +210,12 @@
       "altitude_m": 122.0,
       "lat": 43.689,
       "lon": 0.601167,
-      "pressure": 1022.4,
-      "pressure_station_hpa": 1007.5,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.1,
+      "pressure": 1022.5,
+      "pressure_station_hpa": 1007.7,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.1,
       "var12": null,
-      "var24": null
+      "var24": 6.3
     },
     {
       "id": "15014004",
@@ -224,12 +224,12 @@
       "altitude_m": 632.0,
       "lat": 44.8915,
       "lon": 2.419167,
-      "pressure": 1022.0,
-      "pressure_station_hpa": 949.4,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.2,
+      "pressure": 1021.9,
+      "pressure_station_hpa": 950.0,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -0.1,
       "var12": null,
-      "var24": null
+      "var24": 6.4
     },
     {
       "id": "89295001",
@@ -238,12 +238,12 @@
       "altitude_m": 152.0,
       "lat": 47.824667,
       "lon": 3.549667,
-      "pressure": 1017.8,
-      "pressure_station_hpa": 999.9,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.9,
+      "pressure": 1019.1,
+      "pressure_station_hpa": 1001.1,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.3,
       "var12": null,
-      "var24": null
+      "var24": 3.6
     },
     {
       "id": "84007005",
@@ -252,12 +252,12 @@
       "altitude_m": 34.0,
       "lat": 43.911333,
       "lon": 4.9025,
-      "pressure": 1017.6,
-      "pressure_station_hpa": 1013.3,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.5,
+      "pressure": 1017.8,
+      "pressure_station_hpa": 1013.6,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.2,
       "var12": null,
-      "var24": null
+      "var24": 2.2
     },
     {
       "id": "18092001",
@@ -266,12 +266,12 @@
       "altitude_m": 175.0,
       "lat": 47.052167,
       "lon": 2.642167,
-      "pressure": 1019.1,
-      "pressure_station_hpa": 998.4,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.1,
+      "pressure": 1019.6,
+      "pressure_station_hpa": 999.1,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.5,
       "var12": null,
-      "var24": null
+      "var24": 3.6
     },
     {
       "id": "60040001",
@@ -280,12 +280,12 @@
       "altitude_m": 131.0,
       "lat": 49.423667,
       "lon": 2.579667,
-      "pressure": 1013.5,
-      "pressure_station_hpa": 998.2,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.0,
+      "pressure": 1014.8,
+      "pressure_station_hpa": 999.6,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.3,
       "var12": null,
-      "var24": null
+      "var24": 1.1
     },
     {
       "id": "68297001",
@@ -294,12 +294,12 @@
       "altitude_m": 263.0,
       "lat": 47.614333,
       "lon": 7.51,
-      "pressure": 1019.0,
+      "pressure": 1018.5,
       "pressure_station_hpa": 987.3,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.6,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -0.5,
       "var12": null,
-      "var24": null
+      "var24": 3.4
     },
     {
       "id": "20148001",
@@ -310,10 +310,10 @@
       "lon": 9.485167,
       "pressure": 1016.1,
       "pressure_station_hpa": 1014.7,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.6,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.0,
       "var12": null,
-      "var24": null
+      "var24": 1.0
     },
     {
       "id": "49020001",
@@ -322,12 +322,12 @@
       "altitude_m": 50.0,
       "lat": 47.479,
       "lon": -0.614333,
-      "pressure": 1018.1,
-      "pressure_station_hpa": 1012.3,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.9,
+      "pressure": 1019.0,
+      "pressure_station_hpa": 1013.3,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.9,
       "var12": null,
-      "var24": null
+      "var24": 4.4
     },
     {
       "id": "60639001",
@@ -336,12 +336,12 @@
       "altitude_m": 89.0,
       "lat": 49.4465,
       "lon": 2.127167,
-      "pressure": 1013.7,
-      "pressure_station_hpa": 1001.8,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.6,
+      "pressure": 1014.8,
+      "pressure_station_hpa": 1003.0,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.1,
       "var12": null,
-      "var24": null
+      "var24": 1.3
     },
     {
       "id": "98801001",
@@ -350,12 +350,12 @@
       "altitude_m": 88.0,
       "lat": -19.719833,
       "lon": 163.661,
-      "pressure": 1020.6,
-      "pressure_station_hpa": 1010.8,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.3,
+      "pressure": 1022.5,
+      "pressure_station_hpa": 1012.6,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.9,
       "var12": null,
-      "var24": null
+      "var24": 2.7
     },
     {
       "id": "56009003",
@@ -364,12 +364,12 @@
       "altitude_m": 52.0,
       "lat": 47.325667,
       "lon": -3.196833,
-      "pressure": 1018.5,
-      "pressure_station_hpa": 1012.4,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 2.3,
+      "pressure": 1020.1,
+      "pressure_station_hpa": 1014.0,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.6,
       "var12": null,
-      "var24": null
+      "var24": 5.9
     },
     {
       "id": "24037005",
@@ -378,12 +378,12 @@
       "altitude_m": 49.0,
       "lat": 44.822833,
       "lon": 0.524167,
-      "pressure": 1022.0,
+      "pressure": 1021.9,
       "pressure_station_hpa": 1015.9,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.9,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -0.1,
       "var12": null,
-      "var24": null
+      "var24": 5.1
     },
     {
       "id": "25056001",
@@ -392,12 +392,12 @@
       "altitude_m": 306.0,
       "lat": 47.249,
       "lon": 5.988833,
-      "pressure": 1019.8,
-      "pressure_station_hpa": 984.1,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.7,
+      "pressure": 1019.7,
+      "pressure_station_hpa": 984.3,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -0.1,
       "var12": null,
-      "var24": null
+      "var24": 4.1
     },
     {
       "id": "64024001",
@@ -406,12 +406,12 @@
       "altitude_m": 71.0,
       "lat": 43.469333,
       "lon": -1.534333,
-      "pressure": 1022.8,
-      "pressure_station_hpa": 1014.5,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.0,
+      "pressure": 1023.5,
+      "pressure_station_hpa": 1015.2,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.7,
       "var12": null,
-      "var24": null
+      "var24": 6.5
     },
     {
       "id": "40046001",
@@ -420,12 +420,12 @@
       "altitude_m": 35.0,
       "lat": 44.431667,
       "lon": -1.2475,
-      "pressure": 1022.2,
-      "pressure_station_hpa": 1017.6,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.4,
+      "pressure": 1023.0,
+      "pressure_station_hpa": 1018.5,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.8,
       "var12": null,
-      "var24": null
+      "var24": 5.6
     },
     {
       "id": "41281001",
@@ -434,12 +434,12 @@
       "altitude_m": 119.0,
       "lat": 47.6785,
       "lon": 1.212333,
-      "pressure": 1017.5,
-      "pressure_station_hpa": 1002.3,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.4,
+      "pressure": 1018.2,
+      "pressure_station_hpa": 1003.2,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.7,
       "var12": null,
-      "var24": null
+      "var24": 3.2
     },
     {
       "id": "33281001",
@@ -448,12 +448,12 @@
       "altitude_m": 47.0,
       "lat": 44.830667,
       "lon": -0.691333,
-      "pressure": 1021.6,
-      "pressure_station_hpa": 1016.0,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.0,
+      "pressure": 1022.5,
+      "pressure_station_hpa": 1016.9,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.9,
       "var12": null,
-      "var24": null
+      "var24": 5.3
     },
     {
       "id": "62160001",
@@ -462,12 +462,12 @@
       "altitude_m": 73.0,
       "lat": 50.7325,
       "lon": 1.599667,
-      "pressure": 1009.5,
-      "pressure_station_hpa": 1001.5,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.4,
+      "pressure": 1011.9,
+      "pressure_station_hpa": 1003.9,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 2.4,
       "var12": null,
-      "var24": null
+      "var24": 0.0
     },
     {
       "id": "18033001",
@@ -476,12 +476,12 @@
       "altitude_m": 161.0,
       "lat": 47.059167,
       "lon": 2.359833,
-      "pressure": 1019.1,
-      "pressure_station_hpa": 999.7,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.0,
+      "pressure": 1019.6,
+      "pressure_station_hpa": 1000.3,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.5,
       "var12": null,
-      "var24": null
+      "var24": 3.5
     },
     {
       "id": "29075001",
@@ -490,12 +490,12 @@
       "altitude_m": 92.0,
       "lat": 48.453833,
       "lon": -4.391167,
-      "pressure": 1017.4,
-      "pressure_station_hpa": 1005.8,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 2.4,
+      "pressure": 1019.4,
+      "pressure_station_hpa": 1007.9,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 2.0,
       "var12": null,
-      "var24": null
+      "var24": 7.7
     },
     {
       "id": "19031008",
@@ -504,12 +504,12 @@
       "altitude_m": 115.0,
       "lat": 45.146667,
       "lon": 1.473333,
-      "pressure": 1022.4,
-      "pressure_station_hpa": 1008.6,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.0,
+      "pressure": 1022.3,
+      "pressure_station_hpa": 1008.7,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -0.1,
       "var12": null,
-      "var24": null
+      "var24": 5.5
     },
     {
       "id": "19147001",
@@ -518,12 +518,12 @@
       "altitude_m": 295.0,
       "lat": 45.036333,
       "lon": 1.491667,
-      "pressure": 1022.0,
-      "pressure_station_hpa": 987.0,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.3,
+      "pressure": 1021.8,
+      "pressure_station_hpa": 987.1,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -0.2,
       "var12": null,
-      "var24": null
+      "var24": 5.6
     },
     {
       "id": "14137001",
@@ -532,12 +532,12 @@
       "altitude_m": 67.0,
       "lat": 49.18,
       "lon": -0.456167,
-      "pressure": 1014.2,
-      "pressure_station_hpa": 1006.3,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.8,
+      "pressure": 1016.1,
+      "pressure_station_hpa": 1008.3,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.9,
       "var12": null,
-      "var24": null
+      "var24": 3.6
     },
     {
       "id": "62548002",
@@ -546,12 +546,12 @@
       "altitude_m": 2.0,
       "lat": 50.959833,
       "lon": 1.956167,
-      "pressure": 1009.1,
-      "pressure_station_hpa": 1008.7,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.3,
+      "pressure": 1011.3,
+      "pressure_station_hpa": 1010.9,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 2.2,
       "var12": null,
-      "var24": null
+      "var24": -0.5
     },
     {
       "id": "20050001",
@@ -560,12 +560,12 @@
       "altitude_m": 57.0,
       "lat": 42.5295,
       "lon": 8.7915,
-      "pressure": 1016.1,
+      "pressure": 1016.0,
       "pressure_station_hpa": 1009.5,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.1,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -0.1,
       "var12": null,
-      "var24": null
+      "var24": 1.7
     },
     {
       "id": "06029001",
@@ -574,12 +574,12 @@
       "altitude_m": 2.0,
       "lat": 43.5565,
       "lon": 6.9505,
-      "pressure": 1015.9,
-      "pressure_station_hpa": 1015.4,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.7,
+      "pressure": 1015.8,
+      "pressure_station_hpa": 1015.3,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -0.1,
       "var12": null,
-      "var24": null
+      "var24": 0.3
     },
     {
       "id": "66148001",
@@ -588,12 +588,12 @@
       "altitude_m": 72.0,
       "lat": 42.516167,
       "lon": 3.133667,
-      "pressure": 1018.9,
-      "pressure_station_hpa": 1009.0,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.1,
+      "pressure": 1019.7,
+      "pressure_station_hpa": 1010.0,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.8,
       "var12": null,
-      "var24": null
+      "var24": 3.5
     },
     {
       "id": "20107001",
@@ -602,12 +602,12 @@
       "altitude_m": 72.0,
       "lat": 43.003833,
       "lon": 9.3595,
-      "pressure": 1015.3,
-      "pressure_station_hpa": 1002.5,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.4,
+      "pressure": 1016.2,
+      "pressure_station_hpa": 1003.4,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.9,
       "var12": null,
-      "var24": null
+      "var24": 0.8
     },
     {
       "id": "20041001",
@@ -618,10 +618,10 @@
       "lon": 9.178333,
       "pressure": 1016.1,
       "pressure_station_hpa": 1002.9,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.6,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.0,
       "var12": null,
-      "var24": null
+      "var24": 1.6
     },
     {
       "id": "11069001",
@@ -630,12 +630,12 @@
       "altitude_m": 128.0,
       "lat": 43.215333,
       "lon": 2.2955,
-      "pressure": 1021.3,
-      "pressure_station_hpa": 1006.5,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.3,
+      "pressure": 1021.8,
+      "pressure_station_hpa": 1007.1,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.5,
       "var12": null,
-      "var24": null
+      "var24": 6.0
     },
     {
       "id": "84031001",
@@ -644,12 +644,12 @@
       "altitude_m": 98.0,
       "lat": 44.083667,
       "lon": 5.058333,
-      "pressure": 1017.7,
-      "pressure_station_hpa": 1006.3,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.6,
+      "pressure": 1017.4,
+      "pressure_station_hpa": 1006.2,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -0.3,
       "var12": null,
-      "var24": null
+      "var24": 2.1
     },
     {
       "id": "97307001",
@@ -658,12 +658,12 @@
       "altitude_m": 4.0,
       "lat": 4.822333,
       "lon": -52.365333,
-      "pressure": 1012.2,
-      "pressure_station_hpa": 1011.3,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": -0.3,
+      "pressure": 1013.1,
+      "pressure_station_hpa": 1012.2,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.9,
       "var12": null,
-      "var24": null
+      "var24": 0.5
     },
     {
       "id": "33529001",
@@ -672,12 +672,12 @@
       "altitude_m": 23.0,
       "lat": 44.534667,
       "lon": -1.132,
-      "pressure": 1022.1,
-      "pressure_station_hpa": 1019.3,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.4,
+      "pressure": 1023.0,
+      "pressure_station_hpa": 1020.2,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.9,
       "var12": null,
-      "var24": null
+      "var24": 5.8
     },
     {
       "id": "71081001",
@@ -686,12 +686,12 @@
       "altitude_m": 187.0,
       "lat": 46.827,
       "lon": 4.825667,
-      "pressure": 1020.0,
-      "pressure_station_hpa": 998.2,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.6,
+      "pressure": 1020.2,
+      "pressure_station_hpa": 998.6,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.2,
       "var12": null,
-      "var24": null
+      "var24": 4.2
     },
     {
       "id": "73329001",
@@ -700,12 +700,12 @@
       "altitude_m": 235.0,
       "lat": 45.641333,
       "lon": 5.877833,
-      "pressure": 1019.9,
-      "pressure_station_hpa": 992.8,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.3,
+      "pressure": 1019.4,
+      "pressure_station_hpa": 992.6,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -0.5,
       "var12": null,
-      "var24": null
+      "var24": 3.7
     },
     {
       "id": "08105005",
@@ -714,12 +714,12 @@
       "altitude_m": 145.0,
       "lat": 49.782833,
       "lon": 4.643167,
-      "pressure": 1013.9,
-      "pressure_station_hpa": 996.6,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.6,
+      "pressure": 1014.7,
+      "pressure_station_hpa": 997.4,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.8,
       "var12": null,
-      "var24": null
+      "var24": 0.2
     },
     {
       "id": "28070001",
@@ -728,12 +728,12 @@
       "altitude_m": 155.0,
       "lat": 48.4605,
       "lon": 1.501167,
-      "pressure": 1015.9,
-      "pressure_station_hpa": 997.8,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.4,
+      "pressure": 1016.8,
+      "pressure_station_hpa": 998.8,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.9,
       "var12": null,
-      "var24": null
+      "var24": 2.6
     },
     {
       "id": "17323001",
@@ -742,12 +742,12 @@
       "altitude_m": 11.0,
       "lat": 46.046833,
       "lon": -1.411667,
-      "pressure": 1020.4,
-      "pressure_station_hpa": 1017.7,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.8,
+      "pressure": 1021.5,
+      "pressure_station_hpa": 1018.8,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.1,
       "var12": null,
-      "var24": null
+      "var24": 4.8
     },
     {
       "id": "28198001",
@@ -756,12 +756,12 @@
       "altitude_m": 126.0,
       "lat": 48.061333,
       "lon": 1.376333,
-      "pressure": 1016.8,
-      "pressure_station_hpa": 1001.9,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.4,
+      "pressure": 1017.5,
+      "pressure_station_hpa": 1002.9,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.7,
       "var12": null,
-      "var24": null
+      "var24": 2.7
     },
     {
       "id": "36063001",
@@ -770,12 +770,12 @@
       "altitude_m": 158.0,
       "lat": 46.869833,
       "lon": 1.741,
-      "pressure": 1019.3,
-      "pressure_station_hpa": 1000.9,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.4,
+      "pressure": 1019.6,
+      "pressure_station_hpa": 1001.5,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.3,
       "var12": null,
-      "var24": null
+      "var24": 3.7
     },
     {
       "id": "98818202",
@@ -784,12 +784,12 @@
       "altitude_m": 4.0,
       "lat": -19.968333,
       "lon": 158.4755,
-      "pressure": 1022.2,
-      "pressure_station_hpa": 1021.5,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.3,
+      "pressure": 1023.6,
+      "pressure_station_hpa": 1022.9,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.4,
       "var12": null,
-      "var24": null
+      "var24": 1.4
     },
     {
       "id": "49099003",
@@ -798,12 +798,12 @@
       "altitude_m": 134.0,
       "lat": 47.0795,
       "lon": -0.8805,
-      "pressure": 1018.9,
-      "pressure_station_hpa": 1003.0,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.7,
+      "pressure": 1019.9,
+      "pressure_station_hpa": 1004.2,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.0,
       "var12": null,
-      "var24": null
+      "var24": 4.9
     },
     {
       "id": "63113001",
@@ -812,12 +812,12 @@
       "altitude_m": 331.0,
       "lat": 45.786833,
       "lon": 3.149333,
-      "pressure": 1020.2,
-      "pressure_station_hpa": 982.0,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.2,
+      "pressure": 1020.5,
+      "pressure_station_hpa": 982.6,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.3,
       "var12": null,
-      "var24": null
+      "var24": 4.7
     },
     {
       "id": "16089001",
@@ -826,12 +826,12 @@
       "altitude_m": 30.0,
       "lat": 45.665,
       "lon": -0.315833,
-      "pressure": 1021.0,
-      "pressure_station_hpa": 1017.4,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.2,
+      "pressure": 1021.6,
+      "pressure_station_hpa": 1018.0,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.6,
       "var12": null,
-      "var24": null
+      "var24": 4.0
     },
     {
       "id": "68205001",
@@ -841,11 +841,11 @@
       "lat": 47.928667,
       "lon": 7.407667,
       "pressure": 1018.2,
-      "pressure_station_hpa": 994.0,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.8,
+      "pressure_station_hpa": 994.3,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.0,
       "var12": null,
-      "var24": null
+      "var24": 3.0
     },
     {
       "id": "61124001",
@@ -854,12 +854,12 @@
       "altitude_m": 309.0,
       "lat": 48.6445,
       "lon": -0.459167,
-      "pressure": 1015.7,
-      "pressure_station_hpa": 979.4,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 2.0,
+      "pressure": 1017.2,
+      "pressure_station_hpa": 981.2,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.5,
       "var12": null,
-      "var24": null
+      "var24": 3.3
     },
     {
       "id": "98404004",
@@ -868,12 +868,12 @@
       "altitude_m": 146.0,
       "lat": -46.4325,
       "lon": 51.856667,
-      "pressure": 1018.6,
-      "pressure_station_hpa": 1000.4,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.7,
+      "pressure": 1017.7,
+      "pressure_station_hpa": 999.5,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -0.9,
       "var12": null,
-      "var24": null
+      "var24": 17.4
     },
     {
       "id": "83049005",
@@ -882,12 +882,12 @@
       "altitude_m": 72.0,
       "lat": 43.247667,
       "lon": 6.131333,
-      "pressure": 1016.0,
-      "pressure_station_hpa": 1007.7,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.0,
+      "pressure": 1015.7,
+      "pressure_station_hpa": 1007.5,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -0.3,
       "var12": null,
-      "var24": null
+      "var24": 0.7
     },
     {
       "id": "40088001",
@@ -896,12 +896,12 @@
       "altitude_m": 31.0,
       "lat": 43.689833,
       "lon": -1.07,
-      "pressure": 1022.5,
-      "pressure_station_hpa": 1018.9,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.0,
+      "pressure": 1023.0,
+      "pressure_station_hpa": 1019.4,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.5,
       "var12": null,
-      "var24": null
+      "var24": 6.3
     },
     {
       "id": "76217001",
@@ -910,12 +910,12 @@
       "altitude_m": 40.0,
       "lat": 49.932833,
       "lon": 1.09,
-      "pressure": 1011.5,
-      "pressure_station_hpa": 1006.8,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.6,
+      "pressure": 1013.8,
+      "pressure_station_hpa": 1009.1,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 2.3,
       "var12": null,
-      "var24": null
+      "var24": 1.5
     },
     {
       "id": "21473001",
@@ -924,12 +924,12 @@
       "altitude_m": 219.0,
       "lat": 47.267833,
       "lon": 5.088333,
-      "pressure": 1019.0,
-      "pressure_station_hpa": 993.4,
-      "time": "2026-08-31T08:00:00Z",
+      "pressure": 1019.4,
+      "pressure_station_hpa": 994.0,
+      "time": "2026-08-31T11:00:00Z",
       "var3": 0.4,
       "var12": null,
-      "var24": null
+      "var24": 4.0
     },
     {
       "id": "35228001",
@@ -938,12 +938,12 @@
       "altitude_m": 65.0,
       "lat": 48.584833,
       "lon": -2.076333,
-      "pressure": 1016.1,
-      "pressure_station_hpa": 1008.4,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 2.1,
+      "pressure": 1018.0,
+      "pressure_station_hpa": 1010.4,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.9,
       "var12": null,
-      "var24": null
+      "var24": 5.2
     },
     {
       "id": "90035001",
@@ -952,10 +952,10 @@
       "altitude_m": 401.0,
       "lat": 47.591667,
       "lon": 6.837,
-      "pressure": 1018.9,
+      "pressure": 1018.4,
       "pressure_station_hpa": 972.6,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.5,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -0.5,
       "var12": null,
       "var24": null
     },
@@ -966,12 +966,12 @@
       "altitude_m": 11.0,
       "lat": 51.055833,
       "lon": 2.3395,
-      "pressure": 1009.2,
-      "pressure_station_hpa": 1007.3,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.4,
+      "pressure": 1011.1,
+      "pressure_station_hpa": 1009.2,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.9,
       "var12": null,
-      "var24": null
+      "var24": -0.7
     },
     {
       "id": "98403003",
@@ -980,12 +980,12 @@
       "altitude_m": 6.0,
       "lat": -22.344167,
       "lon": 40.340667,
-      "pressure": 1023.9,
-      "pressure_station_hpa": 1023.2,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.1,
+      "pressure": 1021.9,
+      "pressure_station_hpa": 1021.2,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -2.0,
       "var12": null,
-      "var24": null
+      "var24": -0.2
     },
     {
       "id": "27347001",
@@ -994,12 +994,12 @@
       "altitude_m": 138.0,
       "lat": 49.025,
       "lon": 1.221667,
-      "pressure": 1014.7,
-      "pressure_station_hpa": 998.6,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.7,
+      "pressure": 1016.3,
+      "pressure_station_hpa": 1000.2,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.6,
       "var12": null,
-      "var24": null
+      "var24": 2.4
     },
     {
       "id": "20114002",
@@ -1008,12 +1008,12 @@
       "altitude_m": 20.0,
       "lat": 41.505167,
       "lon": 9.103667,
-      "pressure": 1016.5,
-      "pressure_station_hpa": 1013.9,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.2,
+      "pressure": 1016.0,
+      "pressure_station_hpa": 1013.4,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -0.5,
       "var12": null,
-      "var24": null
+      "var24": 1.1
     },
     {
       "id": "97209004",
@@ -1022,12 +1022,12 @@
       "altitude_m": 143.0,
       "lat": 14.617667,
       "lon": -61.063833,
-      "pressure": 1013.3,
-      "pressure_station_hpa": 996.9,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": -1.4,
+      "pressure": 1013.9,
+      "pressure_station_hpa": 997.5,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.6,
       "var12": null,
-      "var24": null
+      "var24": 0.2
     },
     {
       "id": "97418110",
@@ -1036,26 +1036,12 @@
       "altitude_m": 8.0,
       "lat": -20.892167,
       "lon": 55.528667,
-      "pressure": 1026.9,
-      "pressure_station_hpa": 1025.4,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": -1.6,
+      "pressure": 1025.0,
+      "pressure_station_hpa": 1023.5,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -1.9,
       "var12": null,
-      "var24": null
-    },
-    {
-      "id": "98403001",
-      "name": "GLORIEUSES",
-      "department_code": null,
-      "altitude_m": 3.0,
-      "lat": -11.582667,
-      "lon": 47.289667,
-      "pressure": 1019.8,
-      "pressure_station_hpa": 1019.3,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": -0.3,
-      "var12": null,
-      "var24": null
+      "var24": -1.5
     },
     {
       "id": "50209001",
@@ -1064,12 +1050,12 @@
       "altitude_m": 134.0,
       "lat": 49.652667,
       "lon": -1.4635,
-      "pressure": 1013.4,
-      "pressure_station_hpa": 997.4,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 2.7,
+      "pressure": 1015.9,
+      "pressure_station_hpa": 999.9,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 2.5,
       "var12": null,
-      "var24": null
+      "var24": 4.3
     },
     {
       "id": "46127001",
@@ -1078,12 +1064,12 @@
       "altitude_m": 260.0,
       "lat": 44.745,
       "lon": 1.396667,
-      "pressure": 1022.2,
-      "pressure_station_hpa": 991.9,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.4,
+      "pressure": 1022.3,
+      "pressure_station_hpa": 992.2,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.1,
       "var12": null,
-      "var24": null
+      "var24": 5.9
     },
     {
       "id": "38384001",
@@ -1092,12 +1078,12 @@
       "altitude_m": 376.0,
       "lat": 45.364167,
       "lon": 5.313333,
-      "pressure": 1019.6,
-      "pressure_station_hpa": 975.5,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.9,
+      "pressure": 1019.3,
+      "pressure_station_hpa": 975.6,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -0.3,
       "var12": null,
-      "var24": null
+      "var24": 4.2
     },
     {
       "id": "23206002",
@@ -1106,12 +1092,12 @@
       "altitude_m": 365.0,
       "lat": 46.1755,
       "lon": 1.950333,
-      "pressure": 1020.3,
-      "pressure_station_hpa": 977.9,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.2,
+      "pressure": 1020.4,
+      "pressure_station_hpa": 978.6,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.1,
       "var12": null,
-      "var24": null
+      "var24": 4.1
     },
     {
       "id": "98720002",
@@ -1120,12 +1106,12 @@
       "altitude_m": 5.0,
       "lat": -18.063,
       "lon": -140.961167,
-      "pressure": 1022.0,
-      "pressure_station_hpa": 1020.7,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.9,
+      "pressure": 1020.2,
+      "pressure_station_hpa": 1018.9,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -1.8,
       "var12": null,
-      "var24": null
+      "var24": -0.6
     },
     {
       "id": "98613001",
@@ -1134,12 +1120,12 @@
       "altitude_m": 30.0,
       "lat": -13.239833,
       "lon": -176.194167,
-      "pressure": 1015.2,
-      "pressure_station_hpa": 1011.9,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 2.2,
+      "pressure": 1016.1,
+      "pressure_station_hpa": 1012.8,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.9,
       "var12": null,
-      "var24": null
+      "var24": 1.6
     },
     {
       "id": "98723001",
@@ -1148,12 +1134,12 @@
       "altitude_m": 51.0,
       "lat": -9.806,
       "lon": -139.035667,
-      "pressure": 1015.0,
-      "pressure_station_hpa": 1009.0,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.3,
+      "pressure": 1013.6,
+      "pressure_station_hpa": 1007.6,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -1.4,
       "var12": null,
-      "var24": null
+      "var24": -0.2
     },
     {
       "id": "55248001",
@@ -1162,12 +1148,12 @@
       "altitude_m": 390.0,
       "lat": 48.563,
       "lon": 5.5055,
-      "pressure": 1016.9,
+      "pressure": 1016.4,
       "pressure_station_hpa": 971.6,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.5,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -0.5,
       "var12": null,
-      "var24": null
+      "var24": 1.2
     },
     {
       "id": "83069001",
@@ -1176,12 +1162,12 @@
       "altitude_m": 2.0,
       "lat": 43.1005,
       "lon": 6.147,
-      "pressure": 1016.4,
-      "pressure_station_hpa": 1015.9,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.8,
+      "pressure": 1016.2,
+      "pressure_station_hpa": 1015.7,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -0.2,
       "var12": null,
-      "var24": null
+      "var24": 0.3
     },
     {
       "id": "20093002",
@@ -1190,12 +1176,12 @@
       "altitude_m": 140.0,
       "lat": 42.633333,
       "lon": 8.9225,
-      "pressure": 1015.6,
-      "pressure_station_hpa": 999.5,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.4,
+      "pressure": 1015.3,
+      "pressure_station_hpa": 999.3,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -0.3,
       "var12": null,
-      "var24": null
+      "var24": 1.7
     },
     {
       "id": "13047001",
@@ -1204,12 +1190,12 @@
       "altitude_m": 23.0,
       "lat": 43.522667,
       "lon": 4.9275,
-      "pressure": 1017.5,
-      "pressure_station_hpa": 1014.7,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.7,
+      "pressure": 1017.8,
+      "pressure_station_hpa": 1015.1,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.3,
       "var12": null,
-      "var24": null
+      "var24": 2.1
     },
     {
       "id": "98811001",
@@ -1218,12 +1204,12 @@
       "altitude_m": 9.0,
       "lat": -21.051333,
       "lon": 164.8335,
-      "pressure": 1021.8,
-      "pressure_station_hpa": 1021.0,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 2.2,
+      "pressure": 1023.7,
+      "pressure_station_hpa": 1022.9,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.9,
       "var12": null,
-      "var24": null
+      "var24": 2.8
     },
     {
       "id": "98812001",
@@ -1232,12 +1218,12 @@
       "altitude_m": 25.0,
       "lat": -20.558667,
       "lon": 164.284167,
-      "pressure": 1021.2,
-      "pressure_station_hpa": 1018.3,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.7,
+      "pressure": 1023.0,
+      "pressure_station_hpa": 1020.0,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.8,
       "var12": null,
-      "var24": null
+      "var24": 2.3
     },
     {
       "id": "85113004",
@@ -1246,12 +1232,12 @@
       "altitude_m": 19.0,
       "lat": 46.718167,
       "lon": -2.388667,
-      "pressure": 1019.4,
-      "pressure_station_hpa": 1017.2,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 2.1,
+      "pressure": 1020.9,
+      "pressure_station_hpa": 1018.7,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.5,
       "var12": null,
-      "var24": null
+      "var24": 5.3
     },
     {
       "id": "97110002",
@@ -1260,12 +1246,12 @@
       "altitude_m": 27.0,
       "lat": 16.335,
       "lon": -61.004,
-      "pressure": 1014.4,
-      "pressure_station_hpa": 1011.2,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": -1.3,
+      "pressure": 1014.8,
+      "pressure_station_hpa": 1011.6,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.4,
       "var12": null,
-      "var24": null
+      "var24": 0.8
     },
     {
       "id": "98815001",
@@ -1274,12 +1260,12 @@
       "altitude_m": 41.0,
       "lat": -21.4815,
       "lon": 168.035667,
-      "pressure": 1022.0,
-      "pressure_station_hpa": 1016.2,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.7,
+      "pressure": 1023.5,
+      "pressure_station_hpa": 1017.7,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.5,
       "var12": null,
-      "var24": null
+      "var24": 2.9
     },
     {
       "id": "85191003",
@@ -1288,12 +1274,12 @@
       "altitude_m": 88.0,
       "lat": 46.705,
       "lon": -1.381833,
-      "pressure": 1019.3,
-      "pressure_station_hpa": 1008.7,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.7,
+      "pressure": 1020.3,
+      "pressure_station_hpa": 1009.8,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.0,
       "var12": null,
-      "var24": null
+      "var24": 4.9
     },
     {
       "id": "17300009",
@@ -1302,12 +1288,12 @@
       "altitude_m": 20.0,
       "lat": 46.178,
       "lon": -1.193167,
-      "pressure": 1020.0,
-      "pressure_station_hpa": 1017.9,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.6,
+      "pressure": 1021.2,
+      "pressure_station_hpa": 1019.1,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.2,
       "var12": null,
-      "var24": null
+      "var24": 4.7
     },
     {
       "id": "98821001",
@@ -1316,12 +1302,12 @@
       "altitude_m": 37.0,
       "lat": -22.017333,
       "lon": 166.222333,
-      "pressure": 1022.6,
-      "pressure_station_hpa": 1021.3,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 2.3,
+      "pressure": 1024.1,
+      "pressure_station_hpa": 1022.8,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.5,
       "var12": null,
-      "var24": null
+      "var24": 2.7
     },
     {
       "id": "97213004",
@@ -1330,12 +1316,12 @@
       "altitude_m": 3.0,
       "lat": 14.595333,
       "lon": -60.995667,
-      "pressure": 1013.6,
-      "pressure_station_hpa": 1012.7,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": -1.3,
+      "pressure": 1014.1,
+      "pressure_station_hpa": 1013.2,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.5,
       "var12": null,
-      "var24": null
+      "var24": 0.1
     },
     {
       "id": "07131001",
@@ -1344,12 +1330,12 @@
       "altitude_m": 265.0,
       "lat": 44.537167,
       "lon": 4.368167,
-      "pressure": 1018.1,
+      "pressure": 1017.9,
       "pressure_station_hpa": 988.0,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.3,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -0.2,
       "var12": null,
-      "var24": null
+      "var24": 3.0
     },
     {
       "id": "29264001",
@@ -1358,12 +1344,12 @@
       "altitude_m": 109.0,
       "lat": 48.532,
       "lon": -4.151833,
-      "pressure": 1017.2,
-      "pressure_station_hpa": 1003.6,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 2.6,
+      "pressure": 1019.2,
+      "pressure_station_hpa": 1005.7,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 2.0,
       "var12": null,
-      "var24": null
+      "var24": 7.6
     },
     {
       "id": "52269001",
@@ -1372,12 +1358,12 @@
       "altitude_m": 466.0,
       "lat": 47.843667,
       "lon": 5.3375,
-      "pressure": 1017.6,
-      "pressure_station_hpa": 964.0,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.0,
+      "pressure": 1018.0,
+      "pressure_station_hpa": 964.5,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.4,
       "var12": null,
-      "var24": null
+      "var24": 2.8
     },
     {
       "id": "22113006",
@@ -1386,12 +1372,12 @@
       "altitude_m": 85.0,
       "lat": 48.755333,
       "lon": -3.468667,
-      "pressure": 1016.5,
-      "pressure_station_hpa": 1006.2,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 2.7,
+      "pressure": 1018.7,
+      "pressure_station_hpa": 1008.5,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 2.2,
       "var12": null,
-      "var24": null
+      "var24": 6.5
     },
     {
       "id": "29120001",
@@ -1400,12 +1386,12 @@
       "altitude_m": 81.0,
       "lat": 48.279333,
       "lon": -4.439333,
-      "pressure": 1017.6,
-      "pressure_station_hpa": 1007.8,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 2.4,
+      "pressure": 1019.6,
+      "pressure_station_hpa": 1009.9,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 2.0,
       "var12": null,
-      "var24": null
+      "var24": 7.5
     },
     {
       "id": "53130008",
@@ -1414,12 +1400,12 @@
       "altitude_m": 100.0,
       "lat": 48.030667,
       "lon": -0.7465,
-      "pressure": 1016.9,
-      "pressure_station_hpa": 1005.2,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 2.0,
+      "pressure": 1018.2,
+      "pressure_station_hpa": 1006.6,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.3,
       "var12": null,
-      "var24": null
+      "var24": 4.4
     },
     {
       "id": "95088001",
@@ -1428,12 +1414,12 @@
       "altitude_m": 49.0,
       "lat": 48.967333,
       "lon": 2.427667,
-      "pressure": 1014.8,
-      "pressure_station_hpa": 1009.1,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.3,
+      "pressure": 1016.0,
+      "pressure_station_hpa": 1010.3,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.2,
       "var12": null,
-      "var24": null
+      "var24": 1.8
     },
     {
       "id": "83035001",
@@ -1442,12 +1428,12 @@
       "altitude_m": 417.0,
       "lat": 43.252167,
       "lon": 5.784667,
-      "pressure": 1016.0,
-      "pressure_station_hpa": 969.1,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": -0.4,
+      "pressure": 1015.8,
+      "pressure_station_hpa": 969.6,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -0.2,
       "var12": null,
-      "var24": null
+      "var24": 0.8
     },
     {
       "id": "83031001",
@@ -1456,12 +1442,12 @@
       "altitude_m": 80.0,
       "lat": 43.383167,
       "lon": 6.386167,
-      "pressure": 1015.5,
-      "pressure_station_hpa": 1006.2,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.1,
+      "pressure": 1014.9,
+      "pressure_station_hpa": 1005.8,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -0.6,
       "var12": null,
-      "var24": null
+      "var24": 0.1
     },
     {
       "id": "72181001",
@@ -1470,12 +1456,12 @@
       "altitude_m": 51.0,
       "lat": 47.945833,
       "lon": 0.194167,
-      "pressure": 1017.3,
-      "pressure_station_hpa": 1011.2,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.6,
+      "pressure": 1018.4,
+      "pressure_station_hpa": 1012.3,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.1,
       "var12": null,
-      "var24": null
+      "var24": 4.0
     },
     {
       "id": "97407520",
@@ -1484,12 +1470,12 @@
       "altitude_m": 9.0,
       "lat": -20.946167,
       "lon": 55.282,
-      "pressure": 1026.3,
-      "pressure_station_hpa": 1025.1,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": -0.9,
+      "pressure": 1024.5,
+      "pressure_station_hpa": 1023.3,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -1.8,
       "var12": null,
-      "var24": null
+      "var24": -1.4
     },
     {
       "id": "97101015",
@@ -1500,10 +1486,10 @@
       "lon": -61.516333,
       "pressure": 1015.1,
       "pressure_station_hpa": 1014.2,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": -1.1,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.0,
       "var12": null,
-      "var24": null
+      "var24": 0.9
     },
     {
       "id": "62826001",
@@ -1512,12 +1498,12 @@
       "altitude_m": 5.0,
       "lat": 50.5145,
       "lon": 1.622833,
-      "pressure": 1010.4,
-      "pressure_station_hpa": 1008.0,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.4,
+      "pressure": 1012.7,
+      "pressure_station_hpa": 1010.4,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 2.3,
       "var12": null,
-      "var24": null
+      "var24": 0.3
     },
     {
       "id": "11202001",
@@ -1526,12 +1512,12 @@
       "altitude_m": 42.0,
       "lat": 42.917333,
       "lon": 3.059667,
-      "pressure": 1019.3,
-      "pressure_station_hpa": 1014.7,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.7,
+      "pressure": 1019.8,
+      "pressure_station_hpa": 1015.2,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.5,
       "var12": null,
-      "var24": null
+      "var24": 3.6
     },
     {
       "id": "11203004",
@@ -1540,12 +1526,12 @@
       "altitude_m": 60.0,
       "lat": 43.173,
       "lon": 2.728833,
-      "pressure": 1019.9,
-      "pressure_station_hpa": 1012.9,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.0,
+      "pressure": 1020.5,
+      "pressure_station_hpa": 1013.6,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.6,
       "var12": null,
-      "var24": null
+      "var24": 4.9
     },
     {
       "id": "59343001",
@@ -1554,12 +1540,12 @@
       "altitude_m": 47.0,
       "lat": 50.57,
       "lon": 3.0975,
-      "pressure": 1010.7,
-      "pressure_station_hpa": 1005.2,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.9,
+      "pressure": 1012.1,
+      "pressure_station_hpa": 1006.6,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.4,
       "var12": null,
-      "var24": null
+      "var24": -0.4
     },
     {
       "id": "87085006",
@@ -1568,12 +1554,12 @@
       "altitude_m": 402.0,
       "lat": 45.861167,
       "lon": 1.175,
-      "pressure": 1021.0,
-      "pressure_station_hpa": 974.1,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.2,
+      "pressure": 1021.3,
+      "pressure_station_hpa": 974.9,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.3,
       "var12": null,
-      "var24": null
+      "var24": 4.8
     },
     {
       "id": "56185001",
@@ -1582,12 +1568,12 @@
       "altitude_m": 45.0,
       "lat": 47.762833,
       "lon": -3.435667,
-      "pressure": 1018.1,
-      "pressure_station_hpa": 1012.9,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 2.2,
+      "pressure": 1019.6,
+      "pressure_station_hpa": 1014.4,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.5,
       "var12": null,
-      "var24": null
+      "var24": 5.9
     },
     {
       "id": "70473001",
@@ -1596,12 +1582,12 @@
       "altitude_m": 271.0,
       "lat": 47.787,
       "lon": 6.363833,
-      "pressure": 1019.0,
-      "pressure_station_hpa": 987.2,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.6,
+      "pressure": 1018.8,
+      "pressure_station_hpa": 987.3,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -0.2,
       "var12": null,
-      "var24": null
+      "var24": 3.0
     },
     {
       "id": "69029001",
@@ -1610,12 +1596,12 @@
       "altitude_m": 202.0,
       "lat": 45.721333,
       "lon": 4.949167,
-      "pressure": 1020.5,
+      "pressure": 1020.2,
       "pressure_station_hpa": 997.1,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.2,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -0.3,
       "var12": null,
-      "var24": null
+      "var24": 4.6
     },
     {
       "id": "69299001",
@@ -1624,12 +1610,12 @@
       "altitude_m": 235.0,
       "lat": 45.7265,
       "lon": 5.077833,
-      "pressure": 1020.4,
+      "pressure": 1020.1,
       "pressure_station_hpa": 992.6,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.2,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -0.3,
       "var12": null,
-      "var24": null
+      "var24": 4.5
     },
     {
       "id": "71105001",
@@ -1638,12 +1624,12 @@
       "altitude_m": 219.0,
       "lat": 46.2945,
       "lon": 4.794333,
-      "pressure": 1020.2,
-      "pressure_station_hpa": 994.9,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.6,
+      "pressure": 1019.8,
+      "pressure_station_hpa": 994.8,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -0.4,
       "var12": null,
-      "var24": null
+      "var24": 4.3
     },
     {
       "id": "98818002",
@@ -1652,12 +1638,12 @@
       "altitude_m": 3.0,
       "lat": -22.260333,
       "lon": 166.473667,
-      "pressure": 1022.9,
-      "pressure_station_hpa": 1022.5,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.5,
+      "pressure": 1024.1,
+      "pressure_station_hpa": 1023.7,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.2,
       "var12": null,
-      "var24": null
+      "var24": 2.7
     },
     {
       "id": "98719005",
@@ -1666,12 +1652,12 @@
       "altitude_m": 91.0,
       "lat": -23.130167,
       "lon": -134.965333,
-      "pressure": 1025.2,
-      "pressure_station_hpa": 1014.6,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.4,
+      "pressure": 1023.9,
+      "pressure_station_hpa": 1013.4,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -1.3,
       "var12": null,
-      "var24": null
+      "var24": 0.7
     },
     {
       "id": "98611001",
@@ -1680,12 +1666,12 @@
       "altitude_m": 35.0,
       "lat": -14.307833,
       "lon": -178.121,
-      "pressure": 1015.5,
-      "pressure_station_hpa": 1011.4,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.9,
+      "pressure": 1016.3,
+      "pressure_station_hpa": 1012.2,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.8,
       "var12": null,
-      "var24": null
+      "var24": 1.3
     },
     {
       "id": "49188001",
@@ -1694,12 +1680,12 @@
       "altitude_m": 53.0,
       "lat": 47.561833,
       "lon": -0.317,
-      "pressure": 1018.0,
-      "pressure_station_hpa": 1011.8,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.7,
+      "pressure": 1018.9,
+      "pressure_station_hpa": 1012.8,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.9,
       "var12": null,
-      "var24": null
+      "var24": 4.1
     },
     {
       "id": "13054001",
@@ -1708,26 +1694,12 @@
       "altitude_m": 6.0,
       "lat": 43.437,
       "lon": 5.2115,
-      "pressure": 1017.0,
-      "pressure_station_hpa": 1013.3,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.2,
+      "pressure": 1017.4,
+      "pressure_station_hpa": 1013.8,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.4,
       "var12": null,
-      "var24": null
-    },
-    {
-      "id": "97353001",
-      "name": "MARIPASOULA",
-      "department_code": null,
-      "altitude_m": 106.0,
-      "lat": 3.640167,
-      "lon": -54.028333,
-      "pressure": 1012.3,
-      "pressure_station_hpa": 1000.1,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": -0.5,
-      "var12": null,
-      "var24": null
+      "var24": 1.6
     },
     {
       "id": "80523001",
@@ -1736,12 +1708,12 @@
       "altitude_m": 107.0,
       "lat": 49.971833,
       "lon": 2.703833,
-      "pressure": 1012.1,
-      "pressure_station_hpa": 999.0,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.9,
+      "pressure": 1013.8,
+      "pressure_station_hpa": 1000.6,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.7,
       "var12": null,
-      "var24": null
+      "var24": 0.4
     },
     {
       "id": "77306001",
@@ -1750,12 +1722,12 @@
       "altitude_m": 91.0,
       "lat": 48.610333,
       "lon": 2.6795,
-      "pressure": 1015.8,
-      "pressure_station_hpa": 1005.0,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.1,
+      "pressure": 1016.4,
+      "pressure_station_hpa": 1005.8,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.6,
       "var12": null,
-      "var24": null
+      "var24": 1.7
     },
     {
       "id": "74182001",
@@ -1764,12 +1736,12 @@
       "altitude_m": 455.0,
       "lat": 45.928167,
       "lon": 6.094,
-      "pressure": 1019.8,
-      "pressure_station_hpa": 967.7,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.0,
+      "pressure": 1018.9,
+      "pressure_station_hpa": 967.6,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -0.9,
       "var12": null,
-      "var24": null
+      "var24": 3.9
     },
     {
       "id": "12145001",
@@ -1778,12 +1750,12 @@
       "altitude_m": 712.0,
       "lat": 44.1185,
       "lon": 3.0195,
-      "pressure": 1020.4,
-      "pressure_station_hpa": 939.5,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.2,
+      "pressure": 1019.5,
+      "pressure_station_hpa": 939.9,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -0.9,
       "var12": null,
-      "var24": null
+      "var24": 5.0
     },
     {
       "id": "40192001",
@@ -1792,12 +1764,12 @@
       "altitude_m": 59.0,
       "lat": 43.909833,
       "lon": -0.500167,
-      "pressure": 1022.5,
-      "pressure_station_hpa": 1015.6,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.0,
+      "pressure": 1022.6,
+      "pressure_station_hpa": 1015.8,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.1,
       "var12": null,
-      "var24": null
+      "var24": 5.7
     },
     {
       "id": "82121002",
@@ -1806,12 +1778,12 @@
       "altitude_m": 106.0,
       "lat": 44.028,
       "lon": 1.376667,
-      "pressure": 1022.3,
-      "pressure_station_hpa": 1009.8,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.2,
+      "pressure": 1022.4,
+      "pressure_station_hpa": 1010.0,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.1,
       "var12": null,
-      "var24": null
+      "var24": 5.9
     },
     {
       "id": "03180001",
@@ -1820,12 +1792,12 @@
       "altitude_m": 275.0,
       "lat": 46.536333,
       "lon": 3.423167,
-      "pressure": 1019.9,
-      "pressure_station_hpa": 988.0,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.9,
+      "pressure": 1020.2,
+      "pressure_station_hpa": 988.6,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.3,
       "var12": null,
-      "var24": null
+      "var24": 3.9
     },
     {
       "id": "26198001",
@@ -1834,12 +1806,12 @@
       "altitude_m": 73.0,
       "lat": 44.581167,
       "lon": 4.733,
-      "pressure": 1018.6,
-      "pressure_station_hpa": 1010.1,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.0,
+      "pressure": 1018.7,
+      "pressure_station_hpa": 1010.2,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.1,
       "var12": null,
-      "var24": null
+      "var24": 3.2
     },
     {
       "id": "34154001",
@@ -1848,12 +1820,12 @@
       "altitude_m": 1.0,
       "lat": 43.576167,
       "lon": 3.964667,
-      "pressure": 1018.8,
-      "pressure_station_hpa": 1017.9,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.1,
+      "pressure": 1018.7,
+      "pressure_station_hpa": 1017.8,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -0.1,
       "var12": null,
-      "var24": null
+      "var24": 2.4
     },
     {
       "id": "98729009",
@@ -1862,12 +1834,12 @@
       "altitude_m": 5.0,
       "lat": -17.486333,
       "lon": -149.766167,
-      "pressure": 1018.5,
-      "pressure_station_hpa": 1017.8,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.0,
+      "pressure": 1018.2,
+      "pressure_station_hpa": 1017.5,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -0.3,
       "var12": null,
-      "var24": null
+      "var24": -0.6
     },
     {
       "id": "98755002",
@@ -1876,12 +1848,12 @@
       "altitude_m": 3.0,
       "lat": -21.8105,
       "lon": -138.822833,
-      "pressure": 1024.4,
-      "pressure_station_hpa": 1024.0,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.5,
+      "pressure": 1023.3,
+      "pressure_station_hpa": 1022.9,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -1.1,
       "var12": null,
-      "var24": null
+      "var24": -0.7
     },
     {
       "id": "98809001",
@@ -1890,12 +1862,12 @@
       "altitude_m": 95.0,
       "lat": -22.589833,
       "lon": 167.452167,
-      "pressure": 1023.2,
-      "pressure_station_hpa": 1010.8,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.7,
+      "pressure": 1024.5,
+      "pressure_station_hpa": 1012.1,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.3,
       "var12": null,
-      "var24": null
+      "var24": 3.2
     },
     {
       "id": "31299001",
@@ -1904,12 +1876,12 @@
       "altitude_m": 189.0,
       "lat": 43.4515,
       "lon": 1.262,
-      "pressure": 1022.3,
-      "pressure_station_hpa": 1000.2,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.0,
+      "pressure": 1022.6,
+      "pressure_station_hpa": 1000.6,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.3,
       "var12": null,
-      "var24": null
+      "var24": 6.5
     },
     {
       "id": "54526001",
@@ -1918,12 +1890,12 @@
       "altitude_m": 212.0,
       "lat": 48.687833,
       "lon": 6.2215,
-      "pressure": 1016.8,
-      "pressure_station_hpa": 992.0,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.5,
+      "pressure": 1016.2,
+      "pressure_station_hpa": 991.8,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -0.6,
       "var12": null,
-      "var24": null
+      "var24": 1.1
     },
     {
       "id": "54405001",
@@ -1932,12 +1904,12 @@
       "altitude_m": 336.0,
       "lat": 48.581,
       "lon": 5.959833,
-      "pressure": 1016.9,
-      "pressure_station_hpa": 976.3,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.5,
+      "pressure": 1016.6,
+      "pressure_station_hpa": 976.5,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -0.3,
       "var12": null,
-      "var24": null
+      "var24": 1.7
     },
     {
       "id": "44020001",
@@ -1946,12 +1918,12 @@
       "altitude_m": 26.0,
       "lat": 47.15,
       "lon": -1.608833,
-      "pressure": 1018.4,
-      "pressure_station_hpa": 1015.3,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.7,
+      "pressure": 1019.6,
+      "pressure_station_hpa": 1016.6,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.2,
       "var12": null,
-      "var24": null
+      "var24": 4.9
     },
     {
       "id": "58160001",
@@ -1960,12 +1932,12 @@
       "altitude_m": 175.0,
       "lat": 46.999333,
       "lon": 3.1145,
-      "pressure": 1019.4,
-      "pressure_station_hpa": 998.8,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.0,
+      "pressure": 1019.9,
+      "pressure_station_hpa": 999.4,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.5,
       "var12": null,
-      "var24": null
+      "var24": 3.9
     },
     {
       "id": "06088001",
@@ -1974,12 +1946,12 @@
       "altitude_m": 2.0,
       "lat": 43.648833,
       "lon": 7.209,
-      "pressure": 1015.7,
-      "pressure_station_hpa": 1012.7,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.9,
+      "pressure": 1015.9,
+      "pressure_station_hpa": 1012.9,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.2,
       "var12": null,
-      "var24": null
+      "var24": 0.5
     },
     {
       "id": "30189001",
@@ -1988,10 +1960,10 @@
       "altitude_m": 59.0,
       "lat": 43.856833,
       "lon": 4.406333,
-      "pressure": 1018.0,
-      "pressure_station_hpa": 1010.9,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.9,
+      "pressure": 1017.8,
+      "pressure_station_hpa": 1010.8,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -0.2,
       "var12": null,
       "var24": null
     },
@@ -2002,12 +1974,12 @@
       "altitude_m": 94.0,
       "lat": 43.772833,
       "lon": 4.412833,
-      "pressure": 1017.9,
-      "pressure_station_hpa": 1005.9,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.8,
+      "pressure": 1017.8,
+      "pressure_station_hpa": 1006.0,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -0.1,
       "var12": null,
-      "var24": null
+      "var24": 2.3
     },
     {
       "id": "79191005",
@@ -2016,12 +1988,12 @@
       "altitude_m": 57.0,
       "lat": 46.315833,
       "lon": -0.400167,
-      "pressure": 1020.1,
-      "pressure_station_hpa": 1012.9,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.4,
+      "pressure": 1020.7,
+      "pressure_station_hpa": 1013.6,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.6,
       "var12": null,
-      "var24": null
+      "var24": 4.3
     },
     {
       "id": "98818001",
@@ -2030,10 +2002,10 @@
       "altitude_m": 69.0,
       "lat": -22.276,
       "lon": 166.452833,
-      "pressure": 1023.0,
-      "pressure_station_hpa": 1014.7,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.5,
+      "pressure": 1024.2,
+      "pressure_station_hpa": 1015.9,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.2,
       "var12": null,
       "var24": null
     },
@@ -2044,12 +2016,12 @@
       "altitude_m": 27.0,
       "lat": -37.795167,
       "lon": 77.569167,
-      "pressure": 1029.1,
-      "pressure_station_hpa": 1025.6,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": -1.4,
+      "pressure": 1029.0,
+      "pressure_station_hpa": 1025.5,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -0.1,
       "var12": null,
-      "var24": null
+      "var24": 1.2
     },
     {
       "id": "98731007",
@@ -2058,12 +2030,12 @@
       "altitude_m": 64.0,
       "lat": -8.7935,
       "lon": -140.220667,
-      "pressure": 1014.7,
-      "pressure_station_hpa": 1006.5,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.4,
+      "pressure": 1013.4,
+      "pressure_station_hpa": 1005.2,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -1.3,
       "var12": null,
-      "var24": null
+      "var24": 0.1
     },
     {
       "id": "76481001",
@@ -2072,12 +2044,12 @@
       "altitude_m": 90.0,
       "lat": 49.533,
       "lon": 0.091667,
-      "pressure": 1013.4,
-      "pressure_station_hpa": 1002.7,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.7,
+      "pressure": 1015.9,
+      "pressure_station_hpa": 1005.2,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 2.5,
       "var12": null,
-      "var24": null
+      "var24": 2.8
     },
     {
       "id": "84087001",
@@ -2086,12 +2058,12 @@
       "altitude_m": 57.0,
       "lat": 44.1445,
       "lon": 4.861,
-      "pressure": 1017.9,
-      "pressure_station_hpa": 1011.6,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.6,
+      "pressure": 1018.0,
+      "pressure_station_hpa": 1011.8,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.1,
       "var12": null,
-      "var24": null
+      "var24": 2.5
     },
     {
       "id": "45055001",
@@ -2100,12 +2072,12 @@
       "altitude_m": 123.0,
       "lat": 47.990667,
       "lon": 1.778167,
-      "pressure": 1016.6,
-      "pressure_station_hpa": 1002.0,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.3,
+      "pressure": 1017.4,
+      "pressure_station_hpa": 1003.0,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.8,
       "var12": null,
-      "var24": null
+      "var24": 2.7
     },
     {
       "id": "91027002",
@@ -2114,12 +2086,12 @@
       "altitude_m": 86.0,
       "lat": 48.718,
       "lon": 2.397,
-      "pressure": 1015.6,
-      "pressure_station_hpa": 1005.0,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.3,
+      "pressure": 1016.5,
+      "pressure_station_hpa": 1006.0,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.9,
       "var12": null,
-      "var24": null
+      "var24": 2.1
     },
     {
       "id": "98814001",
@@ -2128,12 +2100,12 @@
       "altitude_m": 30.0,
       "lat": -20.777667,
       "lon": 167.241167,
-      "pressure": 1021.7,
-      "pressure_station_hpa": 1017.9,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.6,
+      "pressure": 1023.2,
+      "pressure_station_hpa": 1019.4,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.5,
       "var12": null,
-      "var24": null
+      "var24": 2.8
     },
     {
       "id": "29155005",
@@ -2142,12 +2114,12 @@
       "altitude_m": 64.0,
       "lat": 48.473333,
       "lon": -5.057,
-      "pressure": 1016.8,
-      "pressure_station_hpa": 1008.8,
-      "time": "2026-08-31T08:00:00Z",
+      "pressure": 1019.2,
+      "pressure_station_hpa": 1011.2,
+      "time": "2026-08-31T11:00:00Z",
       "var3": 2.4,
       "var12": null,
-      "var24": null
+      "var24": 8.7
     },
     {
       "id": "98508001",
@@ -2156,12 +2128,12 @@
       "altitude_m": 7.0,
       "lat": -12.8055,
       "lon": 45.282833,
-      "pressure": 1020.6,
-      "pressure_station_hpa": 1019.8,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.1,
+      "pressure": 1019.0,
+      "pressure_station_hpa": 1018.2,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -1.6,
       "var12": null,
-      "var24": null
+      "var24": -0.2
     },
     {
       "id": "75114001",
@@ -2170,12 +2142,12 @@
       "altitude_m": 75.0,
       "lat": 48.821667,
       "lon": 2.337833,
-      "pressure": 1015.2,
-      "pressure_station_hpa": 1006.0,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.3,
+      "pressure": 1016.2,
+      "pressure_station_hpa": 1007.1,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.0,
       "var12": null,
-      "var24": null
+      "var24": 2.3
     },
     {
       "id": "64549001",
@@ -2185,11 +2157,11 @@
       "lat": 43.385,
       "lon": -0.416333,
       "pressure": 1022.5,
-      "pressure_station_hpa": 1001.2,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.1,
+      "pressure_station_hpa": 1001.4,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.0,
       "var12": null,
-      "var24": null
+      "var24": 6.6
     },
     {
       "id": "66136001",
@@ -2198,12 +2170,12 @@
       "altitude_m": 42.0,
       "lat": 42.737167,
       "lon": 2.872833,
-      "pressure": 1019.6,
-      "pressure_station_hpa": 1014.5,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.2,
+      "pressure": 1020.1,
+      "pressure_station_hpa": 1015.1,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.5,
       "var12": null,
-      "var24": null
+      "var24": 4.0
     },
     {
       "id": "97416463",
@@ -2212,12 +2184,12 @@
       "altitude_m": 21.0,
       "lat": -21.32,
       "lon": 55.4255,
-      "pressure": 1025.9,
-      "pressure_station_hpa": 1023.1,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": -1.1,
+      "pressure": 1024.1,
+      "pressure_station_hpa": 1021.3,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -1.8,
       "var12": null,
-      "var24": null
+      "var24": -0.8
     },
     {
       "id": "29178001",
@@ -2226,12 +2198,12 @@
       "altitude_m": 40.0,
       "lat": 48.548,
       "lon": -4.664167,
-      "pressure": 1017.1,
-      "pressure_station_hpa": 1012.4,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 2.6,
+      "pressure": 1019.3,
+      "pressure_station_hpa": 1014.6,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 2.2,
       "var12": null,
-      "var24": null
+      "var24": 8.3
     },
     {
       "id": "22168001",
@@ -2240,12 +2212,12 @@
       "altitude_m": 55.0,
       "lat": 48.825833,
       "lon": -3.473167,
-      "pressure": 1015.8,
-      "pressure_station_hpa": 1009.0,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 2.6,
+      "pressure": 1018.3,
+      "pressure_station_hpa": 1011.5,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 2.5,
       "var12": null,
-      "var24": null
+      "var24": 7.1
     },
     {
       "id": "98826002",
@@ -2254,12 +2226,12 @@
       "altitude_m": 35.0,
       "lat": -20.081167,
       "lon": 164.031333,
-      "pressure": 1021.2,
-      "pressure_station_hpa": 1017.1,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.3,
+      "pressure": 1022.8,
+      "pressure_station_hpa": 1018.7,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.6,
       "var12": null,
-      "var24": null
+      "var24": 2.4
     },
     {
       "id": "86027001",
@@ -2268,12 +2240,12 @@
       "altitude_m": 125.0,
       "lat": 46.593833,
       "lon": 0.314333,
-      "pressure": 1019.7,
-      "pressure_station_hpa": 1005.6,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.3,
+      "pressure": 1020.2,
+      "pressure_station_hpa": 1006.3,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.5,
       "var12": null,
-      "var24": null
+      "var24": 4.2
     },
     {
       "id": "95078001",
@@ -2282,12 +2254,12 @@
       "altitude_m": 87.0,
       "lat": 49.0905,
       "lon": 2.027667,
-      "pressure": 1014.1,
-      "pressure_station_hpa": 1003.7,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.3,
+      "pressure": 1015.7,
+      "pressure_station_hpa": 1005.3,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.6,
       "var12": null,
-      "var24": null
+      "var24": 1.8
     },
     {
       "id": "50020001",
@@ -2296,12 +2268,12 @@
       "altitude_m": 6.0,
       "lat": 49.725167,
       "lon": -1.939833,
-      "pressure": 1013.3,
-      "pressure_station_hpa": 1012.2,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 3.0,
+      "pressure": 1016.0,
+      "pressure_station_hpa": 1014.9,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 2.7,
       "var12": null,
-      "var24": null
+      "var24": 4.7
     },
     {
       "id": "56186003",
@@ -2310,12 +2282,12 @@
       "altitude_m": 9.0,
       "lat": 47.479833,
       "lon": -3.099,
-      "pressure": 1018.5,
-      "pressure_station_hpa": 1017.4,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 2.2,
+      "pressure": 1020.1,
+      "pressure_station_hpa": 1019.0,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.6,
       "var12": null,
-      "var24": null
+      "var24": 5.8
     },
     {
       "id": "29216001",
@@ -2324,12 +2296,12 @@
       "altitude_m": 82.0,
       "lat": 47.973,
       "lon": -4.160667,
-      "pressure": 1017.9,
-      "pressure_station_hpa": 1007.9,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 2.2,
+      "pressure": 1019.8,
+      "pressure_station_hpa": 1009.8,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.9,
       "var12": null,
-      "var24": null
+      "var24": 7.0
     },
     {
       "id": "98740002",
@@ -2338,12 +2310,12 @@
       "altitude_m": 7.0,
       "lat": -14.955667,
       "lon": -147.6595,
-      "pressure": 1017.9,
-      "pressure_station_hpa": 1017.1,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.0,
+      "pressure": 1016.8,
+      "pressure_station_hpa": 1016.0,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -1.1,
       "var12": null,
-      "var24": null
+      "var24": -0.3
     },
     {
       "id": "51449002",
@@ -2352,12 +2324,12 @@
       "altitude_m": 95.0,
       "lat": 49.209833,
       "lon": 4.155333,
-      "pressure": 1014.8,
-      "pressure_station_hpa": 1003.7,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.7,
+      "pressure": 1015.1,
+      "pressure_station_hpa": 1004.1,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.3,
       "var12": null,
-      "var24": null
+      "var24": 0.5
     },
     {
       "id": "35281001",
@@ -2366,12 +2338,12 @@
       "altitude_m": 36.0,
       "lat": 48.068833,
       "lon": -1.734,
-      "pressure": 1017.2,
-      "pressure_station_hpa": 1012.8,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 2.1,
+      "pressure": 1018.5,
+      "pressure_station_hpa": 1014.2,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.3,
       "var12": null,
-      "var24": null
+      "var24": 4.9
     },
     {
       "id": "42253001",
@@ -2380,12 +2352,12 @@
       "altitude_m": 337.0,
       "lat": 46.055167,
       "lon": 4.004667,
-      "pressure": 1020.1,
-      "pressure_station_hpa": 981.3,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": -0.3,
+      "pressure": 1020.9,
+      "pressure_station_hpa": 982.2,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.8,
       "var12": null,
-      "var24": null
+      "var24": 5.0
     },
     {
       "id": "12254001",
@@ -2394,12 +2366,12 @@
       "altitude_m": 578.0,
       "lat": 44.410333,
       "lon": 2.4825,
-      "pressure": 1022.0,
-      "pressure_station_hpa": 955.5,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.7,
+      "pressure": 1021.9,
+      "pressure_station_hpa": 956.0,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -0.1,
       "var12": null,
-      "var24": null
+      "var24": 6.2
     },
     {
       "id": "95527001",
@@ -2408,12 +2380,12 @@
       "altitude_m": 108.0,
       "lat": 49.015167,
       "lon": 2.534333,
-      "pressure": 1014.6,
-      "pressure_station_hpa": 1001.5,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.1,
+      "pressure": 1015.9,
+      "pressure_station_hpa": 1002.8,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.3,
       "var12": null,
-      "var24": null
+      "var24": 1.7
     },
     {
       "id": "41097001",
@@ -2422,26 +2394,12 @@
       "altitude_m": 83.0,
       "lat": 47.319667,
       "lon": 1.6875,
-      "pressure": 1018.4,
-      "pressure_station_hpa": 1008.5,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.2,
+      "pressure": 1019.2,
+      "pressure_station_hpa": 1009.4,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.8,
       "var12": null,
-      "var24": null
-    },
-    {
-      "id": "36173002",
-      "name": "ROSNAY",
-      "department_code": "36",
-      "altitude_m": 109.0,
-      "lat": 46.703,
-      "lon": 1.249833,
-      "pressure": 1019.3,
-      "pressure_station_hpa": 1006.4,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.2,
-      "var12": null,
-      "var24": null
+      "var24": 3.5
     },
     {
       "id": "76116001",
@@ -2450,12 +2408,12 @@
       "altitude_m": 156.0,
       "lat": 49.3895,
       "lon": 1.178333,
-      "pressure": 1013.8,
-      "pressure_station_hpa": 995.4,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.5,
+      "pressure": 1015.8,
+      "pressure_station_hpa": 997.4,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 2.0,
       "var12": null,
-      "var24": null
+      "var24": 2.3
     },
     {
       "id": "17306004",
@@ -2464,12 +2422,12 @@
       "altitude_m": 12.0,
       "lat": 45.633,
       "lon": -0.974667,
-      "pressure": 1021.0,
-      "pressure_station_hpa": 1017.5,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.7,
+      "pressure": 1021.9,
+      "pressure_station_hpa": 1018.4,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.9,
       "var12": null,
-      "var24": null
+      "var24": 4.5
     },
     {
       "id": "97308001",
@@ -2478,12 +2436,12 @@
       "altitude_m": 6.0,
       "lat": 3.890667,
       "lon": -51.804667,
-      "pressure": 1011.8,
-      "pressure_station_hpa": 1011.0,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": -0.3,
+      "pressure": 1012.8,
+      "pressure_station_hpa": 1012.0,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.0,
       "var12": null,
-      "var24": null
+      "var24": 0.7
     },
     {
       "id": "97311001",
@@ -2492,12 +2450,12 @@
       "altitude_m": 5.0,
       "lat": 5.4855,
       "lon": -54.031667,
-      "pressure": 1011.6,
-      "pressure_station_hpa": 1011.0,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": -0.9,
+      "pressure": 1012.1,
+      "pressure_station_hpa": 1011.5,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.5,
       "var12": null,
-      "var24": null
+      "var24": -0.1
     },
     {
       "id": "13103001",
@@ -2506,12 +2464,12 @@
       "altitude_m": 58.0,
       "lat": 43.612833,
       "lon": 5.108,
-      "pressure": 1017.2,
-      "pressure_station_hpa": 1010.4,
-      "time": "2026-08-31T08:00:00Z",
+      "pressure": 1017.5,
+      "pressure_station_hpa": 1010.8,
+      "time": "2026-08-31T11:00:00Z",
       "var3": 0.3,
       "var12": null,
-      "var24": null
+      "var24": 1.9
     },
     {
       "id": "34301002",
@@ -2520,12 +2478,12 @@
       "altitude_m": 75.0,
       "lat": 43.397333,
       "lon": 3.692167,
-      "pressure": 1018.7,
-      "pressure_station_hpa": 1009.8,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.4,
+      "pressure": 1019.1,
+      "pressure_station_hpa": 1010.4,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.4,
       "var12": null,
-      "var24": null
+      "var24": 3.1
     },
     {
       "id": "64189001",
@@ -2534,12 +2492,12 @@
       "altitude_m": 21.0,
       "lat": 43.3945,
       "lon": -1.6865,
-      "pressure": 1022.8,
-      "pressure_station_hpa": 1017.7,
-      "time": "2026-08-31T07:00:00Z",
-      "var3": 0.8,
+      "pressure": 1023.7,
+      "pressure_station_hpa": 1018.7,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": null,
       "var12": null,
-      "var24": null
+      "var24": 6.3
     },
     {
       "id": "20342001",
@@ -2548,12 +2506,12 @@
       "altitude_m": 12.0,
       "lat": 41.921833,
       "lon": 9.400833,
-      "pressure": 1016.2,
-      "pressure_station_hpa": 1014.3,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.5,
+      "pressure": 1016.3,
+      "pressure_station_hpa": 1014.4,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.1,
       "var12": null,
-      "var24": null
+      "var24": 1.2
     },
     {
       "id": "17308001",
@@ -2562,12 +2520,12 @@
       "altitude_m": 18.0,
       "lat": 45.888,
       "lon": -0.984667,
-      "pressure": 1020.6,
-      "pressure_station_hpa": 1018.5,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.3,
+      "pressure": 1021.6,
+      "pressure_station_hpa": 1019.5,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.0,
       "var12": null,
-      "var24": null
+      "var24": 4.5
     },
     {
       "id": "04049001",
@@ -2576,12 +2534,12 @@
       "altitude_m": 458.0,
       "lat": 44.062167,
       "lon": 5.989667,
-      "pressure": 1016.8,
-      "pressure_station_hpa": 964.9,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": -0.9,
+      "pressure": 1015.8,
+      "pressure_station_hpa": 964.7,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -1.0,
       "var12": null,
-      "var24": null
+      "var24": 1.7
     },
     {
       "id": "22372001",
@@ -2590,12 +2548,12 @@
       "altitude_m": 135.0,
       "lat": 48.5365,
       "lon": -2.853167,
-      "pressure": 1016.3,
-      "pressure_station_hpa": 1000.4,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 2.5,
+      "pressure": 1018.3,
+      "pressure_station_hpa": 1002.5,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 2.0,
       "var12": null,
-      "var24": null
+      "var24": 6.2
     },
     {
       "id": "42005001",
@@ -2604,12 +2562,12 @@
       "altitude_m": 395.0,
       "lat": 45.545667,
       "lon": 4.293833,
-      "pressure": 1020.1,
-      "pressure_station_hpa": 974.8,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.3,
+      "pressure": 1019.5,
+      "pressure_station_hpa": 974.7,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -0.6,
       "var12": null,
-      "var24": null
+      "var24": 4.9
     },
     {
       "id": "14578001",
@@ -2618,12 +2576,12 @@
       "altitude_m": 139.0,
       "lat": 49.3645,
       "lon": 0.167,
-      "pressure": 1013.8,
-      "pressure_station_hpa": 997.3,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.7,
+      "pressure": 1015.8,
+      "pressure_station_hpa": 999.4,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 2.0,
       "var12": null,
-      "var24": null
+      "var24": 2.9
     },
     {
       "id": "09289001",
@@ -2632,12 +2590,12 @@
       "altitude_m": 414.0,
       "lat": 43.005333,
       "lon": 1.106833,
-      "pressure": 1022.5,
-      "pressure_station_hpa": 974.5,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.0,
+      "pressure": 1022.4,
+      "pressure_station_hpa": 974.9,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -0.1,
       "var12": null,
-      "var24": null
+      "var24": 7.5
     },
     {
       "id": "44103001",
@@ -2646,12 +2604,12 @@
       "altitude_m": 3.0,
       "lat": 47.313833,
       "lon": -2.1545,
-      "pressure": 1018.5,
-      "pressure_station_hpa": 1018.1,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 2.1,
+      "pressure": 1019.9,
+      "pressure_station_hpa": 1019.5,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.4,
       "var12": null,
-      "var24": null
+      "var24": 5.3
     },
     {
       "id": "02320001",
@@ -2660,12 +2618,12 @@
       "altitude_m": 98.0,
       "lat": 49.818333,
       "lon": 3.206,
-      "pressure": 1012.8,
-      "pressure_station_hpa": 1001.3,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.1,
+      "pressure": 1014.1,
+      "pressure_station_hpa": 1002.7,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.3,
       "var12": null,
-      "var24": null
+      "var24": 0.2
     },
     {
       "id": "71491001",
@@ -2674,12 +2632,12 @@
       "altitude_m": 242.0,
       "lat": 46.408333,
       "lon": 4.0165,
-      "pressure": 1020.0,
-      "pressure_station_hpa": 991.8,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.2,
+      "pressure": 1020.4,
+      "pressure_station_hpa": 992.5,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.4,
       "var12": null,
-      "var24": null
+      "var24": 4.4
     },
     {
       "id": "97123005",
@@ -2688,12 +2646,12 @@
       "altitude_m": 3.0,
       "lat": 17.902833,
       "lon": -62.838,
-      "pressure": 1015.0,
-      "pressure_station_hpa": 1013.3,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": -0.8,
+      "pressure": 1016.0,
+      "pressure_station_hpa": 1014.3,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.0,
       "var12": null,
-      "var24": null
+      "var24": 3.6
     },
     {
       "id": "97123001",
@@ -2702,12 +2660,12 @@
       "altitude_m": 44.0,
       "lat": 17.9015,
       "lon": -62.852167,
-      "pressure": 1015.1,
-      "pressure_station_hpa": 1010.0,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": -0.7,
+      "pressure": 1015.9,
+      "pressure_station_hpa": 1010.8,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.8,
       "var12": null,
-      "var24": null
+      "var24": 3.5
     },
     {
       "id": "52448001",
@@ -2716,12 +2674,12 @@
       "altitude_m": 139.0,
       "lat": 48.631333,
       "lon": 4.903667,
-      "pressure": 1016.5,
-      "pressure_station_hpa": 999.6,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.5,
+      "pressure": 1016.9,
+      "pressure_station_hpa": 1000.0,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.4,
       "var12": null,
-      "var24": null
+      "var24": 1.4
     },
     {
       "id": "97502001",
@@ -2732,10 +2690,10 @@
       "lon": -56.179167,
       "pressure": 1007.7,
       "pressure_station_hpa": 1006.9,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": -1.2,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.0,
       "var12": null,
-      "var24": null
+      "var24": -8.5
     },
     {
       "id": "67124001",
@@ -2744,12 +2702,12 @@
       "altitude_m": 150.0,
       "lat": 48.5495,
       "lon": 7.640333,
-      "pressure": 1017.1,
-      "pressure_station_hpa": 999.6,
-      "time": "2026-08-31T08:00:00Z",
+      "pressure": 1017.5,
+      "pressure_station_hpa": 1000.1,
+      "time": "2026-08-31T11:00:00Z",
       "var3": 0.4,
       "var12": null,
-      "var24": null
+      "var24": 1.8
     },
     {
       "id": "98818201",
@@ -2758,10 +2716,10 @@
       "altitude_m": 4.0,
       "lat": -18.48,
       "lon": 163.086333,
-      "pressure": 1019.9,
-      "pressure_station_hpa": 1019.4,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.2,
+      "pressure": 1021.8,
+      "pressure_station_hpa": 1021.3,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.9,
       "var12": null,
       "var24": null
     },
@@ -2772,12 +2730,26 @@
       "altitude_m": 2.0,
       "lat": -17.745667,
       "lon": -149.158833,
-      "pressure": 1019.6,
-      "pressure_station_hpa": 1019.3,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.0,
+      "pressure": 1018.7,
+      "pressure_station_hpa": 1018.4,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -0.9,
       "var12": null,
       "var24": null
+    },
+    {
+      "id": "98749001",
+      "name": "TAKAROA",
+      "department_code": null,
+      "altitude_m": 2.0,
+      "lat": -14.456833,
+      "lon": -145.025167,
+      "pressure": 1016.2,
+      "pressure_station_hpa": 1015.9,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": null,
+      "var12": null,
+      "var24": 0.0
     },
     {
       "id": "05170001",
@@ -2786,12 +2758,12 @@
       "altitude_m": 593.0,
       "lat": 44.452167,
       "lon": 6.033333,
-      "pressure": 1018.5,
-      "pressure_station_hpa": 951.4,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": -0.1,
+      "pressure": 1015.4,
+      "pressure_station_hpa": 950.2,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -3.1,
       "var12": null,
-      "var24": null
+      "var24": 1.7
     },
     {
       "id": "65344001",
@@ -2801,11 +2773,11 @@
       "lat": 43.188,
       "lon": 0.0,
       "pressure": 1022.7,
-      "pressure_station_hpa": 980.6,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.1,
+      "pressure_station_hpa": 980.9,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.0,
       "var12": null,
-      "var24": null
+      "var24": 7.0
     },
     {
       "id": "39526003",
@@ -2814,12 +2786,12 @@
       "altitude_m": 195.0,
       "lat": 47.043833,
       "lon": 5.427333,
-      "pressure": 1020.1,
+      "pressure": 1019.8,
       "pressure_station_hpa": 997.3,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.9,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -0.3,
       "var12": null,
-      "var24": null
+      "var24": 3.9
     },
     {
       "id": "98830002",
@@ -2828,12 +2800,12 @@
       "altitude_m": 2.0,
       "lat": -20.789333,
       "lon": 165.2545,
-      "pressure": 1021.6,
-      "pressure_station_hpa": 1021.2,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.5,
+      "pressure": 1023.3,
+      "pressure_station_hpa": 1022.9,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.7,
       "var12": null,
-      "var24": null
+      "var24": 2.6
     },
     {
       "id": "31069001",
@@ -2842,12 +2814,12 @@
       "altitude_m": 151.0,
       "lat": 43.621,
       "lon": 1.378833,
-      "pressure": 1022.1,
-      "pressure_station_hpa": 1004.6,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.2,
+      "pressure": 1022.2,
+      "pressure_station_hpa": 1004.9,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.1,
       "var12": null,
-      "var24": null
+      "var24": 6.2
     },
     {
       "id": "31157001",
@@ -2857,11 +2829,11 @@
       "lat": 43.540333,
       "lon": 1.372667,
       "pressure": 1022.0,
-      "pressure_station_hpa": 1001.9,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.1,
+      "pressure_station_hpa": 1002.1,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.0,
       "var12": null,
-      "var24": null
+      "var24": 6.1
     },
     {
       "id": "37179001",
@@ -2870,12 +2842,12 @@
       "altitude_m": 108.0,
       "lat": 47.4445,
       "lon": 0.727333,
-      "pressure": 1018.0,
-      "pressure_station_hpa": 1004.9,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.3,
+      "pressure": 1019.2,
+      "pressure_station_hpa": 1006.1,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.2,
       "var12": null,
-      "var24": null
+      "var24": 4.0
     },
     {
       "id": "78620001",
@@ -2884,12 +2856,12 @@
       "altitude_m": 154.0,
       "lat": 48.750667,
       "lon": 2.1135,
-      "pressure": 1015.1,
-      "pressure_station_hpa": 996.3,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.3,
+      "pressure": 1016.2,
+      "pressure_station_hpa": 997.5,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.1,
       "var12": null,
-      "var24": null
+      "var24": 2.3
     },
     {
       "id": "78621001",
@@ -2898,12 +2870,12 @@
       "altitude_m": 167.0,
       "lat": 48.774333,
       "lon": 2.009833,
-      "pressure": 1015.0,
-      "pressure_station_hpa": 994.7,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.1,
+      "pressure": 1016.3,
+      "pressure_station_hpa": 996.1,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.3,
       "var12": null,
-      "var24": null
+      "var24": 2.4
     },
     {
       "id": "97230001",
@@ -2912,12 +2884,12 @@
       "altitude_m": 26.0,
       "lat": 14.7745,
       "lon": -60.875333,
-      "pressure": 1014.1,
-      "pressure_station_hpa": 1009.7,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": -1.2,
+      "pressure": 1014.8,
+      "pressure_station_hpa": 1010.4,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.7,
       "var12": null,
-      "var24": null
+      "var24": 0.6
     },
     {
       "id": "98403004",
@@ -2926,12 +2898,12 @@
       "altitude_m": 7.0,
       "lat": -15.887667,
       "lon": 54.520667,
-      "pressure": 1022.6,
-      "pressure_station_hpa": 1021.7,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": -1.2,
+      "pressure": 1020.7,
+      "pressure_station_hpa": 1019.8,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -1.9,
       "var12": null,
-      "var24": null
+      "var24": -1.3
     },
     {
       "id": "10030001",
@@ -2940,12 +2912,12 @@
       "altitude_m": 112.0,
       "lat": 48.324667,
       "lon": 4.02,
-      "pressure": 1016.9,
-      "pressure_station_hpa": 1003.1,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.7,
+      "pressure": 1017.0,
+      "pressure_station_hpa": 1003.4,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.1,
       "var12": null,
-      "var24": null
+      "var24": 1.8
     },
     {
       "id": "98753002",
@@ -2954,12 +2926,12 @@
       "altitude_m": 3.0,
       "lat": -23.370667,
       "lon": -149.529333,
-      "pressure": 1023.9,
-      "pressure_station_hpa": 1023.2,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.5,
+      "pressure": 1022.9,
+      "pressure_station_hpa": 1022.2,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": -1.0,
       "var12": null,
-      "var24": null
+      "var24": -2.5
     },
     {
       "id": "26064001",
@@ -2968,12 +2940,12 @@
       "altitude_m": 163.0,
       "lat": 44.914833,
       "lon": 4.971833,
-      "pressure": 1019.0,
-      "pressure_station_hpa": 1000.2,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.0,
+      "pressure": 1019.1,
+      "pressure_station_hpa": 1000.5,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.1,
       "var12": null,
-      "var24": null
+      "var24": 3.7
     },
     {
       "id": "59606004",
@@ -2982,12 +2954,12 @@
       "altitude_m": 50.0,
       "lat": 50.328333,
       "lon": 3.461,
-      "pressure": 1011.6,
-      "pressure_station_hpa": 1005.7,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 1.1,
+      "pressure": 1013.1,
+      "pressure_station_hpa": 1007.2,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.5,
       "var12": null,
-      "var24": null
+      "var24": -0.2
     },
     {
       "id": "56137001",
@@ -2996,12 +2968,12 @@
       "altitude_m": 132.0,
       "lat": 47.722,
       "lon": -2.727,
-      "pressure": 1017.7,
-      "pressure_station_hpa": 1002.2,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 2.1,
+      "pressure": 1018.9,
+      "pressure_station_hpa": 1003.5,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 1.2,
       "var12": null,
-      "var24": null
+      "var24": 5.5
     },
     {
       "id": "51595002",
@@ -3010,12 +2982,12 @@
       "altitude_m": 179.0,
       "lat": 48.777167,
       "lon": 4.164667,
-      "pressure": 1016.0,
-      "pressure_station_hpa": 996.5,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.7,
+      "pressure": 1016.4,
+      "pressure_station_hpa": 997.1,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.4,
       "var12": null,
-      "var24": null
+      "var24": 1.4
     },
     {
       "id": "03060001",
@@ -3024,12 +2996,12 @@
       "altitude_m": 249.0,
       "lat": 46.166667,
       "lon": 3.398667,
-      "pressure": 1020.3,
-      "pressure_station_hpa": 991.2,
-      "time": "2026-08-31T08:00:00Z",
-      "var3": 0.6,
+      "pressure": 1020.5,
+      "pressure_station_hpa": 991.6,
+      "time": "2026-08-31T11:00:00Z",
+      "var3": 0.2,
       "var12": null,
-      "var24": null
+      "var24": 4.7
     },
     {
       "id": "78640001",
@@ -3038,12 +3010,12 @@
       "altitude_m": 174.0,
       "lat": 48.7725,
       "lon": 2.204,
-      "pressure": 1015.2,
-      "pressure_station_hpa": 994.6,
-      "time": "2026-08-31T08:00:00Z",
+      "pressure": 1016.4,
+      "pressure_station_hpa": 995.9,
+      "time": "2026-08-31T11:00:00Z",
       "var3": 1.2,
       "var12": null,
-      "var24": null
+      "var24": 2.2
     }
   ]
 }
