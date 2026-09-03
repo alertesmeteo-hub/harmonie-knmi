@@ -369,7 +369,27 @@ def find_latest_package(
         response = package_request(key, hour)
 
         if response is not None:
-            print("Dernier paquet disponible :", iso(hour))
+            # Meteo-France peut repondre HTTP 200 avec un paquet vide
+            # (heure en cours pas encore publiee). On controle donc le
+            # contenu et pas seulement le code HTTP, sinon la boucle
+            # s'arrete sur un paquet sans donnees et ne redescend jamais
+            # vers H-1, qui lui est complet.
+            rows = parse_csv(response.content)
+
+            if not rows:
+                print(
+                    f"[WARN] Paquet {iso(hour)} vide "
+                    f"({len(response.content)} octets) ; "
+                    "repli sur l'heure precedente."
+                )
+                time.sleep(REQUEST_DELAY)
+                continue
+
+            print(
+                "Dernier paquet disponible :",
+                iso(hour),
+                f"({len(rows)} lignes)",
+            )
             return hour, response
 
         time.sleep(REQUEST_DELAY)
@@ -546,6 +566,12 @@ def add_latest_package_to_cache(
     rows = parse_csv(response.content)
     added = 0
 
+    # Compteurs de diagnostic : sans eux, un changement de colonnes
+    # cote Meteo-France se traduit par "0 station" sans trace au log.
+    rejet_sid = 0
+    rejet_latlon = 0
+    rejet_valeur = 0
+
     # Supprime les éventuels samples de la même heure avant réinsertion.
     latest_iso = iso(latest_hour)
 
@@ -559,6 +585,7 @@ def add_latest_package_to_cache(
         sid = station_id(row)
 
         if not sid:
+            rejet_sid += 1
             continue
 
         lat = fnum(first(row, ("lat", "LAT", "latitude")))
@@ -570,6 +597,7 @@ def add_latest_package_to_cache(
             or not (-90 <= lat <= 90)
             or not (-180 <= lon <= 180)
         ):
+            rejet_latlon += 1
             continue
 
         validity = parse_iso(
@@ -588,6 +616,7 @@ def add_latest_package_to_cache(
         cloud_cover_octas = extract_cloud_cover(row)
 
         if gust is None and mean_wind is None:
+            rejet_valeur += 1
             continue
 
         cache["samples"].append({
@@ -607,6 +636,19 @@ def add_latest_package_to_cache(
         })
 
         added += 1
+
+    print(
+        f"Lignes recues : {len(rows)} ; retenues : {added} ; "
+        f"rejets -> identifiant absent : {rejet_sid}, "
+        f"lat/lon absentes : {rejet_latlon}, "
+        f"pas de vent exploitable : {rejet_valeur}"
+    )
+
+    if rows and added == 0:
+        print(
+            "[WARN] Aucune ligne exploitable. "
+            f"Colonnes recues : {sorted(rows[0].keys())}"
+        )
 
     return added
 
