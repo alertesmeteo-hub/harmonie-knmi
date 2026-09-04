@@ -1,7 +1,7 @@
 {
  "schema_version": 3,
  "status": "ok",
- "generated_at": "2026-09-03T17:03:24+02:00",
+ "generated_at": "2026-09-04T20:29:39+02:00",
  "source": {
   "provider": "Météo-France",
   "product": "Prévision des phénomènes dangereux",
@@ -10,8 +10,8 @@
   "retrieval_mode": "pdf"
  },
  "bulletin": {
-  "issued_at": "2026-09-03T12:51:00+02:00",
-  "issued_label": "Émise le jeudi 03/09/2026 à 12h51 (heure de Paris)"
+  "issued_at": "2026-09-04T12:52:00+02:00",
+  "issued_label": "Émise le vendredi 04/09/2026 à 12h52 (heure de Paris)"
  },
  "legend": {
   "levels": [
@@ -46,13 +46,13 @@
   ]
  },
  "summaries": {
-  "j2_j3": "Nouvel épisode de fortes chaleurs prévu, qui devrait être court dans le Sud-Ouest, et plus durable autour du golfe du Lion et le long de la vallée du Rhône.",
-  "j4_j7": "Persistance de la chaleur dans le sud-est lundi avant une baisse dès mardi. Pas d'autres phénomènes dangereux envisagés pour cette période."
+  "j2_j3": "Épisode de fortes chaleurs durables sur le pourtour méditerranéen et la vallée du Rhône. Un pic de chaleur bref mais intense est attendu sur l'ex région Midi-Pyrénées dimanche, avec un faible risque de passage en vigilance orange compte tenu de la baisse des températures attendue dès lundi par l'ouest.",
+  "j4_j7": "Mardi, un passage perturbé sur le nord du pays pourrait apporter pluies, voire vents marqués. Les températures resteront chaudes sur le sud-est. Ensuite, pas de phénomène dangereux prévu."
  },
  "cards": [
   {
    "label": "J+2",
-   "date_label": "Samedi 05/09/2026",
+   "date_label": "Dimanche 06/09/2026",
    "granularity": "department",
    "max_level": "high",
    "departments": {
@@ -75,21 +75,21 @@
     },
     "04": {
      "name": "Alpes-de-Haute-Provence",
-     "level": "low",
+     "level": "high",
      "phenomena": [
       "canicule"
      ]
     },
     "05": {
      "name": "Hautes-Alpes",
-     "level": "low",
+     "level": "high",
      "phenomena": [
       "canicule"
      ]
     },
     "06": {
      "name": "Alpes-Maritimes",
-     "level": "low",
+     "level": "high",
      "phenomena": [
       "canicule"
      ]
@@ -134,7 +134,7 @@
     },
     "13": {
      "name": "Bouches-du-Rhône",
-     "level": "low",
+     "level": "high",
      "phenomena": [
       "canicule"
      ]
@@ -186,10 +186,8 @@
     },
     "24": {
      "name": "Dordogne",
-     "level": "low",
-     "phenomena": [
-      "canicule"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "25": {
      "name": "Doubs",
@@ -251,10 +249,8 @@
     },
     "33": {
      "name": "Gironde",
-     "level": "low",
-     "phenomena": [
-      "canicule"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "34": {
      "name": "Hérault",
@@ -292,10 +288,8 @@
     },
     "40": {
      "name": "Landes",
-     "level": "low",
-     "phenomena": [
-      "canicule"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "41": {
      "name": "Loir-et-Cher",
@@ -333,10 +327,8 @@
     },
     "47": {
      "name": "Lot-et-Garonne",
-     "level": "low",
-     "phenomena": [
-      "canicule"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "48": {
      "name": "Lozère",
@@ -422,10 +414,8 @@
     },
     "64": {
      "name": "Pyrénées-Atlantiques",
-     "level": "low",
-     "phenomena": [
-      "canicule"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "65": {
      "name": "Hautes-Pyrénées",
@@ -533,14 +523,14 @@
     },
     "83": {
      "name": "Var",
-     "level": "low",
+     "level": "high",
      "phenomena": [
       "canicule"
      ]
     },
     "84": {
      "name": "Vaucluse",
-     "level": "low",
+     "level": "high",
      "phenomena": [
       "canicule"
      ]
@@ -616,7 +606,7 @@
      "y": 0.75819,
      "svg_x": 405.0972,
      "svg_y": 42.7344,
-     "level": "low"
+     "level": "high"
     },
     {
      "phenomenon": "canicule",
@@ -633,20 +623,12 @@
      "svg_x": 390.2667,
      "svg_y": 42.5537,
      "level": "high"
-    },
-    {
-     "phenomenon": "canicule",
-     "x": 0.34343,
-     "y": 0.68358,
-     "svg_x": 363.8976,
-     "svg_y": 38.2441,
-     "level": "low"
     }
    ]
   },
   {
    "label": "J+3",
-   "date_label": "Dimanche 06/09/2026",
+   "date_label": "Lundi 07/09/2026",
    "granularity": "department",
    "max_level": "high",
    "departments": {
@@ -669,21 +651,21 @@
     },
     "04": {
      "name": "Alpes-de-Haute-Provence",
-     "level": "low",
+     "level": "high",
      "phenomena": [
       "canicule"
      ]
     },
     "05": {
      "name": "Hautes-Alpes",
-     "level": "low",
+     "level": "high",
      "phenomena": [
       "canicule"
      ]
     },
     "06": {
      "name": "Alpes-Maritimes",
-     "level": "low",
+     "level": "high",
      "phenomena": [
       "canicule"
      ]
@@ -702,10 +684,8 @@
     },
     "09": {
      "name": "Ariège",
-     "level": "medium",
-     "phenomena": [
-      "canicule"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "10": {
      "name": "Aube",
@@ -721,14 +701,12 @@
     },
     "12": {
      "name": "Aveyron",
-     "level": "medium",
-     "phenomena": [
-      "canicule"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "13": {
      "name": "Bouches-du-Rhône",
-     "level": "low",
+     "level": "high",
      "phenomena": [
       "canicule"
      ]
@@ -780,10 +758,8 @@
     },
     "24": {
      "name": "Dordogne",
-     "level": "low",
-     "phenomena": [
-      "canicule"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "25": {
      "name": "Doubs",
@@ -831,24 +807,18 @@
     },
     "31": {
      "name": "Haute-Garonne",
-     "level": "medium",
-     "phenomena": [
-      "canicule"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "32": {
      "name": "Gers",
-     "level": "medium",
-     "phenomena": [
-      "canicule"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "33": {
      "name": "Gironde",
-     "level": "low",
-     "phenomena": [
-      "canicule"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "34": {
      "name": "Hérault",
@@ -886,10 +856,8 @@
     },
     "40": {
      "name": "Landes",
-     "level": "low",
-     "phenomena": [
-      "canicule"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "41": {
      "name": "Loir-et-Cher",
@@ -920,17 +888,13 @@
     },
     "46": {
      "name": "Lot",
-     "level": "medium",
-     "phenomena": [
-      "canicule"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "47": {
      "name": "Lot-et-Garonne",
-     "level": "low",
-     "phenomena": [
-      "canicule"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "48": {
      "name": "Lozère",
@@ -1016,17 +980,13 @@
     },
     "64": {
      "name": "Pyrénées-Atlantiques",
-     "level": "low",
-     "phenomena": [
-      "canicule"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "65": {
      "name": "Hautes-Pyrénées",
-     "level": "medium",
-     "phenomena": [
-      "canicule"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "66": {
      "name": "Pyrénées-Orientales",
@@ -1113,28 +1073,24 @@
     },
     "81": {
      "name": "Tarn",
-     "level": "medium",
-     "phenomena": [
-      "canicule"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "82": {
      "name": "Tarn-et-Garonne",
-     "level": "medium",
-     "phenomena": [
-      "canicule"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "83": {
      "name": "Var",
-     "level": "low",
+     "level": "high",
      "phenomena": [
       "canicule"
      ]
     },
     "84": {
      "name": "Vaucluse",
-     "level": "low",
+     "level": "high",
      "phenomena": [
       "canicule"
      ]
@@ -1210,15 +1166,7 @@
      "y": 0.75819,
      "svg_x": 405.2273,
      "svg_y": 42.7344,
-     "level": "low"
-    },
-    {
-     "phenomenon": "canicule",
-     "x": 0.48072,
-     "y": 0.75819,
-     "svg_x": 376.8675,
-     "svg_y": 42.7322,
-     "level": "medium"
+     "level": "high"
     },
     {
      "phenomenon": "canicule",
@@ -1227,26 +1175,23 @@
      "svg_x": 390.3968,
      "svg_y": 42.5537,
      "level": "high"
-    },
-    {
-     "phenomenon": "canicule",
-     "x": 0.3448,
-     "y": 0.68358,
-     "svg_x": 364.0277,
-     "svg_y": 38.2441,
-     "level": "low"
     }
    ]
   },
   {
    "label": "J+4",
-   "date_label": "Lundi 07/09/2026",
+   "date_label": "Mardi 08/09/2026",
    "granularity": "quadrant",
    "max_level": "medium",
    "zones": {
     "NO": {
-     "level": "none",
-     "phenomena": []
+     "level": "low",
+     "phenomena": [
+      {
+       "phenomenon": "pluie_inondation",
+       "level": "low"
+      }
+     ]
     },
     "NE": {
      "level": "none",
@@ -1269,7 +1214,7 @@
   },
   {
    "label": "J+5",
-   "date_label": "Mardi 08/09/2026",
+   "date_label": "Mercredi 09/09/2026",
    "granularity": "quadrant",
    "max_level": "none",
    "zones": {
@@ -1293,7 +1238,7 @@
   },
   {
    "label": "J+6 et J+7",
-   "date_label": "Mercredi 09/09/2026 et Jeudi 10/09/2026",
+   "date_label": "Jeudi 10/09/2026 et Vendredi 11/09/2026",
    "granularity": "national",
    "max_level": "none",
    "national": {
