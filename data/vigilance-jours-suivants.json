@@ -1,7 +1,7 @@
 {
  "schema_version": 3,
  "status": "ok",
- "generated_at": "2026-09-05T15:54:49+02:00",
+ "generated_at": "2026-09-06T16:14:49+02:00",
  "source": {
   "provider": "Météo-France",
   "product": "Prévision des phénomènes dangereux",
@@ -10,8 +10,8 @@
   "retrieval_mode": "pdf"
  },
  "bulletin": {
-  "issued_at": "2026-09-05T12:59:00+02:00",
-  "issued_label": "Émise le samedi 05/09/2026 à 12h59 (heure de Paris)"
+  "issued_at": "2026-09-06T13:02:00+02:00",
+  "issued_label": "Émise le dimanche 06/09/2026 à 13h02 (heure de Paris)"
  },
  "legend": {
   "levels": [
@@ -46,19 +46,19 @@
   ]
  },
  "summaries": {
-  "j2_j3": "Épisode de fortes chaleurs durables sur le pourtour méditerranéen et la vallée du Rhône, avec une probabilité élevée du maintien en vigilance orange lundi, devenant moyenne mardi.",
+  "j2_j3": "Fin progressive de l'épisode de fortes chaleurs sur le pourtour méditerranéen et la vallée du Rhône. Le risque de vigilance orange devient faible mardi, et quasi nul mercredi.",
   "j4_j7": "Pas de phénomène météorologique dangereux prévu."
  },
  "cards": [
   {
    "label": "J+2",
-   "date_label": "Lundi 07/09/2026",
+   "date_label": "Mardi 08/09/2026",
    "granularity": "department",
-   "max_level": "high",
+   "max_level": "low",
    "departments": {
     "01": {
      "name": "Ain",
-     "level": "high",
+     "level": "low",
      "phenomena": [
       "canicule"
      ]
@@ -75,28 +75,28 @@
     },
     "04": {
      "name": "Alpes-de-Haute-Provence",
-     "level": "high",
+     "level": "low",
      "phenomena": [
       "canicule"
      ]
     },
     "05": {
      "name": "Hautes-Alpes",
-     "level": "high",
+     "level": "low",
      "phenomena": [
       "canicule"
      ]
     },
     "06": {
      "name": "Alpes-Maritimes",
-     "level": "high",
+     "level": "low",
      "phenomena": [
       "canicule"
      ]
     },
     "07": {
      "name": "Ardèche",
-     "level": "high",
+     "level": "low",
      "phenomena": [
       "canicule"
      ]
@@ -118,7 +118,7 @@
     },
     "11": {
      "name": "Aude",
-     "level": "high",
+     "level": "low",
      "phenomena": [
       "canicule"
      ]
@@ -130,7 +130,7 @@
     },
     "13": {
      "name": "Bouches-du-Rhône",
-     "level": "high",
+     "level": "low",
      "phenomena": [
       "canicule"
      ]
@@ -192,7 +192,7 @@
     },
     "26": {
      "name": "Drôme",
-     "level": "high",
+     "level": "low",
      "phenomena": [
       "canicule"
      ]
@@ -224,7 +224,7 @@
     },
     "30": {
      "name": "Gard",
-     "level": "high",
+     "level": "low",
      "phenomena": [
       "canicule"
      ]
@@ -246,7 +246,7 @@
     },
     "34": {
      "name": "Hérault",
-     "level": "high",
+     "level": "low",
      "phenomena": [
       "canicule"
      ]
@@ -268,7 +268,7 @@
     },
     "38": {
      "name": "Isère",
-     "level": "high",
+     "level": "low",
      "phenomena": [
       "canicule"
      ]
@@ -290,7 +290,7 @@
     },
     "42": {
      "name": "Loire",
-     "level": "high",
+     "level": "low",
      "phenomena": [
       "canicule"
      ]
@@ -322,7 +322,7 @@
     },
     "48": {
      "name": "Lozère",
-     "level": "high",
+     "level": "low",
      "phenomena": [
       "canicule"
      ]
@@ -414,7 +414,7 @@
     },
     "66": {
      "name": "Pyrénées-Orientales",
-     "level": "high",
+     "level": "low",
      "phenomena": [
       "canicule"
      ]
@@ -431,7 +431,7 @@
     },
     "69": {
      "name": "Rhône",
-     "level": "high",
+     "level": "low",
      "phenomena": [
       "canicule"
      ]
@@ -453,14 +453,14 @@
     },
     "73": {
      "name": "Savoie",
-     "level": "high",
+     "level": "low",
      "phenomena": [
       "canicule"
      ]
     },
     "74": {
      "name": "Haute-Savoie",
-     "level": "high",
+     "level": "low",
      "phenomena": [
       "canicule"
      ]
@@ -507,14 +507,14 @@
     },
     "83": {
      "name": "Var",
-     "level": "high",
+     "level": "low",
      "phenomena": [
       "canicule"
      ]
     },
     "84": {
      "name": "Vaucluse",
-     "level": "high",
+     "level": "low",
      "phenomena": [
       "canicule"
      ]
@@ -582,7 +582,7 @@
      "y": 0.61789,
      "svg_x": 398.8461,
      "svg_y": 34.2956,
-     "level": "high"
+     "level": "low"
     },
     {
      "phenomenon": "canicule",
@@ -590,7 +590,7 @@
      "y": 0.75819,
      "svg_x": 405.0972,
      "svg_y": 42.7344,
-     "level": "high"
+     "level": "low"
     },
     {
      "phenomenon": "canicule",
@@ -598,22 +598,20 @@
      "y": 0.7552,
      "svg_x": 390.2667,
      "svg_y": 42.5537,
-     "level": "high"
+     "level": "low"
     }
    ]
   },
   {
    "label": "J+3",
-   "date_label": "Mardi 08/09/2026",
+   "date_label": "Mercredi 09/09/2026",
    "granularity": "department",
-   "max_level": "medium",
+   "max_level": "none",
    "departments": {
     "01": {
      "name": "Ain",
-     "level": "medium",
-     "phenomena": [
-      "canicule"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "02": {
      "name": "Aisne",
@@ -627,31 +625,23 @@
     },
     "04": {
      "name": "Alpes-de-Haute-Provence",
-     "level": "medium",
-     "phenomena": [
-      "canicule"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "05": {
      "name": "Hautes-Alpes",
-     "level": "medium",
-     "phenomena": [
-      "canicule"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "06": {
      "name": "Alpes-Maritimes",
-     "level": "medium",
-     "phenomena": [
-      "canicule"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "07": {
      "name": "Ardèche",
-     "level": "medium",
-     "phenomena": [
-      "canicule"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "08": {
      "name": "Ardennes",
@@ -670,10 +660,8 @@
     },
     "11": {
      "name": "Aude",
-     "level": "medium",
-     "phenomena": [
-      "canicule"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "12": {
      "name": "Aveyron",
@@ -682,10 +670,8 @@
     },
     "13": {
      "name": "Bouches-du-Rhône",
-     "level": "medium",
-     "phenomena": [
-      "canicule"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "14": {
      "name": "Calvados",
@@ -744,10 +730,8 @@
     },
     "26": {
      "name": "Drôme",
-     "level": "medium",
-     "phenomena": [
-      "canicule"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "27": {
      "name": "Eure",
@@ -776,10 +760,8 @@
     },
     "30": {
      "name": "Gard",
-     "level": "medium",
-     "phenomena": [
-      "canicule"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "31": {
      "name": "Haute-Garonne",
@@ -798,10 +780,8 @@
     },
     "34": {
      "name": "Hérault",
-     "level": "medium",
-     "phenomena": [
-      "canicule"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "35": {
      "name": "Ille-et-Vilaine",
@@ -820,10 +800,8 @@
     },
     "38": {
      "name": "Isère",
-     "level": "medium",
-     "phenomena": [
-      "canicule"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "39": {
      "name": "Jura",
@@ -842,10 +820,8 @@
     },
     "42": {
      "name": "Loire",
-     "level": "medium",
-     "phenomena": [
-      "canicule"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "43": {
      "name": "Haute-Loire",
@@ -874,10 +850,8 @@
     },
     "48": {
      "name": "Lozère",
-     "level": "medium",
-     "phenomena": [
-      "canicule"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "49": {
      "name": "Maine-et-Loire",
@@ -966,10 +940,8 @@
     },
     "66": {
      "name": "Pyrénées-Orientales",
-     "level": "medium",
-     "phenomena": [
-      "canicule"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "67": {
      "name": "Bas-Rhin",
@@ -983,10 +955,8 @@
     },
     "69": {
      "name": "Rhône",
-     "level": "medium",
-     "phenomena": [
-      "canicule"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "70": {
      "name": "Haute-Saône",
@@ -1005,17 +975,13 @@
     },
     "73": {
      "name": "Savoie",
-     "level": "medium",
-     "phenomena": [
-      "canicule"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "74": {
      "name": "Haute-Savoie",
-     "level": "medium",
-     "phenomena": [
-      "canicule"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "75": {
      "name": "Paris",
@@ -1059,17 +1025,13 @@
     },
     "83": {
      "name": "Var",
-     "level": "medium",
-     "phenomena": [
-      "canicule"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "84": {
      "name": "Vaucluse",
-     "level": "medium",
-     "phenomena": [
-      "canicule"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "85": {
      "name": "Vendée",
@@ -1127,59 +1089,10 @@
      "phenomena": []
     }
    },
-   "markers": [
-    {
-     "phenomenon": "canicule",
-     "x": 0.71488,
-     "y": 0.61789,
-     "svg_x": 398.9762,
-     "svg_y": 34.2956,
-     "level": "medium"
-    },
-    {
-     "phenomenon": "canicule",
-     "x": 0.78099,
-     "y": 0.75819,
-     "svg_x": 405.2273,
-     "svg_y": 42.7344,
-     "level": "medium"
-    },
-    {
-     "phenomenon": "canicule",
-     "x": 0.62397,
-     "y": 0.7552,
-     "svg_x": 390.3968,
-     "svg_y": 42.5537,
-     "level": "medium"
-    }
-   ]
+   "markers": []
   },
   {
    "label": "J+4",
-   "date_label": "Mercredi 09/09/2026",
-   "granularity": "quadrant",
-   "max_level": "none",
-   "zones": {
-    "NO": {
-     "level": "none",
-     "phenomena": []
-    },
-    "NE": {
-     "level": "none",
-     "phenomena": []
-    },
-    "SO": {
-     "level": "none",
-     "phenomena": []
-    },
-    "SE": {
-     "level": "none",
-     "phenomena": []
-    }
-   }
-  },
-  {
-   "label": "J+5",
    "date_label": "Jeudi 10/09/2026",
    "granularity": "quadrant",
    "max_level": "none",
@@ -1203,8 +1116,32 @@
    }
   },
   {
+   "label": "J+5",
+   "date_label": "Vendredi 11/09/2026",
+   "granularity": "quadrant",
+   "max_level": "none",
+   "zones": {
+    "NO": {
+     "level": "none",
+     "phenomena": []
+    },
+    "NE": {
+     "level": "none",
+     "phenomena": []
+    },
+    "SO": {
+     "level": "none",
+     "phenomena": []
+    },
+    "SE": {
+     "level": "none",
+     "phenomena": []
+    }
+   }
+  },
+  {
    "label": "J+6 et J+7",
-   "date_label": "Vendredi 11/09/2026 et Samedi 12/09/2026",
+   "date_label": "Samedi 12/09/2026 et Dimanche 13/09/2026",
    "granularity": "national",
    "max_level": "none",
    "national": {
