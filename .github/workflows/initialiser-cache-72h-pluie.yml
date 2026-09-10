@@ -148,22 +148,37 @@ jobs:
           cp observations_pluie.json cache_pluie_climatologie.json cache_pluie_horaire.json /tmp/carte-pluie-publish/
 
       - name: Publier sur observations
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          PUBLISH_DIR="/tmp/carte-pluie-observations"
-          rm -rf "$PUBLISH_DIR"
-          git fetch origin observations || true
-          if git ls-remote --exit-code --heads origin observations >/dev/null 2>&1; then
-            git worktree add --force -B observations-publish "$PUBLISH_DIR" origin/observations
-          else
-            mkdir -p "$PUBLISH_DIR"
-            git -C "$PUBLISH_DIR" init
-            git -C "$PUBLISH_DIR" remote add origin "$(git remote get-url origin)"
-            git -C "$PUBLISH_DIR" checkout --orphan observations-publish
-          fi
-          cp /tmp/carte-pluie-publish/* "$PUBLISH_DIR"/
-          git -C "$PUBLISH_DIR" add observations_pluie.json cache_pluie_climatologie.json cache_pluie_horaire.json
-          if git -C "$PUBLISH_DIR" diff --cached --quiet; then exit 0; fi
-          git -C "$PUBLISH_DIR" commit -m "Initialisation RR1 glissants Météo-France v2.6.0"
-          git -C "$PUBLISH_DIR" push origin HEAD:observations
+          set -euo pipefail
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          REPO_URL="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+
+          for attempt in 1 2 3 4; do
+            echo "Publication tentative ${attempt}/4..."
+            publish_dir="$(mktemp -d)"
+            if git ls-remote --exit-code --heads "$REPO_URL" observations >/dev/null 2>&1; then
+              git clone --quiet --depth 1 --branch observations "$REPO_URL" "$publish_dir"
+            else
+              git init --quiet -b observations "$publish_dir"
+              git -C "$publish_dir" remote add origin "$REPO_URL"
+            fi
+            cp /tmp/carte-pluie-publish/* "$publish_dir"/
+            git -C "$publish_dir" add observations_pluie.json cache_pluie_climatologie.json cache_pluie_horaire.json
+            if git -C "$publish_dir" diff --cached --quiet; then
+              echo "Aucun changement à publier."
+              exit 0
+            fi
+            git -C "$publish_dir" commit -m "Initialisation RR1 glissants Météo-France v2.6.0"
+            if git -C "$publish_dir" push origin HEAD:observations; then
+              echo "Publication réussie."
+              exit 0
+            fi
+            echo "::warning::Conflit de publication (autre workflow concurrent) ; nouvel essai."
+            rm -rf "$publish_dir"
+            sleep $((attempt * 3))
+          done
+          echo "::error::Échec de publication après 4 tentatives."
+          exit 1
