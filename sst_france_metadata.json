@@ -3,7 +3,7 @@
   "module_version": "1.0.3",
   "build_id": "sst-france-mur-webmercator-hover-v103-20260820",
   "status": "ok",
-  "generated_at": "2026-09-11T22:48:35Z",
+  "generated_at": "2026-09-12T22:34:01Z",
   "analysis_time": "2026-09-09T09:00:00Z",
   "title": "Température de surface de la mer — SST France",
   "source": {
@@ -54,8 +54,8 @@
     }
   },
   "stats": {
-    "min_c": 14.6,
-    "max_c": 30.2
+    "min_c": 14.4,
+    "max_c": 30.1
   },
   "point_query": {
     "dataset_id": "jplMURSST41",
