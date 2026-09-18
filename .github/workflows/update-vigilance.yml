@@ -3,7 +3,7 @@ name: Update Vigilance Météo-France
 on:
   workflow_dispatch:
   schedule:
-    - cron: '7,22,37,52 * * * *'
+    - cron: '6,21,36,51 * * * *'
 
 permissions:
   contents: write
