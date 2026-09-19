@@ -29,6 +29,8 @@ from urllib.parse import quote
 
 import numpy as np
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 from netCDF4 import Dataset, num2date
 from matplotlib import image as mpimg
 from matplotlib.colors import LinearSegmentedColormap, Normalize
@@ -65,6 +67,20 @@ TEMP_NC = Path("sst_france_latest.nc")
 HTTP_TIMEOUT = 180
 
 session = requests.Session()
+# Réessaie en cas de réseau indisponible / coupure / erreur serveur transitoire
+# (NOAA ERDDAP), avec attente croissante (~2,5 min cumulées).
+_retry = Retry(
+    total=6,
+    connect=6,
+    read=6,
+    status=6,
+    backoff_factor=5,
+    status_forcelist=(500, 502, 503, 504),
+    allowed_methods=("GET",),
+    raise_on_status=False,
+)
+session.mount("https://", HTTPAdapter(max_retries=_retry))
+session.mount("http://", HTTPAdapter(max_retries=_retry))
 session.headers.update({
     "User-Agent": f"alertes-meteo-sst-france/{VERSION}",
 })
