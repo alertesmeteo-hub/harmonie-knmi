@@ -37,6 +37,8 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 
 VERSION = "1.2.0"
@@ -72,6 +74,20 @@ CURRENT_MONTH_REFRESH_HOURS = 6
 RECORD_EPSILON = 0.05
 
 session = requests.Session()
+# Réessaie automatiquement en cas de coupure de connexion (RemoteDisconnected)
+# ou d'erreur serveur transitoire.
+_retry = Retry(
+    total=5,
+    connect=5,
+    read=5,
+    status=5,
+    backoff_factor=2,
+    status_forcelist=(500, 502, 503, 504),
+    allowed_methods=("GET",),
+    raise_on_status=False,
+)
+session.mount("https://", HTTPAdapter(max_retries=_retry))
+session.mount("http://", HTTPAdapter(max_retries=_retry))
 session.headers.update({
     "User-Agent": f"alertes-meteo-temperature-records/{VERSION}",
 })
