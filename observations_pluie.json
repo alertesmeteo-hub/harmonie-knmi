@@ -2,7 +2,7 @@
   "schema_version": 5,
   "module_version": "2.6.0",
   "status": "ok",
-  "generated_at": "2026-09-19T18:11:03Z",
+  "generated_at": "2026-09-19T18:58:31Z",
   "latest_observation_at": "2026-09-19T18:00:00Z",
   "title": "Cumuls de précipitations",
   "unit": "mm",
@@ -14,7 +14,7 @@
     "through_min": "20260909",
     "through_max": "20260919",
     "latest_day": "20260919",
-    "stations_live": 1652,
+    "stations_live": 1650,
     "stations_stale": 72
   },
   "current_season": {
@@ -47,17 +47,17 @@
     "rr_month_current": {
       "label": "Mois en cours",
       "long_label": "Cumul depuis le 1er septembre",
-      "max": 300.5
+      "max": 224.5
     },
     "rr_season_current": {
       "label": "Saison en cours",
       "long_label": "Cumul de la saison en cours - Automne 2026",
-      "max": 300.5
+      "max": 224.5
     },
     "rr_year_current": {
       "label": "Année en cours",
       "long_label": "Cumul depuis le 1er janvier 2026",
-      "max": 3943.0
+      "max": 3275.4
     },
     "rr_daily_record": {
       "label": "Records",
@@ -67,18 +67,18 @@
     "rr_month_mean": {
       "label": "Moy. du mois",
       "long_label": "Cumul moyen de septembre (1991-2020)",
-      "max": 626.3
+      "max": 433.8
     },
     "rr_year_mean": {
       "label": "Moy. annuelle",
       "long_label": "Cumul moyen annuel (1991-2020)",
-      "max": 7106.8
+      "max": 4905.9
     }
   },
-  "stations_total": 1782,
+  "stations_total": 1780,
   "stations_rr24": 1647,
-  "stations_rr48": 1647,
-  "stations_rr72": 1638,
+  "stations_rr48": 1645,
+  "stations_rr72": 1636,
   "stations_records": 0,
   "stations_excluded_sapc": 342,
   "hourly_cache_depth_hours": 80,
@@ -62147,43 +62147,6 @@
       "normal_year_years": 16
     },
     {
-      "id": "97107002",
-      "name": "CAPESTERRE-B-EAU NEUFCHATEAU",
-      "department": "97",
-      "department_anchor": false,
-      "lat": 16.0785,
-      "lon": -61.6,
-      "date": "2026-09-19T15:00:00Z",
-      "rr1": 0.0,
-      "rr24": null,
-      "rr24_hours": 21,
-      "rr24_complete": false,
-      "rr48": 5.8,
-      "rr48_hours": 45,
-      "rr48_complete": false,
-      "rr72": 8.4,
-      "rr72_hours": 69,
-      "rr72_complete": false,
-      "rr_month_current": 129.5,
-      "rr_month_current_through": "20260919",
-      "rr_month_current_complete": true,
-      "rr_month_current_method": "quotidien_plus_paquets_horaires",
-      "rr_season_current": 129.5,
-      "rr_season_current_through": "20260919",
-      "rr_season_current_complete": true,
-      "rr_season_current_method": "quotidien_plus_paquets_horaires",
-      "rr_year_current": 1824.2,
-      "rr_year_current_through": "20260919",
-      "rr_year_current_complete": true,
-      "rr_year_current_method": "quotidien_plus_paquets_horaires",
-      "rr_daily_record": null,
-      "rr_daily_record_date": null,
-      "rr_month_mean": 346.6,
-      "rr_year_mean": 3491.5,
-      "normal_month_years": 27,
-      "normal_year_years": 21
-    },
-    {
       "id": "22032002",
       "name": "CAULNES-EDF",
       "department": "22",
@@ -65475,43 +65438,6 @@
       "rr_year_mean": 1386.4,
       "normal_month_years": 30,
       "normal_year_years": 29
-    },
-    {
-      "id": "97124009",
-      "name": "ST-CLAUDE CITERNE",
-      "department": "97",
-      "department_anchor": false,
-      "lat": 16.032667,
-      "lon": -61.656,
-      "date": "2026-09-19T15:00:00Z",
-      "rr1": 0.0,
-      "rr24": null,
-      "rr24_hours": 21,
-      "rr24_complete": false,
-      "rr48": 6.6,
-      "rr48_hours": 45,
-      "rr48_complete": false,
-      "rr72": 13.4,
-      "rr72_hours": 69,
-      "rr72_complete": false,
-      "rr_month_current": 300.5,
-      "rr_month_current_through": "20260919",
-      "rr_month_current_complete": true,
-      "rr_month_current_method": "quotidien_plus_paquets_horaires",
-      "rr_season_current": 300.5,
-      "rr_season_current_through": "20260919",
-      "rr_season_current_complete": true,
-      "rr_season_current_method": "quotidien_plus_paquets_horaires",
-      "rr_year_current": 3943.0,
-      "rr_year_current_through": "20260919",
-      "rr_year_current_complete": true,
-      "rr_year_current_method": "quotidien_plus_paquets_horaires",
-      "rr_daily_record": null,
-      "rr_daily_record_date": null,
-      "rr_month_mean": 626.3,
-      "rr_year_mean": 7106.8,
-      "normal_month_years": 21,
-      "normal_year_years": 20
     },
     {
       "id": "07232001",
