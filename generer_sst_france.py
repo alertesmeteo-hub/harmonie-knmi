@@ -45,6 +45,13 @@ ERDDAP_BASE = (
     "erddap/griddap/jplMURSST41"
 )
 
+# Serveurs ERDDAP NOAA équivalents (même jeu MUR) : basculement si le premier
+# refuse les connexions des runners GitHub (« Connection reset by peer »).
+ERDDAP_BASES = (
+    ERDDAP_BASE,
+    "https://upwell.pfeg.noaa.gov/erddap/griddap/jplMURSST41",
+)
+
 DATASET_ID = "jplMURSST41"
 VARIABLE = "analysed_sst"
 MASK_VARIABLE = "mask"
@@ -68,12 +75,12 @@ HTTP_TIMEOUT = 180
 
 session = requests.Session()
 # Réessaie en cas de réseau indisponible / coupure / erreur serveur transitoire
-# (NOAA ERDDAP), avec attente croissante (~2,5 min cumulées).
+# (NOAA ERDDAP), avec attente croissante (par serveur).
 _retry = Retry(
-    total=6,
-    connect=6,
-    read=6,
-    status=6,
+    total=3,
+    connect=3,
+    read=3,
+    status=3,
     backoff_factor=5,
     status_forcelist=(500, 502, 503, 504),
     allowed_methods=("GET",),
@@ -94,7 +101,7 @@ def utcnow_iso() -> str:
     ).replace("+00:00", "Z")
 
 
-def build_nc_url() -> str:
+def build_nc_url(base: str = ERDDAP_BASE) -> str:
     selection = (
         f"[(last)]"
         f"[({SOUTH}):{STRIDE}:({NORTH})]"
@@ -114,21 +121,36 @@ def build_nc_url() -> str:
         safe="[]():,.-"
     )
 
-    return f"{ERDDAP_BASE}.nc?{encoded}"
+    return f"{base}.nc?{encoded}"
 
 
 def download_latest() -> None:
-    url = build_nc_url()
+    response = None
+    last_error: Exception | None = None
 
-    print("Téléchargement MUR SST :")
-    print(url)
+    for base in ERDDAP_BASES:
+        url = build_nc_url(base)
 
-    response = session.get(
-        url,
-        timeout=HTTP_TIMEOUT,
-    )
+        print("Téléchargement MUR SST :")
+        print(url)
 
-    response.raise_for_status()
+        try:
+            response = session.get(
+                url,
+                timeout=HTTP_TIMEOUT,
+            )
+            response.raise_for_status()
+            break
+        except requests.RequestException as exc:
+            last_error = exc
+            response = None
+            print("Échec sur", base, ":", exc)
+
+    if response is None:
+        raise RuntimeError(
+            "MUR SST indisponible sur tous les serveurs ERDDAP : "
+            f"{last_error}"
+        )
 
     content_type = (
         response.headers.get("content-type")
