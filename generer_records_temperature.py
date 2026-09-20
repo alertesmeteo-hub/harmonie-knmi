@@ -107,6 +107,12 @@ def fnum(v: Any) -> Optional[float]:
     return x if math.isfinite(x) else None
 
 
+def celsius(v: Optional[float]) -> Optional[float]:
+    """DPPaquetObs V2 renvoie des kelvins ; les historiques de records sont en °C."""
+    if v is None: return None
+    return round(v - 273.15, 1) if v > 150 else v
+
+
 def fint(v: Any) -> Optional[int]:
     x = fnum(v)
     return int(x) if x is not None else None
@@ -545,9 +551,9 @@ def generate_live() -> None:
             # TX/TN horaires, T en secours. Les fenêtres provisoires reprennent
             # les périodes utilisées par les extrêmes journaliers :
             # TX à partir de 06 UTC, TN à partir de 18 UTC la veille.
-            t = fnum(first(row, ("t", "T")))
-            tx = fnum(first(row, ("tx", "TX")))
-            tn = fnum(first(row, ("tn", "TN")))
+            t = celsius(fnum(first(row, ("t", "T"))))
+            tx = celsius(fnum(first(row, ("tx", "TX"))))
+            tn = celsius(fnum(first(row, ("tn", "TN"))))
             if tx is None: tx = t
             if tn is None: tn = t
             if h >= tx_start and tx is not None:
