@@ -14232,11 +14232,15 @@
     "83069003": {
       "current_month_txab": 31.3,
       "current_month_txab_date": "20260905"
+    },
+    "97219006": {
+      "current_month_txab": null,
+      "current_month_txab_date": null
     }
   },
   "record_baseline_month_id": "2026-09",
   "records_generated_at": "2026-09-01T02:03:56Z",
   "current_month_id": "2026-09",
-  "current_month_generated_at": "2026-09-21T13:25:08Z",
+  "current_month_generated_at": "2026-09-21T20:49:56Z",
   "module_version": "1.2.0"
 }
