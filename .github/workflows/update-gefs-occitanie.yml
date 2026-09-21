@@ -1,0 +1,160 @@
+name: Update GEFS pluie Occitanie v1.0.0
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Après la fin habituelle des quatre cycles GEFS 00/06/12/18 UTC.
+    - cron: '45 5,11,17,23 * * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gefs-pluie-occitanie-v100
+  cancel-in-progress: true
+
+jobs:
+  generate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+
+      - name: Installer les dépendances GEFS
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install requests==2.33.0 "numpy>=2.0,<3" "xarray>=2025.1,<2027" "cfgrib>=0.9.15,<0.10" "eccodes>=2.41,<3"
+
+      - name: Tester le générateur sans réseau
+        run: python scripts/update_gefs_occitanie.py --self-test
+
+      - name: Générer la pluie ensembliste Occitanie
+        run: python scripts/update_gefs_occitanie.py --output-dir build/gefs-occitanie/current --workers 8
+
+      - name: Contrôler les sorties
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          root = Path('build/gefs-occitanie/current')
+          data = json.loads((root / 'index.json').read_text(encoding='utf-8'))
+          assert data['status'] == 'ok'
+          assert data['module_version'] == '1.0.0'
+          assert data['area']['code'] == '76'
+          assert data['member_count_expected'] == 31
+          assert data['thresholds_mm'] == [1.0, 10.0, 30.0, 50.0]
+          assert len(data['frames']) >= 58, f"Horizon insuffisant: {len(data['frames'])}/64"
+          assert max(f['forecast_hour'] for f in data['frames']) >= 360
+          frame_path = root / data['frames'][0]['file']
+          frame = json.loads(frame_path.read_text(encoding='utf-8'))
+          assert frame['member_count'] >= 25
+          required = {
+              'precipitation_6h_mean_mm', 'precipitation_6h_median_mm',
+              'precipitation_cumulative_mean_mm', 'precipitation_cumulative_median_mm',
+              'precipitation_cumulative_p10_mm', 'precipitation_cumulative_p90_mm',
+              'precipitation_cumulative_prob_ge_1mm_pct',
+              'precipitation_cumulative_prob_ge_10mm_pct',
+              'precipitation_cumulative_prob_ge_30mm_pct',
+              'precipitation_cumulative_prob_ge_50mm_pct',
+          }
+          assert required.issubset(frame['fields'])
+          print('Run GEFS:', data['run_id'])
+          print('Échéances:', len(data['frames']))
+          PY
+
+      - name: Préparer la publication
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/gefs-occitanie-publish
+          mkdir -p /tmp/gefs-occitanie-publish
+          cp -a build/gefs-occitanie/current/. /tmp/gefs-occitanie-publish/
+
+      - name: Publier et conserver les quatre derniers cycles
+        shell: bash
+        run: |
+          set -euo pipefail
+          RUN_ID=$(python -c "import json; print(json.load(open('/tmp/gefs-occitanie-publish/index.json', encoding='utf-8'))['run_id'])")
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if git ls-remote --exit-code --heads origin observations >/dev/null 2>&1; then
+            git fetch origin observations
+            git switch -C observations origin/observations
+          else
+            git switch --orphan observations
+            git rm -rf . || true
+          fi
+
+          mkdir -p "gefs-occitanie/runs/$RUN_ID"
+          rm -rf "gefs-occitanie/runs/$RUN_ID"
+          mkdir -p "gefs-occitanie/runs/$RUN_ID"
+          cp -a /tmp/gefs-occitanie-publish/. "gefs-occitanie/runs/$RUN_ID/"
+
+          python - <<'PY'
+          import json, shutil
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          root = Path('gefs-occitanie')
+          runs_dir = root / 'runs'
+          runs = []
+          for directory in runs_dir.iterdir():
+              index_path = directory / 'index.json'
+              if not directory.is_dir() or not index_path.is_file():
+                  continue
+              try:
+                  data = json.loads(index_path.read_text(encoding='utf-8'))
+                  runs.append((data['run_utc'], directory, data))
+              except Exception as exc:
+                  print(f'::warning::Cycle ignoré {directory.name}: {exc}')
+          runs.sort(key=lambda item: item[0], reverse=True)
+          for _, directory, _ in runs[4:]:
+              shutil.rmtree(directory)
+          kept = runs[:4]
+          manifest = {
+              'status': 'ok',
+              'schema_version': 1,
+              'module_version': '1.0.0',
+              'model': 'NOAA/NCEP GEFS 0.5 degree',
+              'area': {'code': '76', 'name': 'Occitanie'},
+              'generated_at': datetime.now(timezone.utc).isoformat(timespec='seconds').replace('+00:00', 'Z'),
+              'cycles_expected': ['00', '06', '12', '18'],
+              'runs': [
+                  {
+                      'run_id': data['run_id'],
+                      'run_utc': data['run_utc'],
+                      'index': f"runs/{directory.name}/index.json",
+                      'frame_count': len(data['frames']),
+                      'member_count_expected': data['member_count_expected'],
+                  }
+                  for _, directory, data in kept
+              ],
+          }
+          root.mkdir(parents=True, exist_ok=True)
+          (root / 'index.json').write_text(json.dumps(manifest, ensure_ascii=False, separators=(',', ':')), encoding='utf-8')
+          assert 1 <= len(manifest['runs']) <= 4
+          PY
+
+          git add gefs-occitanie
+          if git diff --cached --quiet; then
+            echo "Aucun changement GEFS Occitanie."
+            exit 0
+          fi
+          git commit -m "Update GEFS pluie Occitanie $RUN_ID"
+          if ! git push origin observations; then
+            git fetch origin observations
+            git rebase origin/observations
+            git push origin observations
+          fi

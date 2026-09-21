@@ -1,8 +1,8 @@
 <?php
 /**
- * Plugin Name: Alertes-Météo.com – Cartes Réel & GFS France / Europe
- * Description: Observations réelles de pression + cartes GFS 0,25° (pression/isobares, température 2 m, pluie, vent/rafales) pour la France et l'Europe.
- * Version: 1.3.8
+ * Plugin Name: Alertes-Météo.com – Cartes Réel, GFS & GEFS
+ * Description: Observations, cartes GFS France/Europe et pluie ensembliste GEFS limitée à l'Occitanie.
+ * Version: 1.4.0
  * Author: Alertes-Météo.com
  * Author URI: https://alertes-meteo.com/
  * License: GPL-2.0-or-later
@@ -15,9 +15,10 @@ if (!defined('ABSPATH')) {
 
 final class AM_Carte_Pression_Isobares
 {
-    public const VERSION = '1.3.8';
+    public const VERSION = '1.4.0';
     private const FRANCE_JSON_URL = 'https://raw.githubusercontent.com/alertesmeteo-hub/harmonie-knmi/observations/classements_temperature.json';
     private const GFS_INDEX_URL = 'https://raw.githubusercontent.com/alertesmeteo-hub/harmonie-knmi/observations/gfs/index.json';
+    private const GEFS_OCCITANIE_INDEX_URL = 'https://raw.githubusercontent.com/alertesmeteo-hub/harmonie-knmi/observations/gefs-occitanie/index.json';
     private const AWC_METAR_URL = 'https://aviationweather.gov/api/data/metar';
     private const AWC_METAR_CACHE_URL = 'https://aviationweather.gov/data/cache/metars.cache.csv.gz';
     private const EUROPE_CACHE_KEY = 'am_pr_europe_metar_v138';
@@ -25,6 +26,7 @@ final class AM_Carte_Pression_Isobares
 
     private static $instance = null;
     private $assets_enqueued = false;
+    private $gefs_assets_enqueued = false;
 
     public static function instance()
     {
@@ -39,6 +41,7 @@ final class AM_Carte_Pression_Isobares
         add_shortcode('am_carte_pression', array($this, 'render_shortcode'));
         add_shortcode('carte_pression_isobares', array($this, 'render_shortcode'));
         add_shortcode('am_pression_isobares', array($this, 'render_shortcode'));
+        add_shortcode('am_gefs_pluie_occitanie', array($this, 'render_gefs_shortcode'));
         add_action('rest_api_init', array($this, 'register_rest_routes'));
     }
 
@@ -430,6 +433,99 @@ final class AM_Carte_Pression_Isobares
         wp_enqueue_style('am-carte-pression-isobares', plugin_dir_url(__FILE__) . 'assets/carte-pression-isobares.css', array('leaflet'), self::VERSION);
         wp_enqueue_script('am-carte-pression-isobares', plugin_dir_url(__FILE__) . 'assets/carte-pression-isobares.js', array('leaflet'), self::VERSION, true);
         $this->assets_enqueued = true;
+    }
+
+    private function enqueue_gefs_assets()
+    {
+        if ($this->gefs_assets_enqueued) {
+            return;
+        }
+        if (!wp_style_is('leaflet', 'registered')) {
+            wp_register_style('leaflet', plugin_dir_url(__FILE__) . 'assets/vendor/leaflet/leaflet.css', array(), '1.9.4');
+        }
+        if (!wp_script_is('leaflet', 'registered')) {
+            wp_register_script('leaflet', plugin_dir_url(__FILE__) . 'assets/vendor/leaflet/leaflet.js', array(), '1.9.4', true);
+        }
+        wp_enqueue_style('leaflet');
+        wp_enqueue_script('leaflet');
+        wp_enqueue_style('am-gefs-occitanie', plugin_dir_url(__FILE__) . 'assets/gefs-occitanie.css', array('leaflet'), self::VERSION);
+        wp_enqueue_script('am-gefs-occitanie', plugin_dir_url(__FILE__) . 'assets/gefs-occitanie.js', array('leaflet'), self::VERSION, true);
+        $this->gefs_assets_enqueued = true;
+    }
+
+    public function render_gefs_shortcode($atts)
+    {
+        $atts = shortcode_atts(
+            array(
+                'titre'      => 'Pluie ensembliste GEFS – Occitanie',
+                'hauteur'    => 620,
+                'indicateur' => 'mediane',
+            ),
+            $atts,
+            'am_gefs_pluie_occitanie'
+        );
+        $height = max(440, min(900, absint($atts['hauteur'])));
+        $allowed = array('mediane', 'moyenne', 'p10', 'p90', 'proba1', 'proba10', 'proba30', 'proba50');
+        $indicator = strtolower((string) $atts['indicateur']);
+        if (!in_array($indicator, $allowed, true)) {
+            $indicator = 'mediane';
+        }
+        $index_url = apply_filters('am_gefs_occitanie_index_url', self::GEFS_OCCITANIE_INDEX_URL);
+        $instance_id = function_exists('wp_unique_id') ? wp_unique_id('am-gefs-') : 'am-gefs-' . wp_rand(1000, 999999);
+        $this->enqueue_gefs_assets();
+
+        ob_start();
+        ?>
+        <section
+            id="<?php echo esc_attr($instance_id); ?>"
+            class="am-gefs"
+            data-index-url="<?php echo esc_url($index_url); ?>"
+            data-map-height="<?php echo esc_attr($height); ?>"
+            data-default-indicator="<?php echo esc_attr($indicator); ?>"
+        >
+            <header class="am-gefs__header">
+                <div>
+                    <div class="am-gefs__eyebrow">NOAA/NCEP · 31 MEMBRES · 4 CYCLES</div>
+                    <h2>🌧️ <?php echo esc_html($atts['titre']); ?></h2>
+                    <p>Probabilités, médiane et incertitude des cumuls GEFS jusqu’à +384 h.</p>
+                </div>
+                <div class="am-gefs__date js-gefs-date">—</div>
+            </header>
+
+            <div class="am-gefs__controls">
+                <label>Run GEFS<select class="js-gefs-run"></select></label>
+                <label>Échéance<select class="js-gefs-frame"></select></label>
+                <label>Indicateur
+                    <select class="js-gefs-indicator">
+                        <option value="mediane">Cumul médian</option>
+                        <option value="moyenne">Cumul moyen</option>
+                        <option value="p10">Scénario sec P10</option>
+                        <option value="p90">Scénario humide P90</option>
+                        <option value="proba1">Probabilité ≥ 1 mm</option>
+                        <option value="proba10">Probabilité ≥ 10 mm</option>
+                        <option value="proba30">Probabilité ≥ 30 mm</option>
+                        <option value="proba50">Probabilité ≥ 50 mm</option>
+                    </select>
+                </label>
+                <button type="button" class="js-gefs-refresh">↻ Actualiser</button>
+            </div>
+
+            <div class="am-gefs__summary">
+                <div><span>Cumul médian régional</span><strong class="js-gefs-median">—</strong></div>
+                <div><span>Fourchette P10–P90</span><strong class="js-gefs-range">—</strong></div>
+                <div><span>Probabilité ≥ 10 mm</span><strong class="js-gefs-prob10">—</strong></div>
+                <div><span>Membres disponibles</span><strong class="js-gefs-members">—</strong></div>
+            </div>
+
+            <div class="am-gefs__mapwrap">
+                <div class="am-gefs__map js-gefs-map" style="height:<?php echo esc_attr($height); ?>px"></div>
+                <div class="am-gefs__loading js-gefs-loading">Chargement des quatre runs GEFS…</div>
+                <div class="am-gefs__legend js-gefs-legend"></div>
+            </div>
+            <p class="am-gefs__note js-gefs-note">Prévision probabiliste automatique : elle ne remplace pas la vigilance officielle.</p>
+        </section>
+        <?php
+        return ob_get_clean();
     }
 
     public function render_shortcode($atts)
