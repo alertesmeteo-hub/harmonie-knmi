@@ -1,6 +1,6 @@
 (function () {
   "use strict";
-  var colors={AROME:"#db2777",HARMONIE:"#0f766e",ARPEGE_EU:"#7c3aed",ECMWF:"#ca8a04",AIFS:"#0891b2",ICON:"#16a34a",GFS:"#ea580c",GEFS:"#059669"};
+  var colors={AROME:"#db2777",HARMONIE:"#0f766e",ARPEGE_EU:"#7c3aed",ECMWF:"#ca8a04",AIFS:"#0891b2",ICON:"#16a34a",ICON_GLOBAL:"#65a30d",GFS:"#ea580c",GEFS:"#059669"};
   function draw(root){
     fetch(root.dataset.indexUrl+"?_c="+Date.now(),{cache:"no-store"}).then(function(response){
       if(!response.ok)throw Error("HTTP "+response.status);
