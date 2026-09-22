@@ -539,6 +539,7 @@ final class AM_Carte_Pression_Isobares
         }
         wp_enqueue_style('am-frise-multi-modeles', plugin_dir_url(__FILE__) . 'assets/multi-modeles.css', array(), self::VERSION);
         wp_enqueue_script('am-frise-multi-modeles', plugin_dir_url(__FILE__) . 'assets/multi-modeles.js', array(), self::VERSION, true);
+        wp_enqueue_script('am-frise-multi-modeles-curves', plugin_dir_url(__FILE__) . 'assets/multi-modeles-curves.js', array(), self::VERSION, true);
         $this->multi_modeles_assets_enqueued = true;
     }
 
@@ -556,6 +557,7 @@ final class AM_Carte_Pression_Isobares
             <div class="am-multi__meta"><span class="js-multi-runs">Chargement des runs…</span><span class="js-multi-status"></span></div>
             <div class="am-multi__controls"><strong class="js-multi-variable is-active" data-variable="rain">Pluie</strong><button type="button" class="js-multi-variable" data-variable="temperature">Température 2 m</button><button type="button" class="is-active js-multi-mode" data-mode="cumul">Cumul</button><button type="button" class="js-multi-mode" data-mode="pas">Pas de pluie</button><span>Pas</span><button type="button" class="is-active js-multi-step" data-step="1">1 h</button><button type="button" class="js-multi-step" data-step="3">3 h</button><button type="button" class="js-multi-step" data-step="6">6 h</button></div>
             <div class="am-multi__models"><strong>Lecture croisée des modèles</strong><span class="js-multi-count">—</span><div class="js-multi-model-picker"></div><button type="button" class="js-multi-all">Tout afficher</button><button type="button" class="js-multi-essential">Essentiels</button></div>
+            <div class="am-multi__curve"><h3>Cumuls de pluie comparés</h3><svg class="js-multi-curves" role="img" aria-label="Courbes de pluie multi-modèles"></svg></div>
             <div class="am-multi__legend js-multi-legend"></div>
             <div class="am-multi__tablewrap"><table class="am-multi__table js-multi-table" aria-label="Tableau horaire de pluie multi-modèles"></table><div class="am-multi__loading js-multi-loading">Chargement du tableau…</div></div>
             <p class="am-multi__note">Les cumuls sont des moyennes spatiales sur le domaine Occitanie–PACA : ils servent à comparer la chronologie et non à remplacer les maxima locaux ni les vigilances officielles.</p>

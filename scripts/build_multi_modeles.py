@@ -31,11 +31,13 @@ def arome():
 def gfs():
  idx=get(RAW+"gfs/index.json"); total=0; points=[]
  for frame in idx["frames"]:
-  d=get(RAW+"gfs/"+frame["file"]); grid=d["grid"]; vals=[]
+  d=get(RAW+"gfs/"+frame["file"]); grid=d["grid"]; rain=d.get("fields",{}).get("precipitation_mm")
+  if not rain: continue
+  vals=[]
   for i,lat in enumerate(grid["latitudes"]):
    if not 42<=lat<=45.5: continue
    for j,lon in enumerate(grid["longitudes"]):
-    if -1.5<=lon<=8 and d["fields"]["precipitation_mm"][i][j] is not None: vals.append(d["fields"]["precipitation_mm"][i][j])
+    if -1.5<=lon<=8 and rain[i][j] is not None: vals.append(rain[i][j])
   total+=mean(vals) or 0; points.append({"valid_utc":frame["valid_utc"],"total_mm":round(total,1)})
  return {"id":"GFS","label":"GFS 0,25°","status":"ok","run_utc":idx["run_utc"],"points":points}
 def gefs():
