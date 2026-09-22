@@ -22,14 +22,16 @@ def get(url):
 def mean(values):
  vals=[float(v) for v in values if isinstance(v,(int,float))]
  return round(sum(vals)/len(vals),2) if vals else None
+def add_department_forecast(grouped,data):
+ cols=data.get("columns",{}).get("values",[]); pos=cols.index("precipitation_mm")
+ for row in data.get("forecast",[]):
+  if len(row)<2 or not isinstance(row[1],list): continue
+  grouped.setdefault(row[0],[]).extend(values[pos] for values in row[1] if isinstance(values,list) and len(values)>pos)
 def arome():
  idx=get(AROME+"index.json")
  with ThreadPoolExecutor(max_workers=5) as pool: files=list(pool.map(lambda d:get(AROME+"departements/"+d+".json"),DEPS))
  grouped={}
- for data in files:
-  cols=data.get("columns",{}).get("values",[]); pos=cols.index("precipitation_mm")
-  for row in data.get("forecast",[]):
-   grouped.setdefault(row[0],[]).extend(v[pos] for v in row[1:] if len(v)>pos)
+ for data in files: add_department_forecast(grouped,data)
  total=0; points=[]
  for utc in sorted(grouped):
   inc=mean(grouped[utc]); total+=inc or 0; points.append({"valid_utc":utc,"total_mm":round(total,1)})
@@ -38,9 +40,7 @@ def harmonie():
  idx=get(HARMONIE+"index.json")
  with ThreadPoolExecutor(max_workers=5) as pool: files=list(pool.map(lambda d:get(HARMONIE+"departements/"+d+".json"),DEPS))
  grouped={}
- for data in files:
-  cols=data.get("columns",{}).get("values",[]); pos=cols.index("precipitation_mm")
-  for row in data.get("forecast",[]): grouped.setdefault(row[0],[]).extend(v[pos] for v in row[1:] if len(v)>pos)
+ for data in files: add_department_forecast(grouped,data)
  total=0; points=[]
  for utc in sorted(grouped):
   inc=mean(grouped[utc]); total+=inc or 0; points.append({"valid_utc":utc,"total_mm":round(total,1)})
@@ -49,9 +49,7 @@ def arpege_europe():
  idx=get(ARPEGE+"index.json")
  with ThreadPoolExecutor(max_workers=5) as pool: files=list(pool.map(lambda d:get(ARPEGE+"departements/"+d+".json"),DEPS))
  grouped={}
- for data in files:
-  cols=data.get("columns",{}).get("values",[]); pos=cols.index("precipitation_mm")
-  for row in data.get("forecast",[]): grouped.setdefault(row[0],[]).extend(v[pos] for v in row[1:] if len(v)>pos)
+ for data in files: add_department_forecast(grouped,data)
  total=0; points=[]
  for utc in sorted(grouped):
   inc=mean(grouped[utc]); total+=inc or 0; points.append({"valid_utc":utc,"total_mm":round(total,1)})
@@ -60,9 +58,7 @@ def aifs():
  idx=get(AIFS+"index.json")
  with ThreadPoolExecutor(max_workers=5) as pool: files=list(pool.map(lambda d:get(AIFS+"departements/"+d+".json"),DEPS))
  grouped={}
- for data in files:
-  cols=data.get("columns",{}).get("values",[]); pos=cols.index("precipitation_mm")
-  for row in data.get("forecast",[]): grouped.setdefault(row[0],[]).extend(v[pos] for v in row[1:] if len(v)>pos)
+ for data in files: add_department_forecast(grouped,data)
  total=0; points=[]
  for utc in sorted(grouped):
   inc=mean(grouped[utc]); total+=inc or 0; points.append({"valid_utc":utc,"total_mm":round(total,1)})
@@ -71,9 +67,7 @@ def ecmwf_ifs():
  idx=get(CEP+"index.json")
  with ThreadPoolExecutor(max_workers=5) as pool: files=list(pool.map(lambda d:get(CEP+"departements/"+d+".json"),DEPS))
  grouped={}
- for data in files:
-  cols=data.get("columns",{}).get("values",[]); pos=cols.index("precipitation_mm")
-  for row in data.get("forecast",[]): grouped.setdefault(row[0],[]).extend(v[pos] for v in row[1:] if len(v)>pos)
+ for data in files: add_department_forecast(grouped,data)
  total=0; points=[]
  for utc in sorted(grouped):
   inc=mean(grouped[utc]); total+=inc or 0; points.append({"valid_utc":utc,"total_mm":round(total,1)})
@@ -98,9 +92,7 @@ def icon_global():
  idx=get(ICON_GLOBAL+"index.json")
  with ThreadPoolExecutor(max_workers=5) as pool: files=list(pool.map(lambda d:get(ICON_GLOBAL+"departements/"+d+".json"),DEPS))
  grouped={}
- for data in files:
-  cols=data.get("columns",{}).get("values",[]); pos=cols.index("precipitation_mm")
-  for row in data.get("forecast",[]): grouped.setdefault(row[0],[]).extend(v[pos] for v in row[1:] if len(v)>pos)
+ for data in files: add_department_forecast(grouped,data)
  total=0; points=[]
  for utc in sorted(grouped):
   inc=mean(grouped[utc]); total+=inc or 0; points.append({"valid_utc":utc,"total_mm":round(total,1)})
@@ -128,7 +120,7 @@ def main():
  for name,fn in (("AROME",arome),("HARMONIE",harmonie),("ARPEGE_EU",arpege_europe),("ECMWF",ecmwf_ifs),("AIFS",aifs),("ICON",icon_eu),("ICON_GLOBAL",icon_global),("GFS",gfs),("GEFS",gefs)):
   try: series.append(fn())
   except Exception as exc: unavailable.append(name+" ("+str(exc)+")")
- payload={"status":"ok","schema_version":1,"module_version":"1.0.6","area":{"codes":["76","93"],"name":"Occitanie + Provence-Alpes-Côte d’Azur"},"generated_at":datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00","Z"),"series":series,"unavailable":unavailable}
+ payload={"status":"ok","schema_version":1,"module_version":"1.0.7","area":{"codes":["76","93"],"name":"Occitanie + Provence-Alpes-Côte d’Azur"},"generated_at":datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00","Z"),"series":series,"unavailable":unavailable}
  out=Path(args.output);out.parent.mkdir(parents=True,exist_ok=True);out.write_text(json.dumps(payload,ensure_ascii=False,separators=(",",":")),encoding="utf-8")
  if not series: raise SystemExit("Aucune série disponible")
 if __name__=="__main__": main()
