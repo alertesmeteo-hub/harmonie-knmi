@@ -16,6 +16,7 @@ import re
 import shutil
 import sys
 import tempfile
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
@@ -27,8 +28,8 @@ from urllib.parse import urlencode
 import numpy as np
 import requests
 
-VERSION = "1.0.0"
-BUILD_ID = "gefs-occitanie-rain-four-cycles-v100-20260921"
+VERSION = "1.0.1"
+BUILD_ID = "gefs-occitanie-rain-four-cycles-v101-20260921"
 NOMADS_FILTER = "https://nomads.ncep.noaa.gov/cgi-bin/filter_gefs_atmos_0p50a.pl"
 BOUNDARY_URL = "https://raw.githubusercontent.com/gregoiredavid/france-geojson/master/regions/occitanie/region-occitanie.geojson"
 
@@ -40,6 +41,9 @@ THRESHOLDS_MM = (1.0, 10.0, 30.0, 50.0)
 HTTP_TIMEOUT = (20, 120)
 SESSION = requests.Session()
 SESSION.headers.update({"User-Agent": f"alertes-meteo-gefs/{VERSION} (+https://alertes-meteo.com/)"})
+REQUEST_INTERVAL_SECONDS = 0.6  # ~100 requêtes/minute, cadence respectueuse de NOMADS.
+_REQUEST_LOCK = threading.Lock()
+_NEXT_REQUEST_AT = 0.0
 
 
 @dataclass(frozen=True)
@@ -93,9 +97,16 @@ def nomads_url(run: Run, member: str, fhr: int, tiny: bool = False) -> str:
 
 
 def get_bytes(url: str, attempts: int = 4) -> bytes:
+    global _NEXT_REQUEST_AT
     last: Exception | None = None
     for attempt in range(attempts):
         try:
+            with _REQUEST_LOCK:
+                now = time.monotonic()
+                wait = max(0.0, _NEXT_REQUEST_AT - now)
+                _NEXT_REQUEST_AT = max(now, _NEXT_REQUEST_AT) + REQUEST_INTERVAL_SECONDS
+            if wait:
+                time.sleep(wait)
             response = SESSION.get(url, timeout=HTTP_TIMEOUT)
             response.raise_for_status()
             data = response.content
@@ -110,10 +121,12 @@ def get_bytes(url: str, attempts: int = 4) -> bytes:
 
 
 def detect_latest_run(now: datetime | None = None) -> Run:
-    # Le dernier membre à +384 h garantit que le cycle est réellement complet.
+    # Sonde plusieurs lots de membres à +384 h : un seul membre disponible ne
+    # suffit pas, car NOMADS publie parfois les fichiers par vagues.
     for run in candidates(now or utcnow()):
         try:
-            get_bytes(nomads_url(run, "p30", 384, tiny=True), attempts=1)
+            for member in ("c00", "p01", "p15", "p30"):
+                get_bytes(nomads_url(run, member, 384, tiny=True), attempts=1)
             print("Run GEFS complet détecté :", iso(run.dt))
             return run
         except Exception as exc:
@@ -420,15 +433,18 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-dir", default="build/gefs-occitanie/current")
     parser.add_argument("--hours", default=",".join(str(v) for v in FORECAST_HOURS))
     parser.add_argument("--workers", type=int, default=8)
+    parser.add_argument("--request-interval", type=float, default=REQUEST_INTERVAL_SECONDS)
     parser.add_argument("--run", help="Cycle imposé au format YYYYMMDDHH")
     parser.add_argument("--self-test", action="store_true")
     return parser.parse_args()
 
 
 def main() -> int:
+    global REQUEST_INTERVAL_SECONDS
     args = parse_args()
     if args.self_test:
         return self_test()
+    REQUEST_INTERVAL_SECONDS = max(0.1, float(args.request_interval))
     hours = sorted({int(v.strip()) for v in args.hours.split(",") if v.strip()})
     if args.run:
         dt = datetime.strptime(args.run, "%Y%m%d%H").replace(tzinfo=timezone.utc)

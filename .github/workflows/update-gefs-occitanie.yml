@@ -1,4 +1,4 @@
-name: Update GEFS pluie Occitanie v1.0.0
+name: Update GEFS pluie Occitanie v1.0.1
 
 on:
   workflow_dispatch:
@@ -10,13 +10,13 @@ permissions:
   contents: write
 
 concurrency:
-  group: gefs-pluie-occitanie-v100
+  group: gefs-pluie-occitanie-v101
   cancel-in-progress: true
 
 jobs:
   generate:
     runs-on: ubuntu-24.04
-    timeout-minutes: 90
+    timeout-minutes: 120
 
     steps:
       - name: Checkout
@@ -38,7 +38,7 @@ jobs:
         run: python scripts/update_gefs_occitanie.py --self-test
 
       - name: Générer la pluie ensembliste Occitanie
-        run: python scripts/update_gefs_occitanie.py --output-dir build/gefs-occitanie/current --workers 8
+        run: python scripts/update_gefs_occitanie.py --output-dir build/gefs-occitanie/current --workers 8 --request-interval 0.6
 
       - name: Contrôler les sorties
         shell: bash
@@ -50,7 +50,7 @@ jobs:
           root = Path('build/gefs-occitanie/current')
           data = json.loads((root / 'index.json').read_text(encoding='utf-8'))
           assert data['status'] == 'ok'
-          assert data['module_version'] == '1.0.0'
+          assert data['module_version'] == '1.0.1'
           assert data['area']['code'] == '76'
           assert data['member_count_expected'] == 31
           assert data['thresholds_mm'] == [1.0, 10.0, 30.0, 50.0]
@@ -126,7 +126,7 @@ jobs:
           manifest = {
               'status': 'ok',
               'schema_version': 1,
-              'module_version': '1.0.0',
+              'module_version': '1.0.1',
               'model': 'NOAA/NCEP GEFS 0.5 degree',
               'area': {'code': '76', 'name': 'Occitanie'},
               'generated_at': datetime.now(timezone.utc).isoformat(timespec='seconds').replace('+00:00', 'Z'),
