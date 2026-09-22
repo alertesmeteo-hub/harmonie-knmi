@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Alertes-Météo.com – Cartes Réel, GFS & GEFS
  * Description: Observations, cartes GFS France/Europe et pluie ensembliste GEFS pour les épisodes méditerranéens en Occitanie et PACA.
- * Version: 1.5.1
+ * Version: 1.5.2
  * Author: Alertes-Météo.com
  * Author URI: https://alertes-meteo.com/
  * License: GPL-2.0-or-later
@@ -15,7 +15,7 @@ if (!defined('ABSPATH')) {
 
 final class AM_Carte_Pression_Isobares
 {
-    public const VERSION = '1.5.1';
+    public const VERSION = '1.5.2';
     private const FRANCE_JSON_URL = 'https://raw.githubusercontent.com/alertesmeteo-hub/harmonie-knmi/observations/classements_temperature.json';
     private const GFS_INDEX_URL = 'https://raw.githubusercontent.com/alertesmeteo-hub/harmonie-knmi/observations/gfs/index.json';
     private const GEFS_OCCITANIE_INDEX_URL = 'https://raw.githubusercontent.com/alertesmeteo-hub/harmonie-knmi/observations/gefs-occitanie/index.json';
@@ -553,7 +553,7 @@ final class AM_Carte_Pression_Isobares
         ob_start();
         ?>
         <section id="<?php echo esc_attr($instance_id); ?>" class="am-multi" data-index-url="<?php echo esc_url($index_url); ?>" style="--am-multi-height:<?php echo esc_attr($height); ?>px">
-            <header class="am-multi__header"><div><div class="am-multi__eyebrow">OCCITANIE + PACA · HEURES VALIDES</div><h2>📋 <?php echo esc_html($atts['titre']); ?></h2><p>Tableau horaire comparatif des cumuls moyens de domaine. GEFS affiche sa médiane et son enveloppe P10–P90.</p></div><button type="button" class="js-multi-refresh">↻ Actualiser</button></header>
+            <header class="am-multi__header"><div><div class="am-multi__eyebrow">OCCITANIE + PACA · HEURES VALIDES · MODULE v<?php echo esc_html(self::VERSION); ?></div><h2>📋 <?php echo esc_html($atts['titre']); ?></h2><p>Tableau horaire comparatif des cumuls moyens de domaine. GEFS affiche sa médiane et son enveloppe P10–P90.</p></div><button type="button" class="js-multi-refresh">↻ Actualiser</button></header>
             <div class="am-multi__meta"><span class="js-multi-runs">Chargement des runs…</span><span class="js-multi-status"></span></div>
             <div class="am-multi__controls"><strong class="js-multi-variable is-active" data-variable="rain">Pluie</strong><button type="button" class="js-multi-variable" data-variable="temperature">Température 2 m</button><button type="button" class="is-active js-multi-mode" data-mode="cumul">Cumul</button><button type="button" class="js-multi-mode" data-mode="pas">Pas de pluie</button><span>Pas</span><button type="button" class="is-active js-multi-step" data-step="1">1 h</button><button type="button" class="js-multi-step" data-step="3">3 h</button><button type="button" class="js-multi-step" data-step="6">6 h</button></div>
             <div class="am-multi__models"><strong>Lecture croisée des modèles</strong><span class="js-multi-count">—</span><div class="js-multi-model-picker"></div><button type="button" class="js-multi-all">Tout afficher</button><button type="button" class="js-multi-essential">Essentiels</button></div>
