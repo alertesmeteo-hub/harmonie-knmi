@@ -1,1 +1,28 @@
-(function(){function g(r){fetch(r.dataset.indexUrl+'?_c='+Date.now()).then(function(x){return x.json()}).then(function(d){var s=(d.series||[]).filter(function(x){return x.status==='ok'&&x.points&&x.points.length}),e=r.querySelector('.js-multi-curves');if(!s.length)return;var a=[];s.forEach(function(x){x.points.forEach(function(p){a.push([+new Date(p.valid_utc),+p.total_mm])})});var t=Math.min(...a.map(x=>x[0])),u=Math.max(...a.map(x=>x[0])),m=Math.max(1,...a.map(x=>x[1])),W=900,H=250,L=42,B=28,X=v=>L+(v-t)/(u-t)*(W-L-8),Y=v=>H-B-v/m*(H-B-16),c={AROME:'#db2777',GFS:'#ea580c',GEFS:'#059669'},z='';for(let i=0;i<5;i++){let v=m*i/4;z+='<path d="M'+L+' '+Y(v)+'H'+(W-8)+'" stroke="#e5edf2"/><text x="'+(L-5)+'" y="'+(Y(v)+4)+'" text-anchor="end">'+v.toFixed(0)+'</text>'}s.forEach(x=>z+='<polyline fill="none" stroke="'+(c[x.id]||'#334155')+'" stroke-width="3" points="'+x.points.map(p=>X(+new Date(p.valid_utc)).toFixed(1)+','+Y(+p.total_mm).toFixed(1)).join(' ')+'"/>');e.setAttribute('viewBox','0 0 '+W+' '+H);e.innerHTML=z})}function b(){document.querySelectorAll('.am-multi').forEach(g)}document.readyState==='loading'?document.addEventListener('DOMContentLoaded',b):b()})();
+(function () {
+  "use strict";
+  var colors={AROME:"#db2777",HARMONIE:"#0f766e",ARPEGE_EU:"#7c3aed",AIFS:"#0891b2",GFS:"#ea580c",GEFS:"#059669"};
+  function draw(root){
+    fetch(root.dataset.indexUrl+"?_c="+Date.now(),{cache:"no-store"}).then(function(response){
+      if(!response.ok)throw Error("HTTP "+response.status);
+      return response.json();
+    }).then(function(data){
+      var series=(data.series||[]).filter(function(item){return item.status==="ok"&&item.points&&item.points.length;});
+      var svg=root.querySelector(".js-multi-curves");
+      if(!series.length||!svg)return;
+      var all=[];
+      series.forEach(function(item){item.points.forEach(function(point){all.push([+new Date(point.valid_utc),+point.total_mm]);});});
+      var start=Math.min.apply(null,all.map(function(point){return point[0];}));
+      var end=Math.max.apply(null,all.map(function(point){return point[0];}));
+      var maximum=Math.max.apply(null,[1].concat(all.map(function(point){return point[1];})));
+      var width=900,height=250,left=42,bottom=28;
+      function x(value){return left+(value-start)/(end-start)*(width-left-8);}
+      function y(value){return height-bottom-value/maximum*(height-bottom-16);}
+      var markup="";
+      for(var i=0;i<5;i++){var tick=maximum*i/4;markup+='<path d="M'+left+" "+y(tick)+"H"+(width-8)+'" stroke="#e5edf2"/><text x="'+(left-5)+'" y="'+(y(tick)+4)+'" text-anchor="end">'+tick.toFixed(0)+"</text>";}
+      series.forEach(function(item){markup+='<polyline fill="none" stroke="'+(colors[item.id]||"#334155")+'" stroke-width="3" points="'+item.points.map(function(point){return x(+new Date(point.valid_utc)).toFixed(1)+","+y(+point.total_mm).toFixed(1);}).join(" ")+'"/>';});
+      svg.setAttribute("viewBox","0 0 "+width+" "+height);svg.innerHTML=markup;
+    });
+  }
+  function boot(){document.querySelectorAll(".am-multi").forEach(draw);}
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",boot);else boot();
+}());

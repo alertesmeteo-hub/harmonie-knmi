@@ -7,7 +7,7 @@
   function day(utc){return new Date(utc).toLocaleDateString("fr-FR",{timeZone:"Europe/Paris",weekday:"long",day:"2-digit",month:"long"});}
   function num(n){n=Number(n);return Number.isFinite(n)?n:null;}
   function init(root){
-    var table=root.querySelector(".js-multi-table"),loading=root.querySelector(".js-multi-loading"),status=root.querySelector(".js-multi-status"),runs=root.querySelector(".js-multi-runs"),legend=root.querySelector(".js-multi-legend"),picker=root.querySelector(".js-multi-model-picker"),count=root.querySelector(".js-multi-count"),data,mode="cumul",step=1,variable="rain",selected={AROME:1,HARMONIE:1,ARPEGE_EU:1,GFS:1,GEFS:1};
+    var table=root.querySelector(".js-multi-table"),loading=root.querySelector(".js-multi-loading"),status=root.querySelector(".js-multi-status"),runs=root.querySelector(".js-multi-runs"),legend=root.querySelector(".js-multi-legend"),picker=root.querySelector(".js-multi-model-picker"),count=root.querySelector(".js-multi-count"),data,mode="cumul",step=1,variable="rain",selected={AROME:1,HARMONIE:1,ARPEGE_EU:1,AIFS:1,GFS:1,GEFS:1};
     function points(s){return variable==="temperature"?(s.temperature_points||[]):(s.points||[]);}
     function active(){return(data.series||[]).filter(function(s){return s.status==="ok"&&selected[s.id]&&points(s).length;});}
     function pickerRender(){var ready={};(data.series||[]).forEach(function(s){ready[s.id]=s.status==="ok";});picker.innerHTML=CATALOG.map(function(x){var ok=ready[x[0]],checked=ok&&selected[x[0]]?" checked":"";return '<label class="'+(ok?"":"is-unavailable")+'"><i style="background:'+COLORS[x[0]]+'"></i><input type="checkbox" data-id="'+x[0]+'"'+checked+(ok?"":" disabled")+'>'+x[1]+' <small>'+(ok?"chargé":"indisponible")+"</small></label>";}).join("");picker.querySelectorAll("input").forEach(function(input){input.onchange=function(){selected[input.dataset.id]=input.checked?1:0;render();};});}
@@ -25,7 +25,7 @@
     root.querySelectorAll(".js-multi-step").forEach(function(b){b.onclick=function(){step=+b.dataset.step;root.querySelectorAll(".js-multi-step").forEach(function(x){x.classList.toggle("is-active",x===b);});render();};});
     root.querySelectorAll(".js-multi-variable").forEach(function(b){b.onclick=function(){variable=b.dataset.variable;root.querySelectorAll(".js-multi-variable").forEach(function(x){x.classList.toggle("is-active",x===b);});render();};});
     root.querySelector(".js-multi-all").onclick=function(){CATALOG.forEach(function(x){selected[x[0]]=1;});pickerRender();render();};
-    root.querySelector(".js-multi-essential").onclick=function(){selected={AROME:1,HARMONIE:1,ARPEGE_EU:1,GFS:1,GEFS:1};pickerRender();render();};refresh();
+    root.querySelector(".js-multi-essential").onclick=function(){selected={AROME:1,HARMONIE:1,ARPEGE_EU:1,AIFS:1,GFS:1,GEFS:1};pickerRender();render();};refresh();
   }
   function boot(){document.querySelectorAll(".am-multi").forEach(init);}if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",boot);else boot();
 }());
