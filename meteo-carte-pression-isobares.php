@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: Alertes-Météo.com – Cartes Réel, GFS & GEFS
- * Description: Observations, cartes GFS France/Europe et pluie ensembliste GEFS limitée à l'Occitanie.
- * Version: 1.4.0
+ * Description: Observations, cartes GFS France/Europe et pluie ensembliste GEFS pour les épisodes méditerranéens en Occitanie et PACA.
+ * Version: 1.5.0
  * Author: Alertes-Météo.com
  * Author URI: https://alertes-meteo.com/
  * License: GPL-2.0-or-later
@@ -15,10 +15,11 @@ if (!defined('ABSPATH')) {
 
 final class AM_Carte_Pression_Isobares
 {
-    public const VERSION = '1.4.0';
+    public const VERSION = '1.5.0';
     private const FRANCE_JSON_URL = 'https://raw.githubusercontent.com/alertesmeteo-hub/harmonie-knmi/observations/classements_temperature.json';
     private const GFS_INDEX_URL = 'https://raw.githubusercontent.com/alertesmeteo-hub/harmonie-knmi/observations/gfs/index.json';
     private const GEFS_OCCITANIE_INDEX_URL = 'https://raw.githubusercontent.com/alertesmeteo-hub/harmonie-knmi/observations/gefs-occitanie/index.json';
+    private const MULTI_MODELES_INDEX_URL = 'https://raw.githubusercontent.com/alertesmeteo-hub/harmonie-knmi/observations/multi-modeles/index.json';
     private const AWC_METAR_URL = 'https://aviationweather.gov/api/data/metar';
     private const AWC_METAR_CACHE_URL = 'https://aviationweather.gov/data/cache/metars.cache.csv.gz';
     private const EUROPE_CACHE_KEY = 'am_pr_europe_metar_v138';
@@ -27,6 +28,7 @@ final class AM_Carte_Pression_Isobares
     private static $instance = null;
     private $assets_enqueued = false;
     private $gefs_assets_enqueued = false;
+    private $multi_modeles_assets_enqueued = false;
 
     public static function instance()
     {
@@ -42,6 +44,8 @@ final class AM_Carte_Pression_Isobares
         add_shortcode('carte_pression_isobares', array($this, 'render_shortcode'));
         add_shortcode('am_pression_isobares', array($this, 'render_shortcode'));
         add_shortcode('am_gefs_pluie_occitanie', array($this, 'render_gefs_shortcode'));
+        add_shortcode('am_gefs_pluie_mediterranee', array($this, 'render_gefs_shortcode'));
+        add_shortcode('am_frise_multi_modeles', array($this, 'render_multi_modeles_shortcode'));
         add_action('rest_api_init', array($this, 'register_rest_routes'));
     }
 
@@ -457,7 +461,7 @@ final class AM_Carte_Pression_Isobares
     {
         $atts = shortcode_atts(
             array(
-                'titre'      => 'Pluie ensembliste GEFS – Occitanie',
+                'titre'      => 'Pluie ensembliste GEFS – Occitanie & PACA',
                 'hauteur'    => 620,
                 'indicateur' => 'mediane',
             ),
@@ -485,9 +489,9 @@ final class AM_Carte_Pression_Isobares
         >
             <header class="am-gefs__header">
                 <div>
-                    <div class="am-gefs__eyebrow">NOAA/NCEP · 31 MEMBRES · 4 CYCLES</div>
+                    <div class="am-gefs__eyebrow">OCCITANIE + PACA · 31 MEMBRES · 4 CYCLES</div>
                     <h2>🌧️ <?php echo esc_html($atts['titre']); ?></h2>
-                    <p>Probabilités, médiane et incertitude des cumuls GEFS jusqu’à +384 h.</p>
+                    <p>Surveillance des épisodes méditerranéens : probabilités, médiane et incertitude des cumuls jusqu’à +384 h.</p>
                 </div>
                 <div class="am-gefs__date js-gefs-date">—</div>
             </header>
@@ -523,6 +527,37 @@ final class AM_Carte_Pression_Isobares
                 <div class="am-gefs__legend js-gefs-legend"></div>
             </div>
             <p class="am-gefs__note js-gefs-note">Prévision probabiliste automatique : elle ne remplace pas la vigilance officielle.</p>
+        </section>
+        <?php
+        return ob_get_clean();
+    }
+
+    private function enqueue_multi_modeles_assets()
+    {
+        if ($this->multi_modeles_assets_enqueued) {
+            return;
+        }
+        wp_enqueue_style('am-frise-multi-modeles', plugin_dir_url(__FILE__) . 'assets/multi-modeles.css', array(), self::VERSION);
+        wp_enqueue_script('am-frise-multi-modeles', plugin_dir_url(__FILE__) . 'assets/multi-modeles.js', array(), self::VERSION, true);
+        $this->multi_modeles_assets_enqueued = true;
+    }
+
+    public function render_multi_modeles_shortcode($atts)
+    {
+        $atts = shortcode_atts(array('titre' => 'Pluie multi-modèles – Occitanie & PACA', 'hauteur' => 430), $atts, 'am_frise_multi_modeles');
+        $height = max(300, min(720, absint($atts['hauteur'])));
+        $index_url = apply_filters('am_frise_multi_modeles_index_url', self::MULTI_MODELES_INDEX_URL);
+        $instance_id = function_exists('wp_unique_id') ? wp_unique_id('am-multi-') : 'am-multi-' . wp_rand(1000, 999999);
+        $this->enqueue_multi_modeles_assets();
+        ob_start();
+        ?>
+        <section id="<?php echo esc_attr($instance_id); ?>" class="am-multi" data-index-url="<?php echo esc_url($index_url); ?>" style="--am-multi-height:<?php echo esc_attr($height); ?>px">
+            <header class="am-multi__header"><div><div class="am-multi__eyebrow">OCCITANIE + PACA · HEURES VALIDES</div><h2>📋 <?php echo esc_html($atts['titre']); ?></h2><p>Tableau horaire comparatif des cumuls moyens de domaine. GEFS affiche sa médiane et son enveloppe P10–P90.</p></div><button type="button" class="js-multi-refresh">↻ Actualiser</button></header>
+            <div class="am-multi__meta"><span class="js-multi-runs">Chargement des runs…</span><span class="js-multi-status"></span></div>
+            <div class="am-multi__controls"><strong>Pluie</strong><button type="button" class="is-active js-multi-mode" data-mode="cumul">Cumul</button><button type="button" class="js-multi-mode" data-mode="pas">Pas de pluie</button><span>Pas</span><button type="button" class="is-active js-multi-step" data-step="1">1 h</button><button type="button" class="js-multi-step" data-step="3">3 h</button><button type="button" class="js-multi-step" data-step="6">6 h</button></div>
+            <div class="am-multi__legend js-multi-legend"></div>
+            <div class="am-multi__tablewrap"><table class="am-multi__table js-multi-table" aria-label="Tableau horaire de pluie multi-modèles"></table><div class="am-multi__loading js-multi-loading">Chargement du tableau…</div></div>
+            <p class="am-multi__note">Les cumuls sont des moyennes spatiales sur le domaine Occitanie–PACA : ils servent à comparer la chronologie et non à remplacer les maxima locaux ni les vigilances officielles.</p>
         </section>
         <?php
         return ob_get_clean();

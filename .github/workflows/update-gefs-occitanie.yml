@@ -1,4 +1,4 @@
-name: Update GEFS pluie Occitanie v1.0.1
+name: Update GEFS épisodes méditerranéens v1.1.0
 
 on:
   workflow_dispatch:
@@ -10,7 +10,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: gefs-pluie-occitanie-v101
+  group: gefs-pluie-mediterranee-v110
   cancel-in-progress: true
 
 jobs:
@@ -37,7 +37,7 @@ jobs:
       - name: Tester le générateur sans réseau
         run: python scripts/update_gefs_occitanie.py --self-test
 
-      - name: Générer la pluie ensembliste Occitanie
+      - name: Générer la pluie ensembliste Occitanie-PACA
         run: python scripts/update_gefs_occitanie.py --output-dir build/gefs-occitanie/current --workers 8 --request-interval 0.6
 
       - name: Contrôler les sorties
@@ -50,8 +50,8 @@ jobs:
           root = Path('build/gefs-occitanie/current')
           data = json.loads((root / 'index.json').read_text(encoding='utf-8'))
           assert data['status'] == 'ok'
-          assert data['module_version'] == '1.0.1'
-          assert data['area']['code'] == '76'
+          assert data['module_version'] == '1.1.0'
+          assert set(data['area']['codes']) == {'76', '93'}
           assert data['member_count_expected'] == 31
           assert data['thresholds_mm'] == [1.0, 10.0, 30.0, 50.0]
           assert len(data['frames']) >= 58, f"Horizon insuffisant: {len(data['frames'])}/64"
@@ -126,9 +126,9 @@ jobs:
           manifest = {
               'status': 'ok',
               'schema_version': 1,
-              'module_version': '1.0.1',
+              'module_version': '1.1.0',
               'model': 'NOAA/NCEP GEFS 0.5 degree',
-              'area': {'code': '76', 'name': 'Occitanie'},
+              'area': {'codes': ['76', '93'], 'name': 'Occitanie + Provence-Alpes-Côte d’Azur'},
               'generated_at': datetime.now(timezone.utc).isoformat(timespec='seconds').replace('+00:00', 'Z'),
               'cycles_expected': ['00', '06', '12', '18'],
               'runs': [
@@ -149,10 +149,10 @@ jobs:
 
           git add gefs-occitanie
           if git diff --cached --quiet; then
-            echo "Aucun changement GEFS Occitanie."
+            echo "Aucun changement GEFS Méditerranée."
             exit 0
           fi
-          git commit -m "Update GEFS pluie Occitanie $RUN_ID"
+          git commit -m "Update GEFS épisodes méditerranéens $RUN_ID"
           if ! git push origin observations; then
             git fetch origin observations
             git rebase origin/observations

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Produit la pluie ensembliste GEFS pour l'Occitanie.
+"""Produit la pluie ensembliste GEFS pour l'arc Occitanie-PACA.
 
 Le générateur traite le dernier cycle complet parmi 00/06/12/18 UTC. Il lit les
 31 membres GEFS (c00 + p01-p30), calcule les statistiques de l'intervalle et du
@@ -28,13 +28,16 @@ from urllib.parse import urlencode
 import numpy as np
 import requests
 
-VERSION = "1.0.1"
-BUILD_ID = "gefs-occitanie-rain-four-cycles-v101-20260921"
+VERSION = "1.1.0"
+BUILD_ID = "gefs-mediterranee-rain-four-cycles-v110-20260922"
 NOMADS_FILTER = "https://nomads.ncep.noaa.gov/cgi-bin/filter_gefs_atmos_0p50a.pl"
-BOUNDARY_URL = "https://raw.githubusercontent.com/gregoiredavid/france-geojson/master/regions/occitanie/region-occitanie.geojson"
+BOUNDARY_URLS = {
+    "76": "https://raw.githubusercontent.com/gregoiredavid/france-geojson/master/regions/occitanie/region-occitanie.geojson",
+    "93": "https://raw.githubusercontent.com/gregoiredavid/france-geojson/master/regions/provence-alpes-cote-d-azur/region-provence-alpes-cote-d-azur.geojson",
+}
 
 # Marge d'un demi-point autour de la région. Les points hors contour sont masqués.
-LEFT, RIGHT, BOTTOM, TOP = -1.5, 5.0, 42.0, 45.5
+LEFT, RIGHT, BOTTOM, TOP = -1.5, 8.0, 42.0, 45.5
 MEMBERS = ("c00",) + tuple(f"p{i:02d}" for i in range(1, 31))
 FORECAST_HOURS = tuple(range(6, 385, 6))
 THRESHOLDS_MM = (1.0, 10.0, 30.0, 50.0)
@@ -197,15 +200,24 @@ def interval_from_raw(
 
 
 def fetch_boundary() -> tuple[dict[str, Any] | None, str]:
-    try:
-        response = SESSION.get(BOUNDARY_URL, timeout=(10, 30))
-        response.raise_for_status()
-        body = response.json()
-        geometry = body.get("geometry") if body.get("type") == "Feature" else body
-        if geometry and geometry.get("type") in {"Polygon", "MultiPolygon"}:
-            return geometry, "france-geojson — contours IGN/INSEE (région 76)"
-    except Exception as exc:
-        print(f"::warning::Contour Occitanie indisponible, emprise rectangulaire utilisée: {exc}")
+    polygons: list[Any] = []
+    loaded: list[str] = []
+    for code, url in BOUNDARY_URLS.items():
+        try:
+            response = SESSION.get(url, timeout=(10, 30))
+            response.raise_for_status()
+            body = response.json()
+            geometry = body.get("geometry") if body.get("type") == "Feature" else body
+            if not geometry or geometry.get("type") not in {"Polygon", "MultiPolygon"}:
+                raise RuntimeError("géométrie absente ou invalide")
+            coordinates = geometry["coordinates"] if geometry["type"] == "MultiPolygon" else [geometry["coordinates"]]
+            polygons.extend(coordinates)
+            loaded.append(code)
+        except Exception as exc:
+            print(f"::warning::Contour région {code} indisponible: {exc}")
+    if polygons:
+        return {"type": "MultiPolygon", "coordinates": polygons}, f"france-geojson — contours IGN/INSEE (régions {','.join(loaded)})"
+    print("::warning::Contours Occitanie-PACA indisponibles, emprise rectangulaire utilisée")
     return None, "emprise de secours"
 
 
@@ -322,7 +334,7 @@ def process_run(run: Run, output_dir: Path, hours: list[int], workers: int) -> d
                         base_lat, base_lon = lat, lon
                         region_mask = build_mask(lat, lon, geometry)
                         if not np.any(region_mask):
-                            raise RuntimeError("le masque Occitanie ne contient aucun point GEFS")
+                            raise RuntimeError("le masque Occitanie-PACA ne contient aucun point GEFS")
                     elif not (np.array_equal(lat, base_lat) and np.array_equal(lon, base_lon)):
                         raise RuntimeError("grille différente de la grille de référence")
                     inc = interval_from_raw(raw, step_range, step_type, fhr, previous_raw.get(member), previous_fhr.get(member))
@@ -362,7 +374,7 @@ def process_run(run: Run, output_dir: Path, hours: list[int], workers: int) -> d
                 "schema_version": 1,
                 "module_version": VERSION,
                 "model": "NOAA/NCEP GEFS 0.5 degree",
-                "area": {"code": "76", "name": "Occitanie", "boundary_source": boundary_source},
+                "area": {"codes": ["76", "93"], "name": "Occitanie + Provence-Alpes-Côte d’Azur", "boundary_source": boundary_source},
                 "run_utc": iso(run.dt),
                 "forecast_hour": fhr,
                 "valid_utc": iso(run.dt + timedelta(hours=fhr)),
@@ -397,7 +409,7 @@ def process_run(run: Run, output_dir: Path, hours: list[int], workers: int) -> d
         "run_id": run.run_id,
         "run_utc": iso(run.dt),
         "generated_at": iso(utcnow()),
-        "area": {"code": "76", "name": "Occitanie", "coverage": {"west": LEFT, "east": RIGHT, "south": BOTTOM, "north": TOP}, "boundary_source": boundary_source},
+        "area": {"codes": ["76", "93"], "name": "Occitanie + Provence-Alpes-Côte d’Azur", "coverage": {"west": LEFT, "east": RIGHT, "south": BOTTOM, "north": TOP}, "boundary_source": boundary_source},
         "members_expected": list(MEMBERS),
         "member_count_expected": len(MEMBERS),
         "thresholds_mm": list(THRESHOLDS_MM),
@@ -424,7 +436,7 @@ def self_test() -> int:
     stats = ensemble_stats(stack, np.asarray([[True]]), (10.0,))
     assert float(stats["median"][0, 0]) == 10.0
     assert round(float(stats["prob_ge_10mm_pct"][0, 0]), 1) == 66.7
-    print("Self-test GEFS Occitanie OK")
+    print("Self-test GEFS Méditerranée OK")
     return 0
 
 

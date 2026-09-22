@@ -57,9 +57,9 @@
     var legend = root.querySelector(".js-gefs-legend");
     var dateNode = root.querySelector(".js-gefs-date");
     var note = root.querySelector(".js-gefs-note");
-    var map = L.map(root.querySelector(".js-gefs-map"), { zoomControl: true }).setView([43.72, 2.0], 7);
+    var map = L.map(root.querySelector(".js-gefs-map"), { zoomControl: true }).setView([43.75, 3.35], 6);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 12, attribution: "© OpenStreetMap" }).addTo(map);
-    map.setMaxBounds([[41.7, -2.0], [45.8, 5.5]]);
+    map.setMaxBounds([[41.7, -2.0], [45.8, 8.5]]);
     var layer = L.layerGroup().addTo(map);
     var manifest = null;
     var runIndex = null;
