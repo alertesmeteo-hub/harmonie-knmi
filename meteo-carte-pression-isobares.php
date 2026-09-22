@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Alertes-Météo.com – Cartes Réel, GFS & GEFS
  * Description: Observations, cartes GFS France/Europe et pluie ensembliste GEFS pour les épisodes méditerranéens en Occitanie et PACA.
- * Version: 1.5.4
+ * Version: 1.5.5
  * Author: Alertes-Météo.com
  * Author URI: https://alertes-meteo.com/
  * License: GPL-2.0-or-later
@@ -15,7 +15,7 @@ if (!defined('ABSPATH')) {
 
 final class AM_Carte_Pression_Isobares
 {
-    public const VERSION = '1.5.4';
+    public const VERSION = '1.5.5';
     private const FRANCE_JSON_URL = 'https://raw.githubusercontent.com/alertesmeteo-hub/harmonie-knmi/observations/classements_temperature.json';
     private const GFS_INDEX_URL = 'https://raw.githubusercontent.com/alertesmeteo-hub/harmonie-knmi/observations/gfs/index.json';
     private const GEFS_OCCITANIE_INDEX_URL = 'https://raw.githubusercontent.com/alertesmeteo-hub/harmonie-knmi/observations/gefs-occitanie/index.json';

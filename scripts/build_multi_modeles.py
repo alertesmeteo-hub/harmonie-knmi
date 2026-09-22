@@ -13,6 +13,7 @@ HARMONIE="https://raw.githubusercontent.com/alertesmeteo-hub/harmonie/data/"
 ARPEGE="https://raw.githubusercontent.com/alertesmeteo-hub/arpege-meteo-france/data/"
 AIFS="https://raw.githubusercontent.com/alertesmeteo-hub/aifs/data/"
 CEP="https://raw.githubusercontent.com/alertesmeteo-hub/cep/data/"
+ICON="https://raw.githubusercontent.com/alertesmeteo-hub/ICON-EU-7-km/data/"
 DEPS=("04","05","06","09","11","12","13","30","31","32","34","46","48","65","66","81","82","83","84")
 S=requests.Session(); S.headers["User-Agent"]="alertes-meteo-multi-modeles/1.0"
 def get(url):
@@ -76,6 +77,22 @@ def ecmwf_ifs():
  for utc in sorted(grouped):
   inc=mean(grouped[utc]); total+=inc or 0; points.append({"valid_utc":utc,"total_mm":round(total,1)})
  return {"id":"ECMWF","label":"ECMWF IFS 0,25°","status":"ok","run_utc":idx["model"]["run_time"],"points":points}
+def icon_eu():
+ idx=get(ICON+"index.json")
+ with ThreadPoolExecutor(max_workers=5) as pool: files=list(pool.map(lambda d:get(ICON+"departements/"+d+".json"),DEPS))
+ grouped={}
+ for data in files:
+  pos=data.get("columns",[]).index("precipitation")
+  times=data.get("time",[])
+  for commune in data.get("communes",{}).values():
+   for i,row in enumerate(commune.get("values",[])):
+    if i<len(times) and len(row)>pos: grouped.setdefault(int(times[i]),[]).append(row[pos])
+ total=0; points=[]
+ for stamp in sorted(grouped):
+  inc=mean(grouped[stamp]); total+=inc or 0
+  utc=datetime.fromtimestamp(stamp,timezone.utc).isoformat(timespec="seconds").replace("+00:00","Z")
+  points.append({"valid_utc":utc,"total_mm":round(total,1)})
+ return {"id":"ICON","label":"ICON-EU 7 km","status":"ok","run_utc":idx["model_run"],"points":points}
 def gfs():
  idx=get(RAW+"gfs/index.json"); total=0; points=[]
  for frame in idx["frames"]:
@@ -96,10 +113,10 @@ def gefs():
  return {"id":"GEFS","label":"GEFS médiane (31 membres)","status":"ok","run_utc":run["run_utc"],"band":True,"points":points}
 def main():
  p=argparse.ArgumentParser();p.add_argument("--output",default="build/multi-modeles/index.json");args=p.parse_args(); series=[]; unavailable=[]
- for name,fn in (("AROME",arome),("HARMONIE",harmonie),("ARPEGE_EU",arpege_europe),("ECMWF",ecmwf_ifs),("AIFS",aifs),("GFS",gfs),("GEFS",gefs)):
+ for name,fn in (("AROME",arome),("HARMONIE",harmonie),("ARPEGE_EU",arpege_europe),("ECMWF",ecmwf_ifs),("AIFS",aifs),("ICON",icon_eu),("GFS",gfs),("GEFS",gefs)):
   try: series.append(fn())
   except Exception as exc: unavailable.append(name+" ("+str(exc)+")")
- payload={"status":"ok","schema_version":1,"module_version":"1.0.4","area":{"codes":["76","93"],"name":"Occitanie + Provence-Alpes-Côte d’Azur"},"generated_at":datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00","Z"),"series":series,"unavailable":unavailable}
+ payload={"status":"ok","schema_version":1,"module_version":"1.0.5","area":{"codes":["76","93"],"name":"Occitanie + Provence-Alpes-Côte d’Azur"},"generated_at":datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00","Z"),"series":series,"unavailable":unavailable}
  out=Path(args.output);out.parent.mkdir(parents=True,exist_ok=True);out.write_text(json.dumps(payload,ensure_ascii=False,separators=(",",":")),encoding="utf-8")
  if not series: raise SystemExit("Aucune série disponible")
 if __name__=="__main__": main()
