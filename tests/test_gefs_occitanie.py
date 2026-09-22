@@ -12,6 +12,8 @@ SPEC.loader.exec_module(MODULE)
 
 
 def test_members_and_cycles():
+    assert set(MODULE.BOUNDARY_URLS) == {"76"}
+    assert MODULE.RIGHT <= 4.9
     assert len(MODULE.MEMBERS) == 31
     assert MODULE.MEMBERS == ("c00",) + tuple(f"p{i:02d}" for i in range(1, 31))
     cycles = [run.cycle for run in list(MODULE.candidates(MODULE.datetime(2026, 9, 21, 17, tzinfo=MODULE.timezone.utc)))[:4]]

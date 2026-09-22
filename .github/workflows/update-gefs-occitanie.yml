@@ -1,4 +1,4 @@
-name: Update GEFS épisodes méditerranéens v1.1.0
+name: Update GEFS Occitanie v1.2.0
 
 on:
   workflow_dispatch:
@@ -10,7 +10,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: gefs-pluie-mediterranee-v110
+  group: gefs-pluie-occitanie-v120
   cancel-in-progress: true
 
 jobs:
@@ -37,7 +37,7 @@ jobs:
       - name: Tester le générateur sans réseau
         run: python scripts/update_gefs_occitanie.py --self-test
 
-      - name: Générer la pluie ensembliste Occitanie-PACA
+      - name: Générer la pluie ensembliste Occitanie
         run: python scripts/update_gefs_occitanie.py --output-dir build/gefs-occitanie/current --workers 8 --request-interval 0.6
 
       - name: Contrôler les sorties
@@ -50,8 +50,8 @@ jobs:
           root = Path('build/gefs-occitanie/current')
           data = json.loads((root / 'index.json').read_text(encoding='utf-8'))
           assert data['status'] == 'ok'
-          assert data['module_version'] == '1.1.0'
-          assert set(data['area']['codes']) == {'76', '93'}
+          assert data['module_version'] == '1.2.0'
+          assert data['area']['codes'] == ['76']
           assert data['member_count_expected'] == 31
           assert data['thresholds_mm'] == [1.0, 10.0, 30.0, 50.0]
           assert len(data['frames']) >= 58, f"Horizon insuffisant: {len(data['frames'])}/64"
@@ -116,6 +116,9 @@ jobs:
                   continue
               try:
                   data = json.loads(index_path.read_text(encoding='utf-8'))
+                  if data.get('area', {}).get('codes') != ['76']:
+                      shutil.rmtree(directory)
+                      continue
                   runs.append((data['run_utc'], directory, data))
               except Exception as exc:
                   print(f'::warning::Cycle ignoré {directory.name}: {exc}')
@@ -126,9 +129,9 @@ jobs:
           manifest = {
               'status': 'ok',
               'schema_version': 1,
-              'module_version': '1.1.0',
+              'module_version': '1.2.0',
               'model': 'NOAA/NCEP GEFS 0.5 degree',
-              'area': {'codes': ['76', '93'], 'name': 'Occitanie + Provence-Alpes-Côte d’Azur'},
+              'area': {'codes': ['76'], 'name': 'Occitanie'},
               'generated_at': datetime.now(timezone.utc).isoformat(timespec='seconds').replace('+00:00', 'Z'),
               'cycles_expected': ['00', '06', '12', '18'],
               'runs': [

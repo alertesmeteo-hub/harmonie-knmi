@@ -57,9 +57,9 @@
     var legend = root.querySelector(".js-gefs-legend");
     var dateNode = root.querySelector(".js-gefs-date");
     var note = root.querySelector(".js-gefs-note");
-    var map = L.map(root.querySelector(".js-gefs-map"), { zoomControl: true }).setView([43.75, 3.35], 6);
+    var map = L.map(root.querySelector(".js-gefs-map"), { zoomControl: true }).setView([43.65, 2.25], 7);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 12, attribution: "© OpenStreetMap" }).addTo(map);
-    map.setMaxBounds([[41.7, -2.0], [45.8, 8.5]]);
+    map.setMaxBounds([[41.7, -0.9], [45.3, 5.3]]);
     var layer = L.layerGroup().addTo(map);
     var manifest = null;
     var runIndex = null;
@@ -137,6 +137,7 @@
       setLoading("Chargement des quatre runs GEFS…");
       return fetchJson(root.dataset.indexUrl).then(function (data) {
         if (data.status !== "ok" || !Array.isArray(data.runs) || !data.runs.length) throw new Error("aucun run publié");
+        if (!data.area || !Array.isArray(data.area.codes) || data.area.codes.length !== 1 || data.area.codes[0] !== "76") throw new Error("les données publiées incluent encore PACA ; attente du prochain run Occitanie seule");
         manifest = data;
         runSelect.innerHTML = data.runs.map(function (item, index) {
           return '<option value="' + index + '">' + item.run_id + " · " + item.frame_count + " échéances</option>";

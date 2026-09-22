@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Produit la pluie ensembliste GEFS pour l'arc Occitanie-PACA.
+"""Produit la pluie ensembliste GEFS pour la région Occitanie uniquement.
 
 Le générateur traite le dernier cycle complet parmi 00/06/12/18 UTC. Il lit les
 31 membres GEFS (c00 + p01-p30), calcule les statistiques de l'intervalle et du
@@ -28,16 +28,15 @@ from urllib.parse import urlencode
 import numpy as np
 import requests
 
-VERSION = "1.1.0"
-BUILD_ID = "gefs-mediterranee-rain-four-cycles-v110-20260922"
+VERSION = "1.2.0"
+BUILD_ID = "gefs-occitanie-rain-four-cycles-v120-20260922"
 NOMADS_FILTER = "https://nomads.ncep.noaa.gov/cgi-bin/filter_gefs_atmos_0p50a.pl"
 BOUNDARY_URLS = {
     "76": "https://raw.githubusercontent.com/gregoiredavid/france-geojson/master/regions/occitanie/region-occitanie.geojson",
-    "93": "https://raw.githubusercontent.com/gregoiredavid/france-geojson/master/regions/provence-alpes-cote-d-azur/region-provence-alpes-cote-d-azur.geojson",
 }
 
 # Marge d'un demi-point autour de la région. Les points hors contour sont masqués.
-LEFT, RIGHT, BOTTOM, TOP = -1.5, 8.0, 42.0, 45.5
+LEFT, RIGHT, BOTTOM, TOP = -0.5, 4.9, 42.0, 45.0
 MEMBERS = ("c00",) + tuple(f"p{i:02d}" for i in range(1, 31))
 FORECAST_HOURS = tuple(range(6, 385, 6))
 THRESHOLDS_MM = (1.0, 10.0, 30.0, 50.0)
@@ -217,8 +216,7 @@ def fetch_boundary() -> tuple[dict[str, Any] | None, str]:
             print(f"::warning::Contour région {code} indisponible: {exc}")
     if polygons:
         return {"type": "MultiPolygon", "coordinates": polygons}, f"france-geojson — contours IGN/INSEE (régions {','.join(loaded)})"
-    print("::warning::Contours Occitanie-PACA indisponibles, emprise rectangulaire utilisée")
-    return None, "emprise de secours"
+    raise RuntimeError("Contour Occitanie indisponible : publication annulée pour éviter d'inclure PACA")
 
 
 def point_in_ring(x: float, y: float, ring: list[list[float]]) -> bool:
@@ -334,7 +332,7 @@ def process_run(run: Run, output_dir: Path, hours: list[int], workers: int) -> d
                         base_lat, base_lon = lat, lon
                         region_mask = build_mask(lat, lon, geometry)
                         if not np.any(region_mask):
-                            raise RuntimeError("le masque Occitanie-PACA ne contient aucun point GEFS")
+                            raise RuntimeError("le masque Occitanie ne contient aucun point GEFS")
                     elif not (np.array_equal(lat, base_lat) and np.array_equal(lon, base_lon)):
                         raise RuntimeError("grille différente de la grille de référence")
                     inc = interval_from_raw(raw, step_range, step_type, fhr, previous_raw.get(member), previous_fhr.get(member))
@@ -374,7 +372,7 @@ def process_run(run: Run, output_dir: Path, hours: list[int], workers: int) -> d
                 "schema_version": 1,
                 "module_version": VERSION,
                 "model": "NOAA/NCEP GEFS 0.5 degree",
-                "area": {"codes": ["76", "93"], "name": "Occitanie + Provence-Alpes-Côte d’Azur", "boundary_source": boundary_source},
+                "area": {"codes": ["76"], "name": "Occitanie", "boundary_source": boundary_source},
                 "run_utc": iso(run.dt),
                 "forecast_hour": fhr,
                 "valid_utc": iso(run.dt + timedelta(hours=fhr)),
@@ -409,7 +407,7 @@ def process_run(run: Run, output_dir: Path, hours: list[int], workers: int) -> d
         "run_id": run.run_id,
         "run_utc": iso(run.dt),
         "generated_at": iso(utcnow()),
-        "area": {"codes": ["76", "93"], "name": "Occitanie + Provence-Alpes-Côte d’Azur", "coverage": {"west": LEFT, "east": RIGHT, "south": BOTTOM, "north": TOP}, "boundary_source": boundary_source},
+        "area": {"codes": ["76"], "name": "Occitanie", "coverage": {"west": LEFT, "east": RIGHT, "south": BOTTOM, "north": TOP}, "boundary_source": boundary_source},
         "members_expected": list(MEMBERS),
         "member_count_expected": len(MEMBERS),
         "thresholds_mm": list(THRESHOLDS_MM),

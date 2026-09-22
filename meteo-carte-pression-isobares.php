@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Alertes-Météo.com – Cartes multi-modèles
  * Description: Observations et cartes de prévision multi-modèles pour la France et l'Europe.
- * Version: 1.6.0
+ * Version: 1.6.1
  * Author: Alertes-Météo.com
  * Author URI: https://alertes-meteo.com/
  * License: GPL-2.0-or-later
@@ -15,7 +15,7 @@ if (!defined('ABSPATH')) {
 
 final class AM_Carte_Pression_Isobares
 {
-    public const VERSION = '1.6.0';
+    public const VERSION = '1.6.1';
     private const FRANCE_JSON_URL = 'https://raw.githubusercontent.com/alertesmeteo-hub/harmonie-knmi/observations/classements_temperature.json';
     private const GFS_INDEX_URL = 'https://raw.githubusercontent.com/alertesmeteo-hub/harmonie-knmi/observations/gfs/index.json';
     private const GEFS_OCCITANIE_INDEX_URL = 'https://raw.githubusercontent.com/alertesmeteo-hub/harmonie-knmi/observations/gefs-occitanie/index.json';
@@ -463,7 +463,7 @@ final class AM_Carte_Pression_Isobares
     {
         $atts = shortcode_atts(
             array(
-                'titre'      => 'Pluie ensembliste GEFS – Occitanie & PACA',
+                'titre'      => 'Pluie ensembliste GEFS – Occitanie',
                 'hauteur'    => 620,
                 'indicateur' => 'mediane',
             ),
@@ -491,7 +491,7 @@ final class AM_Carte_Pression_Isobares
         >
             <header class="am-gefs__header">
                 <div>
-                    <div class="am-gefs__eyebrow">OCCITANIE + PACA · 31 MEMBRES · 4 CYCLES</div>
+                    <div class="am-gefs__eyebrow">OCCITANIE · 31 MEMBRES · 4 CYCLES</div>
                     <h2>🌧️ <?php echo esc_html($atts['titre']); ?></h2>
                     <p>Surveillance des épisodes méditerranéens : probabilités, médiane et incertitude des cumuls jusqu’à +384 h.</p>
                 </div>
