@@ -1,8 +1,8 @@
 <?php
 /**
- * Plugin Name: Alertes-Météo.com – Cartes Réel, GFS & GEFS
- * Description: Observations, cartes GFS France/Europe et pluie ensembliste GEFS pour les épisodes méditerranéens en Occitanie et PACA.
- * Version: 1.5.7
+ * Plugin Name: Alertes-Météo.com – Cartes multi-modèles
+ * Description: Observations et cartes de prévision multi-modèles pour la France et l'Europe.
+ * Version: 1.6.0
  * Author: Alertes-Météo.com
  * Author URI: https://alertes-meteo.com/
  * License: GPL-2.0-or-later
@@ -15,7 +15,7 @@ if (!defined('ABSPATH')) {
 
 final class AM_Carte_Pression_Isobares
 {
-    public const VERSION = '1.5.7';
+    public const VERSION = '1.6.0';
     private const FRANCE_JSON_URL = 'https://raw.githubusercontent.com/alertesmeteo-hub/harmonie-knmi/observations/classements_temperature.json';
     private const GFS_INDEX_URL = 'https://raw.githubusercontent.com/alertesmeteo-hub/harmonie-knmi/observations/gfs/index.json';
     private const GEFS_OCCITANIE_INDEX_URL = 'https://raw.githubusercontent.com/alertesmeteo-hub/harmonie-knmi/observations/gefs-occitanie/index.json';
@@ -436,6 +436,8 @@ final class AM_Carte_Pression_Isobares
         wp_enqueue_script('leaflet');
         wp_enqueue_style('am-carte-pression-isobares', plugin_dir_url(__FILE__) . 'assets/carte-pression-isobares.css', array('leaflet'), self::VERSION);
         wp_enqueue_script('am-carte-pression-isobares', plugin_dir_url(__FILE__) . 'assets/carte-pression-isobares.js', array('leaflet'), self::VERSION, true);
+        wp_enqueue_style('am-carte-modeles', plugin_dir_url(__FILE__) . 'assets/carte-modeles.css', array('am-carte-pression-isobares'), self::VERSION);
+        wp_enqueue_script('am-carte-modeles', plugin_dir_url(__FILE__) . 'assets/carte-modeles.js', array('leaflet', 'am-carte-pression-isobares'), self::VERSION, true);
         $this->assets_enqueued = true;
     }
 
@@ -570,7 +572,7 @@ final class AM_Carte_Pression_Isobares
     {
         $atts = shortcode_atts(
             array(
-                'titre'      => 'Cartes météo – Réel & GFS France / Europe',
+                'titre'      => 'Cartes météo multi-modèles – France / Europe',
                 'hauteur'    => 650,
                 'densite'    => 'tres-lisible',
                 'intervalle' => 2,
@@ -723,10 +725,33 @@ final class AM_Carte_Pression_Isobares
             </div>
 
             <div class="am-pr__notice js-notice" hidden></div>
-            <div class="am-pr__mapwrap">
-                <div class="am-pr__map js-map" aria-label="Carte météo interactive Réel et GFS France Europe"></div>
-                <div class="am-pr__loading js-loading">Chargement…</div>
-                <div class="am-pr__legend js-legend"></div>
+            <div class="am-pr__map-layout">
+                <div class="am-pr__map-main">
+                    <div class="am-pr__mapwrap">
+                        <div class="am-pr__map js-map" aria-label="Carte météo interactive Réel et GFS France Europe"></div>
+                        <div class="am-pr__loading js-loading">Chargement…</div>
+                        <div class="am-pr__legend js-legend"></div>
+                    </div>
+                    <div class="am-pr__model-view js-model-view" hidden>
+                        <div class="am-pr__model-toolbar">
+                            <label>Variable <select class="js-model-variable"></select></label>
+                            <strong class="js-model-run">—</strong>
+                        </div>
+                        <div class="am-pr__model-map js-model-map" aria-label="Carte du modèle sélectionné"></div>
+                        <div class="am-pr__model-status js-model-status" role="status">Choisissez un modèle dans la liste.</div>
+                        <div class="am-pr__model-timeline">
+                            <button type="button" class="js-model-prev" aria-label="Échéance précédente">◀</button>
+                            <input type="range" class="js-model-range" min="0" max="0" value="0" aria-label="Échéance du modèle">
+                            <button type="button" class="js-model-next" aria-label="Échéance suivante">▶</button>
+                            <span class="js-model-time">—</span>
+                        </div>
+                    </div>
+                </div>
+                <aside class="am-pr__model-sidebar" aria-label="Liste des modèles météo">
+                    <h3>Modèles météo</h3>
+                    <p>Choisissez un modèle pour afficher sa carte.</p>
+                    <div class="js-model-list"></div>
+                </aside>
             </div>
 
             <div class="am-pr__timeline js-timeline" hidden>
