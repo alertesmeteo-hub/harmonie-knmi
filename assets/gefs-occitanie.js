@@ -121,13 +121,16 @@
       var entry = manifest.runs[Math.max(0, Math.min(manifest.runs.length - 1, Number(runSelect.value || 0)))];
       setLoading("Chargement du run " + entry.run_id + "…");
       return fetchJson(resolveUrl(entry.index, root.dataset.indexUrl)).then(function (data) {
-        if (data.status !== "ok" || !Array.isArray(data.frames)) throw new Error("index du run invalide");
+        if (data.status !== "ok" || !Array.isArray(data.frames) || !data.frames.length) throw new Error("index du run invalide");
         data._url = resolveUrl(entry.index, root.dataset.indexUrl);
         runIndex = data;
         frameSelect.innerHTML = data.frames.map(function (item, index) {
           return '<option value="' + index + '">+' + String(item.forecast_hour).padStart(3, "0") + " h · " + formatDate(item.valid_utc) + "</option>";
         }).join("");
-        frameSelect.value = String(Math.min(7, data.frames.length - 1));
+        var maxIndex = data.frames.reduce(function (best, item, index) {
+          return Number(item.forecast_hour) > Number(data.frames[best].forecast_hour) ? index : best;
+        }, 0);
+        frameSelect.value = String(maxIndex);
         note.textContent = data.frames.length + " échéances · run " + data.run_id + " · prévision probabiliste automatique, sans valeur de vigilance officielle.";
         return loadFrame();
       }).catch(function (error) { setLoading("Impossible de charger le run : " + error.message); });
