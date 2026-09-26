@@ -3,8 +3,8 @@
   "module_version": "1.0.3",
   "build_id": "sst-france-mur-webmercator-hover-v103-20260820",
   "status": "ok",
-  "generated_at": "2026-09-25T23:34:01Z",
-  "analysis_time": "2026-09-24T09:00:00Z",
+  "generated_at": "2026-09-26T23:10:44Z",
+  "analysis_time": "2026-09-25T09:00:00Z",
   "title": "Température de surface de la mer — SST France",
   "source": {
     "provider": "NASA/JPL",
@@ -54,8 +54,8 @@
     }
   },
   "stats": {
-    "min_c": 13.8,
-    "max_c": 28.6
+    "min_c": 13.7,
+    "max_c": 28.2
   },
   "point_query": {
     "dataset_id": "jplMURSST41",
