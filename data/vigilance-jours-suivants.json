@@ -1,7 +1,7 @@
 {
  "schema_version": 3,
  "status": "ok",
- "generated_at": "2026-09-27T17:41:41+02:00",
+ "generated_at": "2026-09-28T13:47:45+02:00",
  "source": {
   "provider": "Météo-France",
   "product": "Prévision des phénomènes dangereux",
@@ -10,8 +10,8 @@
   "retrieval_mode": "pdf"
  },
  "bulletin": {
-  "issued_at": "2026-09-27T12:50:00+02:00",
-  "issued_label": "Émise le dimanche 27/09/2026 à 12h50 (heure de Paris)"
+  "issued_at": "2026-09-28T13:00:00+02:00",
+  "issued_label": "Émise le lundi 28/09/2026 à 13h00 (heure de Paris)"
  },
  "legend": {
   "levels": [
@@ -46,15 +46,15 @@
   ]
  },
  "summaries": {
-  "j2_j3": "Des orages particulièrement pluvieux devraient concerner le Languedoc-Roussillon à partir de la fin de journée de mardi. Ces précipitations se maintiennent mercredi avec un risque de débordement vers les Bouches-du-Rhône. Les précipitations pourraient être intenses et durables. La probabilité de passer en vigilance orange pour ce phénomène est faible pour le moment.",
-  "j4_j7": "Un épisode de fortes pluies semblable à celui de la veille devrait avoir lieu. Celui-ci sera accompagné d'une dégradation orageuse dans le sud."
+  "j2_j3": "Des orages particulièrement pluvieux devraient concerner le Languedoc-Roussillon la journée du mercredi avec un risque de débordement vers PACA. Ces précipitations se maintiennent en première partie de journée jeudi. Les précipitations pourraient être intenses et durables. Un passage en vigilance orange est possible.",
+  "j4_j7": "Pas de phénomène météorologique dangereux prévu."
  },
  "cards": [
   {
    "label": "J+2",
-   "date_label": "Mardi 29/09/2026",
+   "date_label": "Mercredi 30/09/2026",
    "granularity": "department",
-   "max_level": "low",
+   "max_level": "medium",
    "departments": {
     "01": {
      "name": "Ain",
@@ -73,18 +73,24 @@
     },
     "04": {
      "name": "Alpes-de-Haute-Provence",
-     "level": "none",
-     "phenomena": []
+     "level": "low",
+     "phenomena": [
+      "pluie_inondation"
+     ]
     },
     "05": {
      "name": "Hautes-Alpes",
-     "level": "none",
-     "phenomena": []
+     "level": "low",
+     "phenomena": [
+      "pluie_inondation"
+     ]
     },
     "06": {
      "name": "Alpes-Maritimes",
-     "level": "none",
-     "phenomena": []
+     "level": "low",
+     "phenomena": [
+      "pluie_inondation"
+     ]
     },
     "07": {
      "name": "Ardèche",
@@ -108,7 +114,7 @@
     },
     "11": {
      "name": "Aude",
-     "level": "low",
+     "level": "medium",
      "phenomena": [
       "pluie_inondation"
      ]
@@ -120,8 +126,10 @@
     },
     "13": {
      "name": "Bouches-du-Rhône",
-     "level": "none",
-     "phenomena": []
+     "level": "low",
+     "phenomena": [
+      "pluie_inondation"
+     ]
     },
     "14": {
      "name": "Calvados",
@@ -210,7 +218,7 @@
     },
     "30": {
      "name": "Gard",
-     "level": "low",
+     "level": "medium",
      "phenomena": [
       "pluie_inondation"
      ]
@@ -232,7 +240,7 @@
     },
     "34": {
      "name": "Hérault",
-     "level": "low",
+     "level": "medium",
      "phenomena": [
       "pluie_inondation"
      ]
@@ -304,7 +312,7 @@
     },
     "48": {
      "name": "Lozère",
-     "level": "low",
+     "level": "medium",
      "phenomena": [
       "pluie_inondation"
      ]
@@ -396,7 +404,7 @@
     },
     "66": {
      "name": "Pyrénées-Orientales",
-     "level": "low",
+     "level": "medium",
      "phenomena": [
       "pluie_inondation"
      ]
@@ -483,13 +491,17 @@
     },
     "83": {
      "name": "Var",
-     "level": "none",
-     "phenomena": []
+     "level": "low",
+     "phenomena": [
+      "pluie_inondation"
+     ]
     },
     "84": {
      "name": "Vaucluse",
-     "level": "none",
-     "phenomena": []
+     "level": "low",
+     "phenomena": [
+      "pluie_inondation"
+     ]
     },
     "85": {
      "name": "Vendée",
@@ -550,19 +562,27 @@
    "markers": [
     {
      "phenomenon": "pluie_inondation",
+     "x": 0.77961,
+     "y": 0.75779,
+     "svg_x": 405.0972,
+     "svg_y": 42.7105,
+     "level": "low"
+    },
+    {
+     "phenomenon": "pluie_inondation",
      "x": 0.62259,
      "y": 0.7548,
      "svg_x": 390.2667,
      "svg_y": 42.5298,
-     "level": "low"
+     "level": "medium"
     }
    ]
   },
   {
    "label": "J+3",
-   "date_label": "Mercredi 30/09/2026",
+   "date_label": "Jeudi 01/10/2026",
    "granularity": "department",
-   "max_level": "low",
+   "max_level": "medium",
    "departments": {
     "01": {
      "name": "Ain",
@@ -622,7 +642,7 @@
     },
     "11": {
      "name": "Aude",
-     "level": "low",
+     "level": "medium",
      "phenomena": [
       "pluie_inondation"
      ]
@@ -726,7 +746,7 @@
     },
     "30": {
      "name": "Gard",
-     "level": "low",
+     "level": "medium",
      "phenomena": [
       "pluie_inondation"
      ]
@@ -748,7 +768,7 @@
     },
     "34": {
      "name": "Hérault",
-     "level": "low",
+     "level": "medium",
      "phenomena": [
       "pluie_inondation"
      ]
@@ -820,7 +840,7 @@
     },
     "48": {
      "name": "Lozère",
-     "level": "low",
+     "level": "medium",
      "phenomena": [
       "pluie_inondation"
      ]
@@ -912,7 +932,7 @@
     },
     "66": {
      "name": "Pyrénées-Orientales",
-     "level": "low",
+     "level": "medium",
      "phenomena": [
       "pluie_inondation"
      ]
@@ -1082,50 +1102,12 @@
      "y": 0.7548,
      "svg_x": 390.3968,
      "svg_y": 42.5298,
-     "level": "low"
+     "level": "medium"
     }
    ]
   },
   {
    "label": "J+4",
-   "date_label": "Jeudi 01/10/2026",
-   "granularity": "quadrant",
-   "max_level": "low",
-   "zones": {
-    "NO": {
-     "level": "none",
-     "phenomena": []
-    },
-    "NE": {
-     "level": "none",
-     "phenomena": []
-    },
-    "SO": {
-     "level": "low",
-     "phenomena": [
-      {
-       "phenomenon": "orages",
-       "level": "low"
-      }
-     ]
-    },
-    "SE": {
-     "level": "low",
-     "phenomena": [
-      {
-       "phenomenon": "pluie_inondation",
-       "level": "low"
-      },
-      {
-       "phenomenon": "orages",
-       "level": "low"
-      }
-     ]
-    }
-   }
-  },
-  {
-   "label": "J+5",
    "date_label": "Vendredi 02/10/2026",
    "granularity": "quadrant",
    "max_level": "none",
@@ -1149,8 +1131,32 @@
    }
   },
   {
+   "label": "J+5",
+   "date_label": "Samedi 03/10/2026",
+   "granularity": "quadrant",
+   "max_level": "none",
+   "zones": {
+    "NO": {
+     "level": "none",
+     "phenomena": []
+    },
+    "NE": {
+     "level": "none",
+     "phenomena": []
+    },
+    "SO": {
+     "level": "none",
+     "phenomena": []
+    },
+    "SE": {
+     "level": "none",
+     "phenomena": []
+    }
+   }
+  },
+  {
    "label": "J+6 et J+7",
-   "date_label": "Samedi 03/10/2026 et Dimanche 04/10/2026",
+   "date_label": "Dimanche 04/10/2026 et Lundi 05/10/2026",
    "granularity": "national",
    "max_level": "none",
    "national": {
