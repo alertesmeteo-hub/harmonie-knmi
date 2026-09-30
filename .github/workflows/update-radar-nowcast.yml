@@ -68,3 +68,31 @@ jobs:
           git -C "$publish_dir" push --force \
             "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
             HEAD:radar-data
+
+      # Contrairement à radar-data (ci-dessus, écrasée à chaque run pour l'affichage en direct),
+      # radar-archive n'est jamais force-push : les observations pluie s'y accumulent (pas le
+      # nowcast, qui est du calcul dérivé sans valeur d'archive) sur une fenêtre glissante d'1 an
+      # (purge au-delà dans archive_radar_rain.py).
+      - name: Archiver les observations radar pluie (rétention 1 an)
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          archive_dir="$(mktemp -d)"
+          if git clone --quiet --depth 1 --branch radar-archive \
+              "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$archive_dir" 2>/dev/null; then
+            echo "Branche radar-archive existante."
+          else
+            echo "Création de la branche radar-archive."
+            git init -q -b radar-archive "$archive_dir"
+          fi
+          if python scripts/archive_radar_rain.py build/radar "$archive_dir"; then
+            git -C "$archive_dir" config user.name "github-actions[bot]"
+            git -C "$archive_dir" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git -C "$archive_dir" add -A pluie
+            git -C "$archive_dir" commit -q -m "Archive radar pluie $(date -u +'%Y-%m-%d %H:%M UTC')"
+            git -C "$archive_dir" push -q \
+              "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
+              radar-archive
+          else
+            echo "Rien de nouveau à archiver/purger."
+          fi
