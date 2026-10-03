@@ -30,7 +30,7 @@ jobs:
       - name: Installer les dépendances radar
         run: |
           python -m pip install --disable-pip-version-check \
-            requests==2.33.0 numpy==2.4.6 h5py pyproj opencv-python-headless
+            requests==2.33.0 numpy==2.4.6 h5py pyproj opencv-python-headless pillow
 
       - name: Vérifier la version du moteur radar
         run: |
