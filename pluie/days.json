@@ -1,1 +1,1 @@
-{"crop_bounds":[[42.0,1.4],[43.25,3.5]],"step_minutes":15,"days":[{"date":"2026-09-30","rain":true,"frames":3},{"date":"2026-10-01","rain":true,"frames":66},{"date":"2026-10-02","rain":true,"frames":96},{"date":"2026-10-03","rain":true,"frames":32}]}
+{"crop_bounds":[[42.0,1.4],[43.25,3.5]],"step_minutes":15,"days":[{"date":"2026-09-30","rain":true,"frames":3},{"date":"2026-10-01","rain":true,"frames":66},{"date":"2026-10-02","rain":true,"frames":96},{"date":"2026-10-03","rain":true,"frames":33}]}
