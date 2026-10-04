@@ -1,0 +1,85 @@
+name: Mise à jour Radar Expert (OPOUL)
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "4,19,34,49 * * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: radar-expert-production
+  cancel-in-progress: false
+
+jobs:
+  radar-expert:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v5
+
+      - name: Installer Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Installer les dépendances
+        run: |
+          python -m pip install --disable-pip-version-check numpy requests pillow
+
+      # La branche radar-expert-data est réécrite à chaque run (un seul commit) : on la récupère
+      # d'abord pour conserver la fenêtre glissante d'images déjà produites.
+      - name: Restaurer les images précédentes
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p build/radar-expert
+          if git clone --quiet --depth 1 --branch radar-expert-data \
+              "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" prev 2>/dev/null; then
+            cp -R prev/. build/radar-expert/
+            rm -rf build/radar-expert/.git
+            echo "Images précédentes restaurées."
+          else
+            echo "Aucune branche radar-expert-data : démarrage à vide."
+          fi
+
+      - name: Produire les images radar OPOUL
+        env:
+          METEOFRANCE_RADAR_TOKEN: ${{ secrets.METEOFRANCE_RADAR_TOKEN }}
+          LOG_LEVEL: INFO
+        run: >-
+          python scripts/update_radar_expert.py
+          --station 57
+          --output-dir build/radar-expert
+          --keep-minutes 60
+
+      - name: Vérifier les sorties
+        run: |
+          test -f build/radar-expert/57/index.json
+          python - <<'PY'
+          import json
+          m = json.load(open("build/radar-expert/57/index.json", encoding="utf-8"))
+          n = sum(len(v) for p in m["params"].values() for v in p["elevations"].values())
+          assert n > 0, "aucune image"
+          print("images :", n)
+          PY
+          du -sh build/radar-expert
+
+      - name: Publier sur la branche radar-expert-data
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          publish_dir="$(mktemp -d)"
+          cp -R build/radar-expert/. "$publish_dir/"
+          git init -q -b radar-expert-data "$publish_dir"
+          git -C "$publish_dir" config user.name "github-actions[bot]"
+          git -C "$publish_dir" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C "$publish_dir" add .
+          git -C "$publish_dir" commit -q -m "Radar Expert $(date -u +'%Y-%m-%d %H:%M UTC')"
+          git -C "$publish_dir" push --force -q \
+            "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
+            HEAD:radar-expert-data
