@@ -1,0 +1,1 @@
+{"schema_version":1,"status":"ok","generated_at":"2026-10-04T00:00:29.199113Z","radar_time":"2026-10-03T23:55:00Z","department":"75","columns":["rate_0","rate_15","rate_30","rate_45","rate_60","confidence","quality"],"communes":{"75056":[0.0,0.0,0.0,0.0,0.0,0.79,94]}}
