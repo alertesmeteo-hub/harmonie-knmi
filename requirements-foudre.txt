@@ -1,0 +1,5 @@
+eumdac>=3.0,<4
+netCDF4>=1.7,<2
+numpy>=2.0,<3
+requests>=2.32,<3
+shapely>=2.0,<3
