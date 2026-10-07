@@ -38,6 +38,7 @@ import os
 import re
 import shutil
 import tempfile
+import time
 import zipfile
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
@@ -1181,9 +1182,13 @@ def backfill_impacts(now: datetime, hours: int) -> None:
                 if product_id(p) not in IMPACT_PRODUCTS]
     print("Rattrapage impacts : produits à lire =", len(products))
     done = 0
+    deadline = time.monotonic() + 15 * 60  # reste sous le timeout du workflow ; la suite au passage suivant
     with tempfile.TemporaryDirectory(prefix="lfl_bf_") as tmp:
         tmp = Path(tmp)
         for product in products:
+            if time.monotonic() > deadline:
+                print("Rattrapage impacts : budget temps atteint, suite au prochain passage.")
+                break
             pid = product_id(product)
             try:
                 downloaded = download_product(product, tmp)
