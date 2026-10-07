@@ -67,6 +67,7 @@ IMPACTS_24H = Path("impacts_24h.json")
 ARCHIVES_DIR = Path("archives")
 IMPACTS_KEEP_HOURS = 48
 IMPACTS = {}
+IMPACT_PRODUCTS = {}
 CACHE = Path("cache_foudre_lfl.json")
 
 COMMUNES_GZ = (
@@ -1157,9 +1158,11 @@ def record_impact(dt: datetime, lat: float, lon: float) -> None:
 
 def load_impacts(now: datetime) -> None:
     IMPACTS.clear()
+    IMPACT_PRODUCTS.clear()
     if IMPACTS_FILE.exists():
         try:
             data = json.loads(IMPACTS_FILE.read_text(encoding="utf-8"))
+            IMPACT_PRODUCTS.update(data.get("products", {}))
             for hour, cells in data.get("hours", {}).items():
                 IMPACTS[hour] = {k: safe_int(v) for k, v in cells.items()}
         except (ValueError, OSError):
@@ -1167,6 +1170,32 @@ def load_impacts(now: datetime) -> None:
     cutoff = (now - timedelta(hours=IMPACTS_KEEP_HOURS)).strftime("%Y-%m-%dT%H")
     for hour in [h for h in IMPACTS if h < cutoff]:
         del IMPACTS[hour]
+    pcut = iso(now - timedelta(hours=IMPACTS_KEEP_HOURS + 48))
+    for pid in [k for k, v in IMPACT_PRODUCTS.items() if str(v) < str(pcut)]:
+        del IMPACT_PRODUCTS[pid]
+
+
+def backfill_impacts(now: datetime, hours: int) -> None:
+    """Relit l'historique du Data Store pour remplir uniquement les impacts (cumuls inchangés)."""
+    products = [p for p in search_products(now - timedelta(hours=hours), now)
+                if product_id(p) not in IMPACT_PRODUCTS]
+    print("Rattrapage impacts : produits à lire =", len(products))
+    done = 0
+    with tempfile.TemporaryDirectory(prefix="lfl_bf_") as tmp:
+        tmp = Path(tmp)
+        for product in products:
+            pid = product_id(product)
+            try:
+                downloaded = download_product(product, tmp)
+                for flash in read_product_flashes(downloaded, tmp):
+                    if inside_france_bbox(flash["lat"], flash["lon"]):
+                        record_impact(flash["time"], flash["lat"], flash["lon"])
+                IMPACT_PRODUCTS[pid] = iso(now)
+                done += 1
+                downloaded.unlink(missing_ok=True)
+            except Exception as exc:
+                print("[WARN] Rattrapage, produit ignoré :", pid, exc)
+    print("Rattrapage impacts : produits lus =", done)
 
 
 def cells_list(cells: dict) -> list:
@@ -1181,7 +1210,7 @@ def cells_list(cells: dict) -> list:
 def write_impacts(now: datetime) -> None:
     compact = {"separators": (",", ":"), "ensure_ascii": False, "allow_nan": False}
     IMPACTS_FILE.write_text(
-        json.dumps({"schema_version": 1, "hours": IMPACTS}, **compact), encoding="utf-8")
+        json.dumps({"schema_version": 1, "products": IMPACT_PRODUCTS, "hours": IMPACTS}, **compact), encoding="utf-8")
     cutoff = (now - timedelta(hours=24)).strftime("%Y-%m-%dT%H")
     hours = [
         {"h": h, "total": sum(IMPACTS[h].values()), "cells": cells_list(IMPACTS[h])}
@@ -1316,8 +1345,6 @@ def add_flash(
             )
             + 1
         )
-
-    record_impact(dt, lat, lon)
 
     update_recent(
         state,
@@ -1880,6 +1907,9 @@ def main() -> int:
 
                     flashes_bbox_run += 1
 
+                    if pid not in IMPACT_PRODUCTS:
+                        record_impact(dt, lat, lon)
+
                     state["diagnostics"][
                         "flashes_in_bbox_total"
                     ] = (
@@ -1937,6 +1967,9 @@ def main() -> int:
                 processed[pid] = iso(
                     now
                 )
+                IMPACT_PRODUCTS[pid] = iso(
+                    now
+                )
 
                 products_new += 1
 
@@ -1985,6 +2018,10 @@ def main() -> int:
         ),
         encoding="utf-8",
     )
+
+    backfill_hours = safe_int(os.environ.get("FOUDRE_BACKFILL_HOURS"))
+    if backfill_hours > 0:
+        backfill_impacts(now, min(backfill_hours, PRODUCT_HISTORY_HOURS))
 
     write_impacts(now)
 

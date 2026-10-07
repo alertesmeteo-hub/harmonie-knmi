@@ -2,6 +2,10 @@ name: Mise à jour Foudre (MTG Lightning Imager)
 
 on:
   workflow_dispatch:
+    inputs:
+      backfill_hours:
+        description: "Rattrapage des impacts (heures d'historique, 0 = aucun)"
+        default: "0"
   schedule:
     - cron: "4,14,24,34,44,54 * * * *"
 
@@ -51,6 +55,7 @@ jobs:
         env:
           EUMETSAT_CONSUMER_KEY: ${{ secrets.EUMETSAT_CONSUMER_KEY }}
           EUMETSAT_CONSUMER_SECRET: ${{ secrets.EUMETSAT_CONSUMER_SECRET }}
+          FOUDRE_BACKFILL_HOURS: ${{ github.event.inputs.backfill_hours || '0' }}
         run: |
           if [ -z "$EUMETSAT_CONSUMER_KEY" ] || [ -z "$EUMETSAT_CONSUMER_SECRET" ]; then
             echo "::warning title=Secrets EUMETSAT manquants::Ajoutez EUMETSAT_CONSUMER_KEY et EUMETSAT_CONSUMER_SECRET."
