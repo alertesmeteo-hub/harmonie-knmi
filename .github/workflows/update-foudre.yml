@@ -41,6 +41,7 @@ jobs:
               "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" state 2>/dev/null; then
             cp state/cache_foudre_lfl.json . 2>/dev/null || true
             cp state/observations_foudre_lfl.json . 2>/dev/null || true
+            cp state/impacts_foudre_lfl.json . 2>/dev/null || true
             echo "État restauré."
           else
             echo "Pas d'état précédent : premier lancement."
@@ -71,6 +72,7 @@ jobs:
           publish_dir="$(mktemp -d)"
           cp observations_foudre_lfl.json "$publish_dir/"
           cp cache_foudre_lfl.json "$publish_dir/" 2>/dev/null || true
+          cp impacts_foudre_lfl.json impacts_24h.json "$publish_dir/" 2>/dev/null || true
           git init -q -b foudre-data "$publish_dir"
           git -C "$publish_dir" config user.name "github-actions[bot]"
           git -C "$publish_dir" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -79,3 +81,25 @@ jobs:
           # Branche écrasée à chaque passage : seul l'état courant compte, pas d'historique à conserver.
           git -C "$publish_dir" push -q --force \
             "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:foudre-data
+
+      # Archives quotidiennes des impacts (une par jour UTC, ~quelques dizaines de Ko) :
+      # branche foudre-archives, jamais écrasée, on y ajoute/met à jour les fichiers du jour.
+      - name: Archiver les impacts du jour
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          test -d archives || { echo "Pas d'archive à écrire."; exit 0; }
+          url="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          rm -rf arch
+          if ! git clone --quiet --depth 1 --branch foudre-archives "$url" arch 2>/dev/null; then
+            git init -q -b foudre-archives arch
+            git -C arch remote add origin "$url"
+          fi
+          mkdir -p arch/archives
+          cp archives/*.json arch/archives/
+          git -C arch config user.name "github-actions[bot]"
+          git -C arch config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C arch add -A
+          if git -C arch diff --cached --quiet; then echo "Archives inchangées."; exit 0; fi
+          git -C arch commit -q -m "Archives foudre $(date -u +'%Y-%m-%d %H:%M UTC')"
+          git -C arch push -q origin HEAD:foudre-archives

@@ -60,6 +60,13 @@ BUILD_ID = "mtg-li-lfl-france-stats-20260820"
 COLLECTION_ID = "EO:EUM:DAT:0691"
 
 OUTPUT = Path("observations_foudre_lfl.json")
+
+# Impacts conservés par heure UTC et cellule de ~5 km (carte 24 h + archives quotidiennes).
+IMPACTS_FILE = Path("impacts_foudre_lfl.json")
+IMPACTS_24H = Path("impacts_24h.json")
+ARCHIVES_DIR = Path("archives")
+IMPACTS_KEEP_HOURS = 48
+IMPACTS = {}
 CACHE = Path("cache_foudre_lfl.json")
 
 COMMUNES_GZ = (
@@ -1141,6 +1148,63 @@ def update_recent(
     )
 
 
+def record_impact(dt: datetime, lat: float, lon: float) -> None:
+    hour = dt.astimezone(UTC).strftime("%Y-%m-%dT%H")
+    key = f"{round(lat / 0.05) * 0.05:.2f},{round(lon / 0.05) * 0.05:.2f}"
+    cells = IMPACTS.setdefault(hour, {})
+    cells[key] = safe_int(cells.get(key)) + 1
+
+
+def load_impacts(now: datetime) -> None:
+    IMPACTS.clear()
+    if IMPACTS_FILE.exists():
+        try:
+            data = json.loads(IMPACTS_FILE.read_text(encoding="utf-8"))
+            for hour, cells in data.get("hours", {}).items():
+                IMPACTS[hour] = {k: safe_int(v) for k, v in cells.items()}
+        except (ValueError, OSError):
+            IMPACTS.clear()
+    cutoff = (now - timedelta(hours=IMPACTS_KEEP_HOURS)).strftime("%Y-%m-%dT%H")
+    for hour in [h for h in IMPACTS if h < cutoff]:
+        del IMPACTS[hour]
+
+
+def cells_list(cells: dict) -> list:
+    rows = []
+    for key, count in cells.items():
+        lat, lon = key.split(",")
+        rows.append([float(lat), float(lon), count])
+    rows.sort(key=lambda r: -r[2])
+    return rows
+
+
+def write_impacts(now: datetime) -> None:
+    compact = {"separators": (",", ":"), "ensure_ascii": False, "allow_nan": False}
+    IMPACTS_FILE.write_text(
+        json.dumps({"schema_version": 1, "hours": IMPACTS}, **compact), encoding="utf-8")
+    cutoff = (now - timedelta(hours=24)).strftime("%Y-%m-%dT%H")
+    hours = [
+        {"h": h, "total": sum(IMPACTS[h].values()), "cells": cells_list(IMPACTS[h])}
+        for h in sorted(IMPACTS) if h >= cutoff
+    ]
+    IMPACTS_24H.write_text(json.dumps({
+        "schema_version": 1, "generated_at": iso(now), "cell_deg": 0.05,
+        "source": "EUMETSAT MTG LI LFL", "hours": hours,
+    }, **compact), encoding="utf-8")
+    # Archives quotidiennes (jour UTC) : une par date présente dans la fenêtre conservée.
+    ARCHIVES_DIR.mkdir(exist_ok=True)
+    days = {}
+    for h in sorted(IMPACTS):
+        days.setdefault(h[:10], []).append(h)
+    for day, hs in days.items():
+        (ARCHIVES_DIR / f"{day}.json").write_text(json.dumps({
+            "schema_version": 1, "date_utc": day, "cell_deg": 0.05,
+            "source": "EUMETSAT MTG LI LFL", "updated_at": iso(now),
+            "total": sum(sum(IMPACTS[h].values()) for h in hs),
+            "hours": [{"h": h, "cells": cells_list(IMPACTS[h])} for h in hs],
+        }, **compact), encoding="utf-8")
+
+
 def add_flash(
     state: dict,
     dt: datetime,
@@ -1252,6 +1316,8 @@ def add_flash(
             )
             + 1
         )
+
+    record_impact(dt, lat, lon)
 
     update_recent(
         state,
@@ -1678,6 +1744,8 @@ def main() -> int:
         now
     )
 
+    load_impacts(now)
+
     reset_periods(
         state,
         now,
@@ -1917,6 +1985,8 @@ def main() -> int:
         ),
         encoding="utf-8",
     )
+
+    write_impacts(now)
 
     output = build_output(
         state,
