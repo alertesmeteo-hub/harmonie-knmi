@@ -88,7 +88,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          test -d archives || { echo "Pas d'archive à écrire."; exit 0; }
+          ls archives/*.json >/dev/null 2>&1 || { echo "Pas d'archive à écrire."; exit 0; }
           url="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           rm -rf arch
           if ! git clone --quiet --depth 1 --branch foudre-archives "$url" arch 2>/dev/null; then
