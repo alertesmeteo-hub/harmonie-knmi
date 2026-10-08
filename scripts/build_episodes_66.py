@@ -190,6 +190,7 @@ def foudre(debut: str, fin: str) -> dict | None:
 
 
 MEDIANES: dict[str, float] = {}
+RECORDS: dict[str, dict] = {}  # plus haut maximum journalier depuis 2001 : {"h": m, "date": iso}
 
 
 def _hix_station(code: str, depuis: str) -> tuple[str, dict[str, float]]:
@@ -227,6 +228,10 @@ def charger_hix(hydro: dict | None, depuis: str = "2001-10-01", medianes: dict[s
         for code, jours in pool.map(lambda s: _hix_station(s["code"], depuis), hydro["stations"]):
             if jours:
                 out[code] = jours
+    for code, jours in out.items():
+        d, h = max(jours.items(), key=lambda x: x[1])
+        if code not in RECORDS or h > RECORDS[code]["h"]:
+            RECORDS[code] = {"h": round(h, 2), "date": d}
     if medianes:
         MEDIANES.update(medianes)
     else:
@@ -354,6 +359,7 @@ def main() -> int:
     ancien_index = {} if a.tout else (get_json(PUBLIE + "index.json") or {})
     ancien = {e["id"]: e for e in ancien_index.get("episodes", [])}
     anciennes_medianes = ancien_index.get("medianes_rivieres") or {}
+    RECORDS.update(ancien_index.get("records_rivieres") or {})
 
     out = Path(a.out_dir)
     (out / "episodes").mkdir(parents=True, exist_ok=True)
@@ -390,6 +396,7 @@ def main() -> int:
         "criteres": f"vigilance orange ou rouge, ou au moins {SEUIL_PLUIE_MM:.0f} mm en un jour à un pluviomètre du département",
         "episodes": index,
         "medianes_rivieres": {k: round(v, 3) for k, v in (MEDIANES or anciennes_medianes).items()},
+        "records_rivieres": RECORDS,
     }, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     print(f"{len(index)} épisodes ({recalcules} recalculés) ; dernier : {index[0]['titre']} du {index[0]['debut']}")
     return 0
