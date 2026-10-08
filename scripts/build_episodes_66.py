@@ -192,38 +192,49 @@ def foudre(debut: str, fin: str) -> dict | None:
 MEDIANES: dict[str, float] = {}
 
 
-def charger_hix(hydro: dict | None) -> dict[str, dict[str, float]]:
-    """Hauteur instantanée maximale journalière (m) de chaque station depuis 2001, en une requête par station."""
+def _hix_station(code: str, depuis: str) -> tuple[str, dict[str, float]]:
+    jours: dict[str, float] = {}
+    url, params = HUBEAU_ELAB, {"code_entite": code, "grandeur_hydro_elab": "HIXnJ", "date_debut_obs_elab": depuis,
+                                 "size": 20000, "fields": "date_obs_elab,resultat_obs_elab"}
+    while url:
+        d = None
+        for essai in range(3):
+            try:
+                r = S.get(url, params=params, timeout=120)
+                if r.status_code in (200, 206):
+                    d = r.json()
+                    break
+            except requests.RequestException:
+                pass
+            time.sleep(3 * (essai + 1))
+        if not d:
+            break
+        for o in d.get("data", []):
+            if o.get("resultat_obs_elab") is not None:
+                jours[o["date_obs_elab"][:10]] = o["resultat_obs_elab"] / 1000.0
+        url, params = d.get("next"), None
+    return code, jours
+
+
+def charger_hix(hydro: dict | None, depuis: str = "2001-10-01", medianes: dict[str, float] | None = None) -> dict[str, dict[str, float]]:
+    """Hauteur instantanée maximale journalière (m) de chaque station depuis `depuis` (Hub'Eau, ~10 s par station)."""
     if not hydro:
         return {}
+    from concurrent.futures import ThreadPoolExecutor
+
     out: dict[str, dict[str, float]] = {}
-    for s in hydro["stations"]:
-        jours: dict[str, float] = {}
-        url, params = HUBEAU_ELAB, {"code_entite": s["code"], "grandeur_hydro_elab": "HIXnJ", "date_debut_obs_elab": "2001-10-01",
-                                     "size": 20000, "fields": "date_obs_elab,resultat_obs_elab"}
-        while url:
-            d = None
-            for essai in range(3):
-                try:
-                    r = S.get(url, params=params, timeout=90)
-                    if r.status_code in (200, 206):
-                        d = r.json()
-                        break
-                except requests.RequestException:
-                    pass
-                time.sleep(3 * (essai + 1))
-            if not d:
-                break
-            for o in d.get("data", []):
-                if o.get("resultat_obs_elab") is not None:
-                    jours[o["date_obs_elab"][:10]] = o["resultat_obs_elab"] / 1000.0
-            url, params = d.get("next"), None
-        if jours:
-            out[s["code"]] = jours
-            # niveau habituel de la station (médiane des maxima journaliers) : certaines échelles ne partent pas de 0
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        for code, jours in pool.map(lambda s: _hix_station(s["code"], depuis), hydro["stations"]):
+            if jours:
+                out[code] = jours
+    if medianes:
+        MEDIANES.update(medianes)
+    else:
+        # niveau habituel de la station (médiane des maxima journaliers) : certaines échelles ne partent pas de 0
+        for code, jours in out.items():
             vals = sorted(jours.values())
-            MEDIANES[s["code"]] = vals[len(vals) // 2]
-    print(f"Hauteurs maximales journalières : {len(out)} stations", flush=True)
+            MEDIANES[code] = vals[len(vals) // 2]
+    print(f"Hauteurs maximales journalières depuis le {depuis} : {len(out)} stations", flush=True)
     return out
 
 
@@ -339,19 +350,31 @@ def main() -> int:
         return 1
     postes, climato = lire_climato(Path(a.climato))
     hydro = get_json(HYDRO)
-    hix = charger_hix(hydro)
     radar_jours = {d["date"] for d in (get_json(RADAR + "days.json") or {}).get("days", [])}
-    ancien = {} if a.tout else {e["id"]: e for e in (get_json(PUBLIE + "index.json") or {}).get("episodes", [])}
+    ancien_index = {} if a.tout else (get_json(PUBLIE + "index.json") or {})
+    ancien = {e["id"]: e for e in ancien_index.get("episodes", [])}
+    anciennes_medianes = ancien_index.get("medianes_rivieres") or {}
 
     out = Path(a.out_dir)
     (out / "episodes").mkdir(parents=True, exist_ok=True)
     limite = (date.today() - timedelta(days=FIGE_APRES_JOURS)).isoformat()
-    index = []
-    recalcules = 0
-    for debut, fin in detecter(vigi, climato):
-        e = None
+    episodes = detecter(vigi, climato)
+    caches: dict[str, dict] = {}
+    for debut, fin in episodes:
         if debut in ancien and ancien[debut]["fin"] == fin and fin < limite:
             e = get_json(f"{PUBLIE}episodes/{debut}.json")
+            if e is not None:
+                caches[debut] = e
+    a_calculer = [(d, f) for d, f in episodes if d not in caches]
+    hix: dict[str, dict[str, float]] = {}
+    if a_calculer:
+        depuis = min(d for d, _ in a_calculer) if anciennes_medianes else "2001-10-01"
+        hix = charger_hix(hydro, depuis, anciennes_medianes or None)
+
+    index = []
+    recalcules = 0
+    for debut, fin in episodes:
+        e = caches.get(debut)
         if e is None:
             e = calculer(debut, fin, vigi, postes, climato, hydro, hix, radar_jours)
             recalcules += 1
@@ -366,6 +389,7 @@ def main() -> int:
         "departement": "66",
         "criteres": f"vigilance orange ou rouge, ou au moins {SEUIL_PLUIE_MM:.0f} mm en un jour à un pluviomètre du département",
         "episodes": index,
+        "medianes_rivieres": {k: round(v, 3) for k, v in (MEDIANES or anciennes_medianes).items()},
     }, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     print(f"{len(index)} épisodes ({recalcules} recalculés) ; dernier : {index[0]['titre']} du {index[0]['debut']}")
     return 0
