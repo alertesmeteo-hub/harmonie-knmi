@@ -1,0 +1,54 @@
+name: Stations en direct (66 + Catalogne Meteocat)
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Déclenchement réel toutes les 30 min depuis le VPS ; ce cron n'est qu'un filet de sécurité.
+    - cron: "20,50 * * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: stations-direct
+  cancel-in-progress: false
+
+jobs:
+  direct:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Lire Meteocat (XEMA) et Météo-France
+        run: |
+          set -o pipefail
+          pip install --disable-pip-version-check -q "requests>=2.32,<3"
+          for attempt in 1 2 3; do
+            if python scripts/update_stations_direct.py --out-dir build/direct 2>&1 | tee "$RUNNER_TEMP/tentative.log"; then
+              break
+            fi
+            if [ "$attempt" -eq 3 ] || ! grep -qiE 'injoignable|RemoteDisconnected|Connection(Error|Reset|refused| aborted)|ReadTimeout|ConnectTimeout|HTTP ?(Error)?:? ?(429|500|502|503|504)|timed out' "$RUNNER_TEMP/tentative.log"; then
+              echo "::error::Échec (tentative $attempt)"
+              exit 1
+            fi
+            echo "Erreur réseau passagère (tentative $attempt), nouvelle tentative dans 60 s"
+            sleep 60
+          done
+
+      - name: Publier la branche direct-data
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          publish_dir="$(mktemp -d)"
+          cp -R build/direct/. "$publish_dir/"
+          git init -q -b direct-data "$publish_dir"
+          git -C "$publish_dir" config user.name "github-actions[bot]"
+          git -C "$publish_dir" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C "$publish_dir" add .
+          git -C "$publish_dir" commit -q -m "Stations en direct $(date -u +'%Y-%m-%d %H:%M UTC')"
+          git -C "$publish_dir" push -q --force "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:direct-data
