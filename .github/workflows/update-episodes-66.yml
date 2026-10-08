@@ -1,0 +1,55 @@
+name: Épisodes marquants du 66 (bilans)
+
+on:
+  workflow_dispatch:
+    inputs:
+      tout:
+        description: "Recalculer tous les épisodes"
+        type: boolean
+        default: false
+  schedule:
+    # Chaque matin après l'historique des vigilances (05:17 UTC) et les données climatologiques,
+    # puis toutes les 3 h pour suivre un épisode en cours (radar, foudre, rivières).
+    - cron: "40 6,9,12,15,18,21 * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: episodes-66
+  cancel-in-progress: false
+
+jobs:
+  episodes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Pluviomètres du 66 (données quotidiennes du dépôt climato)
+        run: |
+          git clone -q --depth 1 --filter=blob:none --sparse --branch data https://github.com/alertesmeteo-hub/climato.git "$RUNNER_TEMP/climato"
+          git -C "$RUNNER_TEMP/climato" sparse-checkout set --no-cone 'stations/66*'
+          ls "$RUNNER_TEMP/climato/stations" | wc -l
+
+      - name: Calculer les épisodes et leurs bilans
+        run: |
+          pip install --disable-pip-version-check -q "requests>=2.32,<3" "numpy>=2,<3" "pillow>=10"
+          python -u scripts/build_episodes_66.py --climato "$RUNNER_TEMP/climato" --out-dir build/episodes ${{ github.event.inputs.tout == 'true' && '--tout' || '' }}
+
+      - name: Publier la branche episodes-data
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          publish_dir="$(mktemp -d)"
+          cp -R build/episodes/. "$publish_dir/"
+          git init -q -b episodes-data "$publish_dir"
+          git -C "$publish_dir" config user.name "github-actions[bot]"
+          git -C "$publish_dir" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C "$publish_dir" add .
+          git -C "$publish_dir" commit -q -m "Épisodes 66 $(date -u +'%Y-%m-%d %H:%M UTC')"
+          git -C "$publish_dir" push -q --force "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:episodes-data
