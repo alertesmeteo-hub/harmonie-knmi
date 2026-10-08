@@ -1,0 +1,55 @@
+name: Rivières 66 (hauteurs et débits)
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Déclenchement réel toutes les 15 min depuis le VPS ; ce cron n'est qu'un filet de sécurité.
+    - cron: "11,41 * * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: hydro-66
+  cancel-in-progress: false
+
+jobs:
+  hydro:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Lire Hub'Eau et Vigicrues
+        run: |
+          set -o pipefail
+          pip install --disable-pip-version-check -q "requests>=2.32,<3"
+          for attempt in 1 2 3; do
+            if python scripts/update_hydro_66.py --out-dir build/hydro \
+                 --previous-url "https://raw.githubusercontent.com/${{ github.repository }}/hydro-data/66.json" 2>&1 | tee "$RUNNER_TEMP/tentative.log"; then
+              break
+            fi
+            if [ "$attempt" -eq 3 ] || ! grep -qiE 'injoignable|RemoteDisconnected|Connection(Error|Reset|refused| aborted)|ReadTimeout|ConnectTimeout|HTTP ?(Error)?:? ?(429|500|502|503|504)|timed out' "$RUNNER_TEMP/tentative.log"; then
+              echo "::error::Échec (tentative $attempt)"
+              exit 1
+            fi
+            echo "Erreur réseau passagère (tentative $attempt), nouvelle tentative dans 60 s"
+            sleep 60
+          done
+
+      - name: Publier la branche hydro-data
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          publish_dir="$(mktemp -d)"
+          cp -R build/hydro/. "$publish_dir/"
+          git init -q -b hydro-data "$publish_dir"
+          git -C "$publish_dir" config user.name "github-actions[bot]"
+          git -C "$publish_dir" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C "$publish_dir" add .
+          git -C "$publish_dir" commit -q -m "Rivières 66 $(date -u +'%Y-%m-%d %H:%M UTC')"
+          git -C "$publish_dir" push -q --force "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:hydro-data
