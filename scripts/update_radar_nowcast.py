@@ -739,6 +739,13 @@ def main() -> int:
         fields, conf, quality = compute(frames, args.downsample)
         write_output(Path(args.output_dir), by_dep, frames[-1], fields, conf, quality, args.downsample)
         write_map_output(Path(args.output_dir), frames, fields, conf, quality, args.downsample)
+        LOG.info("Paquet : %s mosaïques 5 min", len(files))
+        try:
+            # Lame d'eau 5 min au village (66) pour les cumuls glissants 1 h à 72 h (radar_cumuls_communes.py).
+            from radar_cumuls_communes import sample
+            sample(frames, Path(args.output_dir) / "cumuls" / "echantillons.json")
+        except Exception as exc:  # noqa: BLE001 - les cumuls ne doivent jamais bloquer la carte radar
+            LOG.warning("Échantillons cumuls communes non écrits : %s", exc)
     return 0
 
 

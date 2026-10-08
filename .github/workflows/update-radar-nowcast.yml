@@ -62,6 +62,22 @@ jobs:
           test -f build/radar/map/obs_p0.png
           ls -lh build/radar/map/
 
+      # Pluie observée par commune du 66 sur 1 h à 72 h glissantes : l'état (72 h de pas de 5 min)
+      # est relu sur radar-data via l'API (pas le CDN raw, qui peut servir une version vieille de 5 min).
+      - name: Cumuls radar par commune (66)
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          if [ -f build/radar/cumuls/echantillons.json ]; then
+            curl -sf -H "Authorization: Bearer ${GITHUB_TOKEN}" -H "Accept: application/vnd.github.raw"               "https://api.github.com/repos/${GITHUB_REPOSITORY}/contents/cumuls/etat-66.json?ref=radar-data"               -o "$RUNNER_TEMP/etat-66.json" || echo "Pas d'état précédent : on repart de zéro."
+            state=""
+            if [ -s "$RUNNER_TEMP/etat-66.json" ]; then state="--state $RUNNER_TEMP/etat-66.json"; fi
+            python scripts/radar_cumuls_communes.py --samples build/radar/cumuls/echantillons.json $state --out-dir build/radar/cumuls               || echo "::warning::Cumuls par commune non calculés"
+            rm -f build/radar/cumuls/echantillons.json
+          else
+            echo "::warning::Pas d'échantillons radar par commune"
+          fi
+
       - name: Publier sur la branche radar-data
         env:
           GITHUB_TOKEN: ${{ github.token }}
