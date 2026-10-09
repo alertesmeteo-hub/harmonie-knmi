@@ -228,12 +228,14 @@ jobs:
 
           git commit -m "Vent et rafales API Météo-France v1.2.1"
 
-          # Petit retry si un autre workflow a publié sur observations
-          # pendant notre exécution.
-          if ! git push origin observations; then
-            echo "Push concurrent détecté, nouvel essai..."
-
+          for attempt in 1 2 3 4; do
+            if git push origin observations; then
+              exit 0
+            fi
+            echo "::warning::Push concurrent (tentative ${attempt}/4), rebase puis nouvel essai."
+            sleep $((attempt * 3))
             git fetch origin observations
             git rebase origin/observations
-            git push origin observations
-          fi
+          done
+          echo "::error::Échec de publication après 4 tentatives."
+          exit 1

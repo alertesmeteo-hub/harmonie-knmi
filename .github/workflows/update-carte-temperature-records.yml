@@ -161,4 +161,14 @@ jobs:
           fi
 
           git commit -m "Températures, ressentis et records v1.2.0"
-          git push origin observations
+          for attempt in 1 2 3 4; do
+            if git push origin observations; then
+              exit 0
+            fi
+            echo "::warning::Push concurrent (tentative ${attempt}/4), rebase puis nouvel essai."
+            sleep $((attempt * 3))
+            git fetch origin observations
+            git rebase origin/observations
+          done
+          echo "::error::Échec de publication après 4 tentatives."
+          exit 1
