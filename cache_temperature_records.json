@@ -5902,8 +5902,8 @@
       "record_month_old_date": "20231002",
       "record_absolute_old": 41.3,
       "record_absolute_old_date": "20190725",
-      "current_month_txab": null,
-      "current_month_txab_date": null
+      "current_month_txab": 26.0,
+      "current_month_txab_date": "20261006"
     },
     "41269001": {
       "record_month_old": 29.7,
@@ -15581,6 +15581,6 @@
   "record_baseline_month_id": "2026-10",
   "records_generated_at": "2026-10-01T05:28:28Z",
   "current_month_id": "2026-10",
-  "current_month_generated_at": "2026-10-09T08:54:47Z",
+  "current_month_generated_at": "2026-10-09T15:33:42Z",
   "module_version": "1.2.0"
 }
