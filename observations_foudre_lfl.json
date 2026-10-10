@@ -1,0 +1,2330 @@
+{
+  "schema_version": 1,
+  "module_version": "1.0.0",
+  "build_id": "mtg-li-lfl-france-stats-20260820",
+  "status": "ok",
+  "generated_at": "2026-10-10T17:01:19Z",
+  "tracking_started_at": "2026-10-04T16:16:07Z",
+  "title": "Statistiques foudre MTG Lightning Imager",
+  "source": {
+    "provider": "EUMETSAT",
+    "satellite": "Meteosat-12 / MTG-I1",
+    "sensor": "Lightning Imager (LI)",
+    "product": "Lightning Flashes (LFL)",
+    "collection_id": "EO:EUM:DAT:0691",
+    "spatial_resolution": "~4 km",
+    "licence": "CC-BY-4.0",
+    "data_type": "Foudre totale détectée optiquement depuis l'espace"
+  },
+  "coverage": {
+    "area": "France métropolitaine et Corse",
+    "bbox": {
+      "south": 41.0,
+      "north": 51.6,
+      "west": -5.6,
+      "east": 10.0
+    },
+    "administrative_boundaries": "Etalab contours-administratifs communes-1000m",
+    "warning": "Attribution commune/département approximative compte tenu de la résolution LI (~4 km) et de la parallaxe."
+  },
+  "periods": {
+    "today": {
+      "total": 0,
+      "top_departments": [],
+      "top_communes": [],
+      "key": "2026-10-10",
+      "partial": false
+    },
+    "month": {
+      "total": 18805,
+      "top_departments": [
+        {
+          "code": "12",
+          "name": "Aveyron",
+          "count": 1870
+        },
+        {
+          "code": "13",
+          "name": "Bouches-du-Rhône",
+          "count": 1720
+        },
+        {
+          "code": "24",
+          "name": "Dordogne",
+          "count": 1485
+        },
+        {
+          "code": "33",
+          "name": "Gironde",
+          "count": 1453
+        },
+        {
+          "code": "2A",
+          "name": "Corse-du-Sud",
+          "count": 1366
+        },
+        {
+          "code": "30",
+          "name": "Gard",
+          "count": 1192
+        },
+        {
+          "code": "47",
+          "name": "Lot-et-Garonne",
+          "count": 950
+        },
+        {
+          "code": "66",
+          "name": "Pyrénées-Orientales",
+          "count": 913
+        },
+        {
+          "code": "11",
+          "name": "Aude",
+          "count": 735
+        },
+        {
+          "code": "34",
+          "name": "Hérault",
+          "count": 696
+        },
+        {
+          "code": "56",
+          "name": "Morbihan",
+          "count": 509
+        },
+        {
+          "code": "44",
+          "name": "Loire-Atlantique",
+          "count": 451
+        },
+        {
+          "code": "64",
+          "name": "Pyrénées-Atlantiques",
+          "count": 434
+        },
+        {
+          "code": "87",
+          "name": "Haute-Vienne",
+          "count": 428
+        },
+        {
+          "code": "2B",
+          "name": "Haute-Corse",
+          "count": 423
+        },
+        {
+          "code": "49",
+          "name": "Maine-et-Loire",
+          "count": 386
+        },
+        {
+          "code": "16",
+          "name": "Charente",
+          "count": 322
+        },
+        {
+          "code": "84",
+          "name": "Vaucluse",
+          "count": 280
+        },
+        {
+          "code": "37",
+          "name": "Indre-et-Loire",
+          "count": 275
+        },
+        {
+          "code": "40",
+          "name": "Landes",
+          "count": 270
+        },
+        {
+          "code": "63",
+          "name": "Puy-de-Dôme",
+          "count": 262
+        },
+        {
+          "code": "23",
+          "name": "Creuse",
+          "count": 217
+        },
+        {
+          "code": "81",
+          "name": "Tarn",
+          "count": 207
+        },
+        {
+          "code": "17",
+          "name": "Charente-Maritime",
+          "count": 172
+        },
+        {
+          "code": "83",
+          "name": "Var",
+          "count": 154
+        },
+        {
+          "code": "35",
+          "name": "Ille-et-Vilaine",
+          "count": 138
+        },
+        {
+          "code": "26",
+          "name": "Drôme",
+          "count": 123
+        },
+        {
+          "code": "79",
+          "name": "Deux-Sèvres",
+          "count": 113
+        },
+        {
+          "code": "43",
+          "name": "Haute-Loire",
+          "count": 106
+        },
+        {
+          "code": "03",
+          "name": "Allier",
+          "count": 101
+        }
+      ],
+      "top_communes": [
+        {
+          "code": "13004",
+          "name": "Arles",
+          "department_code": "13",
+          "department_name": "Bouches-du-Rhône",
+          "count": 286
+        },
+        {
+          "code": "12077",
+          "name": "Cornus",
+          "department_code": "12",
+          "department_name": "Aveyron",
+          "count": 189
+        },
+        {
+          "code": "12192",
+          "name": "Mounes-Prohencoux",
+          "department_code": "12",
+          "department_name": "Aveyron",
+          "count": 178
+        },
+        {
+          "code": "30258",
+          "name": "Saint-Gilles",
+          "department_code": "30",
+          "department_name": "Gard",
+          "count": 158
+        },
+        {
+          "code": "11170",
+          "name": "Gruissan",
+          "department_code": "11",
+          "department_name": "Aude",
+          "count": 141
+        },
+        {
+          "code": "13097",
+          "name": "Saint-Martin-de-Crau",
+          "department_code": "13",
+          "department_name": "Bouches-du-Rhône",
+          "count": 140
+        },
+        {
+          "code": "12163",
+          "name": "Murasson",
+          "department_code": "12",
+          "department_name": "Aveyron",
+          "count": 136
+        },
+        {
+          "code": "12168",
+          "name": "Nant",
+          "department_code": "12",
+          "department_name": "Aveyron",
+          "count": 128
+        },
+        {
+          "code": "49126",
+          "name": "Orée d'Anjou",
+          "department_code": "49",
+          "department_name": "Maine-et-Loire",
+          "count": 126
+        },
+        {
+          "code": "66136",
+          "name": "Perpignan",
+          "department_code": "66",
+          "department_name": "Pyrénées-Orientales",
+          "count": 120
+        },
+        {
+          "code": "11262",
+          "name": "Narbonne",
+          "department_code": "11",
+          "department_name": "Aude",
+          "count": 117
+        },
+        {
+          "code": "13047",
+          "name": "Istres",
+          "department_code": "13",
+          "department_name": "Bouches-du-Rhône",
+          "count": 112
+        },
+        {
+          "code": "66016",
+          "name": "Banyuls-sur-Mer",
+          "department_code": "66",
+          "department_name": "Pyrénées-Orientales",
+          "count": 111
+        },
+        {
+          "code": "12025",
+          "name": "Belmont-sur-Rance",
+          "department_code": "12",
+          "department_name": "Aveyron",
+          "count": 97
+        },
+        {
+          "code": "49218",
+          "name": "Montrevault-sur-Èvre",
+          "department_code": "49",
+          "department_name": "Maine-et-Loire",
+          "count": 97
+        },
+        {
+          "code": "11024",
+          "name": "Bages",
+          "department_code": "11",
+          "department_name": "Aude",
+          "count": 96
+        },
+        {
+          "code": "33322",
+          "name": "Le Pian-Médoc",
+          "department_code": "33",
+          "department_name": "Gironde",
+          "count": 95
+        },
+        {
+          "code": "64316",
+          "name": "Larrau",
+          "department_code": "64",
+          "department_name": "Pyrénées-Atlantiques",
+          "count": 94
+        },
+        {
+          "code": "24354",
+          "name": "La Roche-Chalais",
+          "department_code": "24",
+          "department_name": "Dordogne",
+          "count": 91
+        },
+        {
+          "code": "12044",
+          "name": "Camarès",
+          "department_code": "12",
+          "department_name": "Aveyron",
+          "count": 90
+        },
+        {
+          "code": "66008",
+          "name": "Argelès-sur-Mer",
+          "department_code": "66",
+          "department_name": "Pyrénées-Orientales",
+          "count": 89
+        },
+        {
+          "code": "12204",
+          "name": "La Roque-Sainte-Marguerite",
+          "department_code": "12",
+          "department_name": "Aveyron",
+          "count": 89
+        },
+        {
+          "code": "13034",
+          "name": "Eygalières",
+          "department_code": "13",
+          "department_name": "Bouches-du-Rhône",
+          "count": 88
+        },
+        {
+          "code": "12154",
+          "name": "Montlaur",
+          "department_code": "12",
+          "department_name": "Aveyron",
+          "count": 88
+        },
+        {
+          "code": "81192",
+          "name": "Murat-sur-Vèbre",
+          "department_code": "81",
+          "department_name": "Tarn",
+          "count": 86
+        },
+        {
+          "code": "30189",
+          "name": "Nîmes",
+          "department_code": "30",
+          "department_name": "Gard",
+          "count": 86
+        },
+        {
+          "code": "11285",
+          "name": "Peyriac-de-Mer",
+          "department_code": "11",
+          "department_name": "Aude",
+          "count": 85
+        },
+        {
+          "code": "87128",
+          "name": "Saint-Pardoux-le-Lac",
+          "department_code": "87",
+          "department_name": "Haute-Vienne",
+          "count": 85
+        },
+        {
+          "code": "56184",
+          "name": "Questembert",
+          "department_code": "56",
+          "department_name": "Morbihan",
+          "count": 82
+        },
+        {
+          "code": "2A031",
+          "name": "Bastelica",
+          "department_code": "2A",
+          "department_name": "Corse-du-Sud",
+          "count": 81
+        }
+      ],
+      "key": "2026-10",
+      "partial": true
+    },
+    "year": {
+      "total": 18805,
+      "top_departments": [
+        {
+          "code": "12",
+          "name": "Aveyron",
+          "count": 1870
+        },
+        {
+          "code": "13",
+          "name": "Bouches-du-Rhône",
+          "count": 1720
+        },
+        {
+          "code": "24",
+          "name": "Dordogne",
+          "count": 1485
+        },
+        {
+          "code": "33",
+          "name": "Gironde",
+          "count": 1453
+        },
+        {
+          "code": "2A",
+          "name": "Corse-du-Sud",
+          "count": 1366
+        },
+        {
+          "code": "30",
+          "name": "Gard",
+          "count": 1192
+        },
+        {
+          "code": "47",
+          "name": "Lot-et-Garonne",
+          "count": 950
+        },
+        {
+          "code": "66",
+          "name": "Pyrénées-Orientales",
+          "count": 913
+        },
+        {
+          "code": "11",
+          "name": "Aude",
+          "count": 735
+        },
+        {
+          "code": "34",
+          "name": "Hérault",
+          "count": 696
+        },
+        {
+          "code": "56",
+          "name": "Morbihan",
+          "count": 509
+        },
+        {
+          "code": "44",
+          "name": "Loire-Atlantique",
+          "count": 451
+        },
+        {
+          "code": "64",
+          "name": "Pyrénées-Atlantiques",
+          "count": 434
+        },
+        {
+          "code": "87",
+          "name": "Haute-Vienne",
+          "count": 428
+        },
+        {
+          "code": "2B",
+          "name": "Haute-Corse",
+          "count": 423
+        },
+        {
+          "code": "49",
+          "name": "Maine-et-Loire",
+          "count": 386
+        },
+        {
+          "code": "16",
+          "name": "Charente",
+          "count": 322
+        },
+        {
+          "code": "84",
+          "name": "Vaucluse",
+          "count": 280
+        },
+        {
+          "code": "37",
+          "name": "Indre-et-Loire",
+          "count": 275
+        },
+        {
+          "code": "40",
+          "name": "Landes",
+          "count": 270
+        },
+        {
+          "code": "63",
+          "name": "Puy-de-Dôme",
+          "count": 262
+        },
+        {
+          "code": "23",
+          "name": "Creuse",
+          "count": 217
+        },
+        {
+          "code": "81",
+          "name": "Tarn",
+          "count": 207
+        },
+        {
+          "code": "17",
+          "name": "Charente-Maritime",
+          "count": 172
+        },
+        {
+          "code": "83",
+          "name": "Var",
+          "count": 154
+        },
+        {
+          "code": "35",
+          "name": "Ille-et-Vilaine",
+          "count": 138
+        },
+        {
+          "code": "26",
+          "name": "Drôme",
+          "count": 123
+        },
+        {
+          "code": "79",
+          "name": "Deux-Sèvres",
+          "count": 113
+        },
+        {
+          "code": "43",
+          "name": "Haute-Loire",
+          "count": 106
+        },
+        {
+          "code": "03",
+          "name": "Allier",
+          "count": 101
+        }
+      ],
+      "top_communes": [
+        {
+          "code": "13004",
+          "name": "Arles",
+          "department_code": "13",
+          "department_name": "Bouches-du-Rhône",
+          "count": 286
+        },
+        {
+          "code": "12077",
+          "name": "Cornus",
+          "department_code": "12",
+          "department_name": "Aveyron",
+          "count": 189
+        },
+        {
+          "code": "12192",
+          "name": "Mounes-Prohencoux",
+          "department_code": "12",
+          "department_name": "Aveyron",
+          "count": 178
+        },
+        {
+          "code": "30258",
+          "name": "Saint-Gilles",
+          "department_code": "30",
+          "department_name": "Gard",
+          "count": 158
+        },
+        {
+          "code": "11170",
+          "name": "Gruissan",
+          "department_code": "11",
+          "department_name": "Aude",
+          "count": 141
+        },
+        {
+          "code": "13097",
+          "name": "Saint-Martin-de-Crau",
+          "department_code": "13",
+          "department_name": "Bouches-du-Rhône",
+          "count": 140
+        },
+        {
+          "code": "12163",
+          "name": "Murasson",
+          "department_code": "12",
+          "department_name": "Aveyron",
+          "count": 136
+        },
+        {
+          "code": "12168",
+          "name": "Nant",
+          "department_code": "12",
+          "department_name": "Aveyron",
+          "count": 128
+        },
+        {
+          "code": "49126",
+          "name": "Orée d'Anjou",
+          "department_code": "49",
+          "department_name": "Maine-et-Loire",
+          "count": 126
+        },
+        {
+          "code": "66136",
+          "name": "Perpignan",
+          "department_code": "66",
+          "department_name": "Pyrénées-Orientales",
+          "count": 120
+        },
+        {
+          "code": "11262",
+          "name": "Narbonne",
+          "department_code": "11",
+          "department_name": "Aude",
+          "count": 117
+        },
+        {
+          "code": "13047",
+          "name": "Istres",
+          "department_code": "13",
+          "department_name": "Bouches-du-Rhône",
+          "count": 112
+        },
+        {
+          "code": "66016",
+          "name": "Banyuls-sur-Mer",
+          "department_code": "66",
+          "department_name": "Pyrénées-Orientales",
+          "count": 111
+        },
+        {
+          "code": "12025",
+          "name": "Belmont-sur-Rance",
+          "department_code": "12",
+          "department_name": "Aveyron",
+          "count": 97
+        },
+        {
+          "code": "49218",
+          "name": "Montrevault-sur-Èvre",
+          "department_code": "49",
+          "department_name": "Maine-et-Loire",
+          "count": 97
+        },
+        {
+          "code": "11024",
+          "name": "Bages",
+          "department_code": "11",
+          "department_name": "Aude",
+          "count": 96
+        },
+        {
+          "code": "33322",
+          "name": "Le Pian-Médoc",
+          "department_code": "33",
+          "department_name": "Gironde",
+          "count": 95
+        },
+        {
+          "code": "64316",
+          "name": "Larrau",
+          "department_code": "64",
+          "department_name": "Pyrénées-Atlantiques",
+          "count": 94
+        },
+        {
+          "code": "24354",
+          "name": "La Roche-Chalais",
+          "department_code": "24",
+          "department_name": "Dordogne",
+          "count": 91
+        },
+        {
+          "code": "12044",
+          "name": "Camarès",
+          "department_code": "12",
+          "department_name": "Aveyron",
+          "count": 90
+        },
+        {
+          "code": "66008",
+          "name": "Argelès-sur-Mer",
+          "department_code": "66",
+          "department_name": "Pyrénées-Orientales",
+          "count": 89
+        },
+        {
+          "code": "12204",
+          "name": "La Roque-Sainte-Marguerite",
+          "department_code": "12",
+          "department_name": "Aveyron",
+          "count": 89
+        },
+        {
+          "code": "13034",
+          "name": "Eygalières",
+          "department_code": "13",
+          "department_name": "Bouches-du-Rhône",
+          "count": 88
+        },
+        {
+          "code": "12154",
+          "name": "Montlaur",
+          "department_code": "12",
+          "department_name": "Aveyron",
+          "count": 88
+        },
+        {
+          "code": "81192",
+          "name": "Murat-sur-Vèbre",
+          "department_code": "81",
+          "department_name": "Tarn",
+          "count": 86
+        },
+        {
+          "code": "30189",
+          "name": "Nîmes",
+          "department_code": "30",
+          "department_name": "Gard",
+          "count": 86
+        },
+        {
+          "code": "11285",
+          "name": "Peyriac-de-Mer",
+          "department_code": "11",
+          "department_name": "Aude",
+          "count": 85
+        },
+        {
+          "code": "87128",
+          "name": "Saint-Pardoux-le-Lac",
+          "department_code": "87",
+          "department_name": "Haute-Vienne",
+          "count": 85
+        },
+        {
+          "code": "56184",
+          "name": "Questembert",
+          "department_code": "56",
+          "department_name": "Morbihan",
+          "count": 82
+        },
+        {
+          "code": "2A031",
+          "name": "Bastelica",
+          "department_code": "2A",
+          "department_name": "Corse-du-Sud",
+          "count": 81
+        }
+      ],
+      "key": "2026",
+      "partial": true
+    }
+  },
+  "last_60_minutes": 0,
+  "series": {
+    "hourly_today": [
+      {
+        "label": "00h",
+        "count": 0
+      },
+      {
+        "label": "01h",
+        "count": 0
+      },
+      {
+        "label": "02h",
+        "count": 0
+      },
+      {
+        "label": "03h",
+        "count": 0
+      },
+      {
+        "label": "04h",
+        "count": 0
+      },
+      {
+        "label": "05h",
+        "count": 0
+      },
+      {
+        "label": "06h",
+        "count": 0
+      },
+      {
+        "label": "07h",
+        "count": 0
+      },
+      {
+        "label": "08h",
+        "count": 0
+      },
+      {
+        "label": "09h",
+        "count": 0
+      },
+      {
+        "label": "10h",
+        "count": 0
+      },
+      {
+        "label": "11h",
+        "count": 0
+      },
+      {
+        "label": "12h",
+        "count": 0
+      },
+      {
+        "label": "13h",
+        "count": 0
+      },
+      {
+        "label": "14h",
+        "count": 0
+      },
+      {
+        "label": "15h",
+        "count": 0
+      },
+      {
+        "label": "16h",
+        "count": 0
+      },
+      {
+        "label": "17h",
+        "count": 0
+      },
+      {
+        "label": "18h",
+        "count": 0
+      },
+      {
+        "label": "19h",
+        "count": 0
+      },
+      {
+        "label": "20h",
+        "count": 0
+      },
+      {
+        "label": "21h",
+        "count": 0
+      },
+      {
+        "label": "22h",
+        "count": 0
+      },
+      {
+        "label": "23h",
+        "count": 0
+      }
+    ],
+    "five_minute_today": [
+      {
+        "label": "00:00",
+        "count": 0
+      },
+      {
+        "label": "00:05",
+        "count": 0
+      },
+      {
+        "label": "00:10",
+        "count": 0
+      },
+      {
+        "label": "00:15",
+        "count": 0
+      },
+      {
+        "label": "00:20",
+        "count": 0
+      },
+      {
+        "label": "00:25",
+        "count": 0
+      },
+      {
+        "label": "00:30",
+        "count": 0
+      },
+      {
+        "label": "00:35",
+        "count": 0
+      },
+      {
+        "label": "00:40",
+        "count": 0
+      },
+      {
+        "label": "00:45",
+        "count": 0
+      },
+      {
+        "label": "00:50",
+        "count": 0
+      },
+      {
+        "label": "00:55",
+        "count": 0
+      },
+      {
+        "label": "01:00",
+        "count": 0
+      },
+      {
+        "label": "01:05",
+        "count": 0
+      },
+      {
+        "label": "01:10",
+        "count": 0
+      },
+      {
+        "label": "01:15",
+        "count": 0
+      },
+      {
+        "label": "01:20",
+        "count": 0
+      },
+      {
+        "label": "01:25",
+        "count": 0
+      },
+      {
+        "label": "01:30",
+        "count": 0
+      },
+      {
+        "label": "01:35",
+        "count": 0
+      },
+      {
+        "label": "01:40",
+        "count": 0
+      },
+      {
+        "label": "01:45",
+        "count": 0
+      },
+      {
+        "label": "01:50",
+        "count": 0
+      },
+      {
+        "label": "01:55",
+        "count": 0
+      },
+      {
+        "label": "02:00",
+        "count": 0
+      },
+      {
+        "label": "02:05",
+        "count": 0
+      },
+      {
+        "label": "02:10",
+        "count": 0
+      },
+      {
+        "label": "02:15",
+        "count": 0
+      },
+      {
+        "label": "02:20",
+        "count": 0
+      },
+      {
+        "label": "02:25",
+        "count": 0
+      },
+      {
+        "label": "02:30",
+        "count": 0
+      },
+      {
+        "label": "02:35",
+        "count": 0
+      },
+      {
+        "label": "02:40",
+        "count": 0
+      },
+      {
+        "label": "02:45",
+        "count": 0
+      },
+      {
+        "label": "02:50",
+        "count": 0
+      },
+      {
+        "label": "02:55",
+        "count": 0
+      },
+      {
+        "label": "03:00",
+        "count": 0
+      },
+      {
+        "label": "03:05",
+        "count": 0
+      },
+      {
+        "label": "03:10",
+        "count": 0
+      },
+      {
+        "label": "03:15",
+        "count": 0
+      },
+      {
+        "label": "03:20",
+        "count": 0
+      },
+      {
+        "label": "03:25",
+        "count": 0
+      },
+      {
+        "label": "03:30",
+        "count": 0
+      },
+      {
+        "label": "03:35",
+        "count": 0
+      },
+      {
+        "label": "03:40",
+        "count": 0
+      },
+      {
+        "label": "03:45",
+        "count": 0
+      },
+      {
+        "label": "03:50",
+        "count": 0
+      },
+      {
+        "label": "03:55",
+        "count": 0
+      },
+      {
+        "label": "04:00",
+        "count": 0
+      },
+      {
+        "label": "04:05",
+        "count": 0
+      },
+      {
+        "label": "04:10",
+        "count": 0
+      },
+      {
+        "label": "04:15",
+        "count": 0
+      },
+      {
+        "label": "04:20",
+        "count": 0
+      },
+      {
+        "label": "04:25",
+        "count": 0
+      },
+      {
+        "label": "04:30",
+        "count": 0
+      },
+      {
+        "label": "04:35",
+        "count": 0
+      },
+      {
+        "label": "04:40",
+        "count": 0
+      },
+      {
+        "label": "04:45",
+        "count": 0
+      },
+      {
+        "label": "04:50",
+        "count": 0
+      },
+      {
+        "label": "04:55",
+        "count": 0
+      },
+      {
+        "label": "05:00",
+        "count": 0
+      },
+      {
+        "label": "05:05",
+        "count": 0
+      },
+      {
+        "label": "05:10",
+        "count": 0
+      },
+      {
+        "label": "05:15",
+        "count": 0
+      },
+      {
+        "label": "05:20",
+        "count": 0
+      },
+      {
+        "label": "05:25",
+        "count": 0
+      },
+      {
+        "label": "05:30",
+        "count": 0
+      },
+      {
+        "label": "05:35",
+        "count": 0
+      },
+      {
+        "label": "05:40",
+        "count": 0
+      },
+      {
+        "label": "05:45",
+        "count": 0
+      },
+      {
+        "label": "05:50",
+        "count": 0
+      },
+      {
+        "label": "05:55",
+        "count": 0
+      },
+      {
+        "label": "06:00",
+        "count": 0
+      },
+      {
+        "label": "06:05",
+        "count": 0
+      },
+      {
+        "label": "06:10",
+        "count": 0
+      },
+      {
+        "label": "06:15",
+        "count": 0
+      },
+      {
+        "label": "06:20",
+        "count": 0
+      },
+      {
+        "label": "06:25",
+        "count": 0
+      },
+      {
+        "label": "06:30",
+        "count": 0
+      },
+      {
+        "label": "06:35",
+        "count": 0
+      },
+      {
+        "label": "06:40",
+        "count": 0
+      },
+      {
+        "label": "06:45",
+        "count": 0
+      },
+      {
+        "label": "06:50",
+        "count": 0
+      },
+      {
+        "label": "06:55",
+        "count": 0
+      },
+      {
+        "label": "07:00",
+        "count": 0
+      },
+      {
+        "label": "07:05",
+        "count": 0
+      },
+      {
+        "label": "07:10",
+        "count": 0
+      },
+      {
+        "label": "07:15",
+        "count": 0
+      },
+      {
+        "label": "07:20",
+        "count": 0
+      },
+      {
+        "label": "07:25",
+        "count": 0
+      },
+      {
+        "label": "07:30",
+        "count": 0
+      },
+      {
+        "label": "07:35",
+        "count": 0
+      },
+      {
+        "label": "07:40",
+        "count": 0
+      },
+      {
+        "label": "07:45",
+        "count": 0
+      },
+      {
+        "label": "07:50",
+        "count": 0
+      },
+      {
+        "label": "07:55",
+        "count": 0
+      },
+      {
+        "label": "08:00",
+        "count": 0
+      },
+      {
+        "label": "08:05",
+        "count": 0
+      },
+      {
+        "label": "08:10",
+        "count": 0
+      },
+      {
+        "label": "08:15",
+        "count": 0
+      },
+      {
+        "label": "08:20",
+        "count": 0
+      },
+      {
+        "label": "08:25",
+        "count": 0
+      },
+      {
+        "label": "08:30",
+        "count": 0
+      },
+      {
+        "label": "08:35",
+        "count": 0
+      },
+      {
+        "label": "08:40",
+        "count": 0
+      },
+      {
+        "label": "08:45",
+        "count": 0
+      },
+      {
+        "label": "08:50",
+        "count": 0
+      },
+      {
+        "label": "08:55",
+        "count": 0
+      },
+      {
+        "label": "09:00",
+        "count": 0
+      },
+      {
+        "label": "09:05",
+        "count": 0
+      },
+      {
+        "label": "09:10",
+        "count": 0
+      },
+      {
+        "label": "09:15",
+        "count": 0
+      },
+      {
+        "label": "09:20",
+        "count": 0
+      },
+      {
+        "label": "09:25",
+        "count": 0
+      },
+      {
+        "label": "09:30",
+        "count": 0
+      },
+      {
+        "label": "09:35",
+        "count": 0
+      },
+      {
+        "label": "09:40",
+        "count": 0
+      },
+      {
+        "label": "09:45",
+        "count": 0
+      },
+      {
+        "label": "09:50",
+        "count": 0
+      },
+      {
+        "label": "09:55",
+        "count": 0
+      },
+      {
+        "label": "10:00",
+        "count": 0
+      },
+      {
+        "label": "10:05",
+        "count": 0
+      },
+      {
+        "label": "10:10",
+        "count": 0
+      },
+      {
+        "label": "10:15",
+        "count": 0
+      },
+      {
+        "label": "10:20",
+        "count": 0
+      },
+      {
+        "label": "10:25",
+        "count": 0
+      },
+      {
+        "label": "10:30",
+        "count": 0
+      },
+      {
+        "label": "10:35",
+        "count": 0
+      },
+      {
+        "label": "10:40",
+        "count": 0
+      },
+      {
+        "label": "10:45",
+        "count": 0
+      },
+      {
+        "label": "10:50",
+        "count": 0
+      },
+      {
+        "label": "10:55",
+        "count": 0
+      },
+      {
+        "label": "11:00",
+        "count": 0
+      },
+      {
+        "label": "11:05",
+        "count": 0
+      },
+      {
+        "label": "11:10",
+        "count": 0
+      },
+      {
+        "label": "11:15",
+        "count": 0
+      },
+      {
+        "label": "11:20",
+        "count": 0
+      },
+      {
+        "label": "11:25",
+        "count": 0
+      },
+      {
+        "label": "11:30",
+        "count": 0
+      },
+      {
+        "label": "11:35",
+        "count": 0
+      },
+      {
+        "label": "11:40",
+        "count": 0
+      },
+      {
+        "label": "11:45",
+        "count": 0
+      },
+      {
+        "label": "11:50",
+        "count": 0
+      },
+      {
+        "label": "11:55",
+        "count": 0
+      },
+      {
+        "label": "12:00",
+        "count": 0
+      },
+      {
+        "label": "12:05",
+        "count": 0
+      },
+      {
+        "label": "12:10",
+        "count": 0
+      },
+      {
+        "label": "12:15",
+        "count": 0
+      },
+      {
+        "label": "12:20",
+        "count": 0
+      },
+      {
+        "label": "12:25",
+        "count": 0
+      },
+      {
+        "label": "12:30",
+        "count": 0
+      },
+      {
+        "label": "12:35",
+        "count": 0
+      },
+      {
+        "label": "12:40",
+        "count": 0
+      },
+      {
+        "label": "12:45",
+        "count": 0
+      },
+      {
+        "label": "12:50",
+        "count": 0
+      },
+      {
+        "label": "12:55",
+        "count": 0
+      },
+      {
+        "label": "13:00",
+        "count": 0
+      },
+      {
+        "label": "13:05",
+        "count": 0
+      },
+      {
+        "label": "13:10",
+        "count": 0
+      },
+      {
+        "label": "13:15",
+        "count": 0
+      },
+      {
+        "label": "13:20",
+        "count": 0
+      },
+      {
+        "label": "13:25",
+        "count": 0
+      },
+      {
+        "label": "13:30",
+        "count": 0
+      },
+      {
+        "label": "13:35",
+        "count": 0
+      },
+      {
+        "label": "13:40",
+        "count": 0
+      },
+      {
+        "label": "13:45",
+        "count": 0
+      },
+      {
+        "label": "13:50",
+        "count": 0
+      },
+      {
+        "label": "13:55",
+        "count": 0
+      },
+      {
+        "label": "14:00",
+        "count": 0
+      },
+      {
+        "label": "14:05",
+        "count": 0
+      },
+      {
+        "label": "14:10",
+        "count": 0
+      },
+      {
+        "label": "14:15",
+        "count": 0
+      },
+      {
+        "label": "14:20",
+        "count": 0
+      },
+      {
+        "label": "14:25",
+        "count": 0
+      },
+      {
+        "label": "14:30",
+        "count": 0
+      },
+      {
+        "label": "14:35",
+        "count": 0
+      },
+      {
+        "label": "14:40",
+        "count": 0
+      },
+      {
+        "label": "14:45",
+        "count": 0
+      },
+      {
+        "label": "14:50",
+        "count": 0
+      },
+      {
+        "label": "14:55",
+        "count": 0
+      },
+      {
+        "label": "15:00",
+        "count": 0
+      },
+      {
+        "label": "15:05",
+        "count": 0
+      },
+      {
+        "label": "15:10",
+        "count": 0
+      },
+      {
+        "label": "15:15",
+        "count": 0
+      },
+      {
+        "label": "15:20",
+        "count": 0
+      },
+      {
+        "label": "15:25",
+        "count": 0
+      },
+      {
+        "label": "15:30",
+        "count": 0
+      },
+      {
+        "label": "15:35",
+        "count": 0
+      },
+      {
+        "label": "15:40",
+        "count": 0
+      },
+      {
+        "label": "15:45",
+        "count": 0
+      },
+      {
+        "label": "15:50",
+        "count": 0
+      },
+      {
+        "label": "15:55",
+        "count": 0
+      },
+      {
+        "label": "16:00",
+        "count": 0
+      },
+      {
+        "label": "16:05",
+        "count": 0
+      },
+      {
+        "label": "16:10",
+        "count": 0
+      },
+      {
+        "label": "16:15",
+        "count": 0
+      },
+      {
+        "label": "16:20",
+        "count": 0
+      },
+      {
+        "label": "16:25",
+        "count": 0
+      },
+      {
+        "label": "16:30",
+        "count": 0
+      },
+      {
+        "label": "16:35",
+        "count": 0
+      },
+      {
+        "label": "16:40",
+        "count": 0
+      },
+      {
+        "label": "16:45",
+        "count": 0
+      },
+      {
+        "label": "16:50",
+        "count": 0
+      },
+      {
+        "label": "16:55",
+        "count": 0
+      },
+      {
+        "label": "17:00",
+        "count": 0
+      },
+      {
+        "label": "17:05",
+        "count": 0
+      },
+      {
+        "label": "17:10",
+        "count": 0
+      },
+      {
+        "label": "17:15",
+        "count": 0
+      },
+      {
+        "label": "17:20",
+        "count": 0
+      },
+      {
+        "label": "17:25",
+        "count": 0
+      },
+      {
+        "label": "17:30",
+        "count": 0
+      },
+      {
+        "label": "17:35",
+        "count": 0
+      },
+      {
+        "label": "17:40",
+        "count": 0
+      },
+      {
+        "label": "17:45",
+        "count": 0
+      },
+      {
+        "label": "17:50",
+        "count": 0
+      },
+      {
+        "label": "17:55",
+        "count": 0
+      },
+      {
+        "label": "18:00",
+        "count": 0
+      },
+      {
+        "label": "18:05",
+        "count": 0
+      },
+      {
+        "label": "18:10",
+        "count": 0
+      },
+      {
+        "label": "18:15",
+        "count": 0
+      },
+      {
+        "label": "18:20",
+        "count": 0
+      },
+      {
+        "label": "18:25",
+        "count": 0
+      },
+      {
+        "label": "18:30",
+        "count": 0
+      },
+      {
+        "label": "18:35",
+        "count": 0
+      },
+      {
+        "label": "18:40",
+        "count": 0
+      },
+      {
+        "label": "18:45",
+        "count": 0
+      },
+      {
+        "label": "18:50",
+        "count": 0
+      },
+      {
+        "label": "18:55",
+        "count": 0
+      },
+      {
+        "label": "19:00",
+        "count": 0
+      },
+      {
+        "label": "19:05",
+        "count": 0
+      },
+      {
+        "label": "19:10",
+        "count": 0
+      },
+      {
+        "label": "19:15",
+        "count": 0
+      },
+      {
+        "label": "19:20",
+        "count": 0
+      },
+      {
+        "label": "19:25",
+        "count": 0
+      },
+      {
+        "label": "19:30",
+        "count": 0
+      },
+      {
+        "label": "19:35",
+        "count": 0
+      },
+      {
+        "label": "19:40",
+        "count": 0
+      },
+      {
+        "label": "19:45",
+        "count": 0
+      },
+      {
+        "label": "19:50",
+        "count": 0
+      },
+      {
+        "label": "19:55",
+        "count": 0
+      },
+      {
+        "label": "20:00",
+        "count": 0
+      },
+      {
+        "label": "20:05",
+        "count": 0
+      },
+      {
+        "label": "20:10",
+        "count": 0
+      },
+      {
+        "label": "20:15",
+        "count": 0
+      },
+      {
+        "label": "20:20",
+        "count": 0
+      },
+      {
+        "label": "20:25",
+        "count": 0
+      },
+      {
+        "label": "20:30",
+        "count": 0
+      },
+      {
+        "label": "20:35",
+        "count": 0
+      },
+      {
+        "label": "20:40",
+        "count": 0
+      },
+      {
+        "label": "20:45",
+        "count": 0
+      },
+      {
+        "label": "20:50",
+        "count": 0
+      },
+      {
+        "label": "20:55",
+        "count": 0
+      },
+      {
+        "label": "21:00",
+        "count": 0
+      },
+      {
+        "label": "21:05",
+        "count": 0
+      },
+      {
+        "label": "21:10",
+        "count": 0
+      },
+      {
+        "label": "21:15",
+        "count": 0
+      },
+      {
+        "label": "21:20",
+        "count": 0
+      },
+      {
+        "label": "21:25",
+        "count": 0
+      },
+      {
+        "label": "21:30",
+        "count": 0
+      },
+      {
+        "label": "21:35",
+        "count": 0
+      },
+      {
+        "label": "21:40",
+        "count": 0
+      },
+      {
+        "label": "21:45",
+        "count": 0
+      },
+      {
+        "label": "21:50",
+        "count": 0
+      },
+      {
+        "label": "21:55",
+        "count": 0
+      },
+      {
+        "label": "22:00",
+        "count": 0
+      },
+      {
+        "label": "22:05",
+        "count": 0
+      },
+      {
+        "label": "22:10",
+        "count": 0
+      },
+      {
+        "label": "22:15",
+        "count": 0
+      },
+      {
+        "label": "22:20",
+        "count": 0
+      },
+      {
+        "label": "22:25",
+        "count": 0
+      },
+      {
+        "label": "22:30",
+        "count": 0
+      },
+      {
+        "label": "22:35",
+        "count": 0
+      },
+      {
+        "label": "22:40",
+        "count": 0
+      },
+      {
+        "label": "22:45",
+        "count": 0
+      },
+      {
+        "label": "22:50",
+        "count": 0
+      },
+      {
+        "label": "22:55",
+        "count": 0
+      },
+      {
+        "label": "23:00",
+        "count": 0
+      },
+      {
+        "label": "23:05",
+        "count": 0
+      },
+      {
+        "label": "23:10",
+        "count": 0
+      },
+      {
+        "label": "23:15",
+        "count": 0
+      },
+      {
+        "label": "23:20",
+        "count": 0
+      },
+      {
+        "label": "23:25",
+        "count": 0
+      },
+      {
+        "label": "23:30",
+        "count": 0
+      },
+      {
+        "label": "23:35",
+        "count": 0
+      },
+      {
+        "label": "23:40",
+        "count": 0
+      },
+      {
+        "label": "23:45",
+        "count": 0
+      },
+      {
+        "label": "23:50",
+        "count": 0
+      },
+      {
+        "label": "23:55",
+        "count": 0
+      }
+    ],
+    "recent_5min_180min": [
+      {
+        "time": "2026-10-10T14:00:00Z",
+        "label": "16:00",
+        "count": 0
+      },
+      {
+        "time": "2026-10-10T14:05:00Z",
+        "label": "16:05",
+        "count": 0
+      },
+      {
+        "time": "2026-10-10T14:10:00Z",
+        "label": "16:10",
+        "count": 0
+      },
+      {
+        "time": "2026-10-10T14:15:00Z",
+        "label": "16:15",
+        "count": 0
+      },
+      {
+        "time": "2026-10-10T14:20:00Z",
+        "label": "16:20",
+        "count": 0
+      },
+      {
+        "time": "2026-10-10T14:25:00Z",
+        "label": "16:25",
+        "count": 0
+      },
+      {
+        "time": "2026-10-10T14:30:00Z",
+        "label": "16:30",
+        "count": 0
+      },
+      {
+        "time": "2026-10-10T14:35:00Z",
+        "label": "16:35",
+        "count": 0
+      },
+      {
+        "time": "2026-10-10T14:40:00Z",
+        "label": "16:40",
+        "count": 0
+      },
+      {
+        "time": "2026-10-10T14:45:00Z",
+        "label": "16:45",
+        "count": 0
+      },
+      {
+        "time": "2026-10-10T14:50:00Z",
+        "label": "16:50",
+        "count": 0
+      },
+      {
+        "time": "2026-10-10T14:55:00Z",
+        "label": "16:55",
+        "count": 0
+      },
+      {
+        "time": "2026-10-10T15:00:00Z",
+        "label": "17:00",
+        "count": 0
+      },
+      {
+        "time": "2026-10-10T15:05:00Z",
+        "label": "17:05",
+        "count": 0
+      },
+      {
+        "time": "2026-10-10T15:10:00Z",
+        "label": "17:10",
+        "count": 0
+      },
+      {
+        "time": "2026-10-10T15:15:00Z",
+        "label": "17:15",
+        "count": 0
+      },
+      {
+        "time": "2026-10-10T15:20:00Z",
+        "label": "17:20",
+        "count": 0
+      },
+      {
+        "time": "2026-10-10T15:25:00Z",
+        "label": "17:25",
+        "count": 0
+      },
+      {
+        "time": "2026-10-10T15:30:00Z",
+        "label": "17:30",
+        "count": 0
+      },
+      {
+        "time": "2026-10-10T15:35:00Z",
+        "label": "17:35",
+        "count": 0
+      },
+      {
+        "time": "2026-10-10T15:40:00Z",
+        "label": "17:40",
+        "count": 0
+      },
+      {
+        "time": "2026-10-10T15:45:00Z",
+        "label": "17:45",
+        "count": 0
+      },
+      {
+        "time": "2026-10-10T15:50:00Z",
+        "label": "17:50",
+        "count": 0
+      },
+      {
+        "time": "2026-10-10T15:55:00Z",
+        "label": "17:55",
+        "count": 0
+      },
+      {
+        "time": "2026-10-10T16:00:00Z",
+        "label": "18:00",
+        "count": 0
+      },
+      {
+        "time": "2026-10-10T16:05:00Z",
+        "label": "18:05",
+        "count": 0
+      },
+      {
+        "time": "2026-10-10T16:10:00Z",
+        "label": "18:10",
+        "count": 0
+      },
+      {
+        "time": "2026-10-10T16:15:00Z",
+        "label": "18:15",
+        "count": 0
+      },
+      {
+        "time": "2026-10-10T16:20:00Z",
+        "label": "18:20",
+        "count": 0
+      },
+      {
+        "time": "2026-10-10T16:25:00Z",
+        "label": "18:25",
+        "count": 0
+      },
+      {
+        "time": "2026-10-10T16:30:00Z",
+        "label": "18:30",
+        "count": 0
+      },
+      {
+        "time": "2026-10-10T16:35:00Z",
+        "label": "18:35",
+        "count": 0
+      },
+      {
+        "time": "2026-10-10T16:40:00Z",
+        "label": "18:40",
+        "count": 0
+      },
+      {
+        "time": "2026-10-10T16:45:00Z",
+        "label": "18:45",
+        "count": 0
+      },
+      {
+        "time": "2026-10-10T16:50:00Z",
+        "label": "18:50",
+        "count": 0
+      },
+      {
+        "time": "2026-10-10T16:55:00Z",
+        "label": "18:55",
+        "count": 0
+      },
+      {
+        "time": "2026-10-10T17:00:00Z",
+        "label": "19:00",
+        "count": 0
+      }
+    ],
+    "daily_current_month": [
+      {
+        "date": "2026-10-04",
+        "label": "04",
+        "count": 88
+      },
+      {
+        "date": "2026-10-05",
+        "label": "05",
+        "count": 109
+      },
+      {
+        "date": "2026-10-06",
+        "label": "06",
+        "count": 7898
+      },
+      {
+        "date": "2026-10-07",
+        "label": "07",
+        "count": 9712
+      },
+      {
+        "date": "2026-10-08",
+        "label": "08",
+        "count": 896
+      },
+      {
+        "date": "2026-10-09",
+        "label": "09",
+        "count": 102
+      }
+    ],
+    "monthly_current_year": [
+      {
+        "month": "01",
+        "label": "01",
+        "count": 0
+      },
+      {
+        "month": "02",
+        "label": "02",
+        "count": 0
+      },
+      {
+        "month": "03",
+        "label": "03",
+        "count": 0
+      },
+      {
+        "month": "04",
+        "label": "04",
+        "count": 0
+      },
+      {
+        "month": "05",
+        "label": "05",
+        "count": 0
+      },
+      {
+        "month": "06",
+        "label": "06",
+        "count": 0
+      },
+      {
+        "month": "07",
+        "label": "07",
+        "count": 0
+      },
+      {
+        "month": "08",
+        "label": "08",
+        "count": 0
+      },
+      {
+        "month": "09",
+        "label": "09",
+        "count": 0
+      },
+      {
+        "month": "10",
+        "label": "10",
+        "count": 18805
+      },
+      {
+        "month": "11",
+        "label": "11",
+        "count": 0
+      },
+      {
+        "month": "12",
+        "label": "12",
+        "count": 0
+      }
+    ]
+  },
+  "recent_activity": {
+    "hours": 3,
+    "cells": []
+  },
+  "diagnostics": {
+    "products_found_this_run": 5,
+    "products_new_this_run": 2,
+    "flashes_read_this_run": 78316,
+    "flashes_in_france_bbox_this_run": 0,
+    "flashes_attributed_this_run": 0,
+    "products_cached": 434,
+    "products_processed_total": 979,
+    "flashes_read_total": 17064153,
+    "flashes_in_bbox_total": 224468,
+    "flashes_attributed_total": 18805,
+    "flashes_unassigned_total": 205663
+  }
+}
