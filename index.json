@@ -1,0 +1,82 @@
+{
+ "schema_version": 1,
+ "generated_at": "2026-10-10T16:00:00Z",
+ "communes": 226,
+ "modeles": {
+  "arome": {
+   "nom": "AROME 1,3 km (Météo-France)",
+   "run": "2026-10-10T12:00:00Z",
+   "type": "deterministe"
+  },
+  "aromeifs": {
+   "nom": "AROME-IFS 2,5 km",
+   "run": "2026-10-10T06:00:00Z",
+   "type": "deterministe"
+  },
+  "harmonie": {
+   "nom": "HARMONIE 5,5 km (KNMI)",
+   "run": "2026-10-10T13:00:00Z",
+   "type": "deterministe"
+  },
+  "harmoniedmi": {
+   "nom": "HARMONIE 2 km (DMI)",
+   "run": "2026-10-10T12:00:00Z",
+   "type": "deterministe"
+  },
+  "arpege": {
+   "nom": "ARPEGE 0,1° (Météo-France)",
+   "run": "2026-10-10T12:00:00Z",
+   "type": "deterministe"
+  },
+  "arpege025": {
+   "nom": "ARPEGE 0,25° (Météo-France)",
+   "run": "2026-10-10T12:00:00Z",
+   "type": "deterministe"
+  },
+  "iconeu": {
+   "nom": "ICON-EU 7 km (DWD)",
+   "run": "2026-10-10T12:00:00+00:00",
+   "type": "deterministe"
+  },
+  "iconglobal": {
+   "nom": "ICON Global 13 km (DWD)",
+   "run": "2026-10-10T12:00:00Z",
+   "type": "deterministe"
+  },
+  "ukmo": {
+   "nom": "UKMO 10 km (Met Office)",
+   "run": "2026-10-10T00:00:00Z",
+   "type": "deterministe"
+  },
+  "cep": {
+   "nom": "ECMWF IFS (CEP)",
+   "run": "2026-10-10T00:00:00Z",
+   "type": "deterministe"
+  },
+  "aifs": {
+   "nom": "ECMWF AIFS (IA)",
+   "run": "2026-10-10T06:00:00Z",
+   "type": "deterministe"
+  },
+  "gfs": {
+   "nom": "GFS 25 km (NOAA)",
+   "run": "2026-10-10T06:00:00Z",
+   "type": "deterministe"
+  },
+  "pearp": {
+   "nom": "PEARP 35 membres (Météo-France)",
+   "run": "",
+   "type": "ensemble"
+  },
+  "gefs": {
+   "nom": "GEFS 31 membres (NOAA)",
+   "run": "",
+   "type": "ensemble"
+  },
+  "aigefs": {
+   "nom": "AIGEFS 31 membres (NOAA, IA)",
+   "run": "",
+   "type": "ensemble"
+  }
+ }
+}
