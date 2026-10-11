@@ -2,7 +2,7 @@
   "schema_version": 3,
   "module_version": "1.2.0",
   "status": "ok",
-  "generated_at": "2026-10-11T15:19:04Z",
+  "generated_at": "2026-10-11T15:36:12Z",
   "latest_observation_at": "2026-10-11T15:00:00Z",
   "title": "Températures, ressentis et records",
   "unit": "°C",
