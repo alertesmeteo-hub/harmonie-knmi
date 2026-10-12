@@ -4,7 +4,7 @@
 Lit les fichiers departements/66.json publiés par chaque dépôt modèle de l'organisation et écrit,
 pour chacune des 226 communes, un petit fichier communes/<INSEE>.json :
   - quotidien : pluie, Tmax, Tmin et rafale maxi par jour (heure de Paris) et par modèle, sur 15 jours ;
-  - ensembles : moyenne, p10 et p90 des ensembles GEFS, AIGEFS et PEARP ;
+  - ensembles : moyenne, p10 et p90 des ensembles GEFS, AIGEFS, PEARP et AIFS ENS ;
   - horaire   : 48 h heure par heure (meilleur modèle disponible à chaque heure) pour la frise du
                 risque, avec la pluie horaire de chaque modèle à maille fine pour mesurer l'accord.
 Ces fichiers alimentent la fiche « Ma commune », la frise horaire et l'indice de confiance du site.
@@ -48,6 +48,7 @@ ENSEMBLES = [
     ("pearp", "PEARP-25-km", "PEARP 35 membres (Météo-France)"),
     ("gefs", "GEFS-25-km", "GEFS 31 membres (NOAA)"),
     ("aigefs", "AIGEFS-25-km", "AIGEFS 31 membres (NOAA, IA)"),
+    ("aifsens", "AIFS-ENS-25-km", "AIFS ENS 51 membres (ECMWF, IA)"),
 ]
 # ordre de préférence pour la frise horaire (maille fine d'abord)
 PRIORITE_HORAIRE = ["arome", "aromeifs", "harmonie", "arpege", "iconeu", "iconglobal", "ukmo", "cep", "gfs"]
