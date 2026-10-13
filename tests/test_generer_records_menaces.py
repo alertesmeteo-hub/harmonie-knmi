@@ -5,6 +5,7 @@ mémoire des écarts, correction de biais et passage complet. Aucun appel résea
 
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
+import gzip
 import importlib.util
 import json
 import math
@@ -346,11 +347,38 @@ with tempfile.TemporaryDirectory() as tmp:
         assert sortie["status"] == "ok" and set(sortie["days"]) == {"2026-10-14", "2026-10-15"}
         etat_fichier = json.loads((tmp / "sortie" / "etat.json").read_text(encoding="utf-8"))
         assert etat_fichier["schema_version"] == 1 and "ecarts" in etat_fichier
+        # archive : une copie compressée de chaque fichier, nommée d'après l'heure du calcul, identique au fichier publié
+        archives = sorted(p.name for p in (tmp / "sortie" / "archive").glob("*"))
+        assert archives == ["20261013T083000Z_etat.json.gz", "20261013T083000Z_menaces.json.gz"], archives
+        assert gzip.decompress((tmp / "sortie" / "archive" / archives[1]).read_bytes()) == (tmp / "sortie" / "menaces.json").read_bytes()
+        assert gzip.decompress((tmp / "sortie" / "archive" / archives[0]).read_bytes()) == (tmp / "sortie" / "etat.json").read_bytes()
         # deuxième passage avec l'état écrit : relu sans erreur
         sys.argv += ["--etat", str(tmp / "sortie" / "etat.json")]
         assert g.main() == 0
     finally:
         sys.argv = argv
         os.chdir(ancien)
+
+# --- Archive des annonces : copie compressée par calcul, conservée 45 jours, idempotente -----------------------------------------------------
+with tempfile.TemporaryDirectory() as tmp_a:
+    sortie_a = Path(tmp_a)
+    (sortie_a / "menaces.json").write_text('{"a":1}', encoding="utf-8")
+    (sortie_a / "etat.json").write_text('{"b":2}', encoding="utf-8")
+    (sortie_a / "archive").mkdir()
+    # limite = 13/10 à 08:30 moins 45 jours = 29/08 à 08:30 : les deux premiers sont périmés, le troisième (44 jours et 19 h) est conservé
+    for prefixe in ("20260828T223000Z", "20260829T013000Z", "20260829T133000Z"):
+        for base in ("menaces", "etat"):
+            (sortie_a / "archive" / f"{prefixe}_{base}.json.gz").write_bytes(gzip.compress(b"{}"))
+    (sortie_a / "archive" / "notes.json.gz").write_bytes(b"x")  # nom hors format : jamais supprimé
+    ecrits = g.archiver(sortie_a, "2026-10-13T08:30:00Z", NOW)
+    assert ecrits == ["20261013T083000Z_menaces.json.gz", "20261013T083000Z_etat.json.gz"], ecrits
+    restants = sorted(p.name for p in (sortie_a / "archive").glob("*"))
+    assert not any(x.startswith(("20260828T223000Z", "20260829T013000Z")) for x in restants), restants
+    assert "20260829T133000Z_menaces.json.gz" in restants and "20260829T133000Z_etat.json.gz" in restants and "notes.json.gz" in restants, restants
+    assert gzip.decompress((sortie_a / "archive" / ecrits[0]).read_bytes()) == b'{"a":1}'
+    # même calcul archivé deux fois : mêmes fichiers, mêmes octets
+    avant = (sortie_a / "archive" / ecrits[0]).read_bytes()
+    assert g.archiver(sortie_a, "2026-10-13T08:30:00Z", NOW) == ecrits and (sortie_a / "archive" / ecrits[0]).read_bytes() == avant
+    assert len(list((sortie_a / "archive").glob("*.tmp"))) == 0
 
 print("tests generer_records_menaces : OK")

@@ -2,7 +2,8 @@ name: Update Records Température Menacés
 
 # Prévisions de nos modèles (AROME, ARPEGE, ICON, CEP) ramenées aux stations et comparées aux records à battre
 # (records_temperature/references.json, produit par le workflow LIVE). Sorties sur la branche records-menaces-data
-# (poussée à chaque passage, sans historique) : menaces.json pour la page, etat.json = mémoire des écarts prévu - mesuré.
+# (poussée à chaque passage, sans historique) : menaces.json pour la page, etat.json = mémoire des écarts prévu - mesuré,
+# archive/ = une copie compressée de chaque annonce (45 jours) pour la comparer plus tard à ce qui s'est produit.
 
 on:
   workflow_dispatch:
@@ -49,6 +50,9 @@ jobs:
         run: |
           # Coupures passagères de la source (connexion fermée, 429/5xx, délai dépassé) : jusqu'à 3 tentatives.
           set -o pipefail
+          # Archive des annonces précédentes reprise telle quelle : le script y ajoute celle de ce calcul et supprime les plus anciennes.
+          mkdir -p records_menaces
+          if [ -d /tmp/menaces-state/archive ]; then rm -rf records_menaces/archive; cp -a /tmp/menaces-state/archive records_menaces/archive; fi
           ETAT=""
           if [ -f /tmp/menaces-state/etat.json ]; then ETAT="--etat /tmp/menaces-state/etat.json"; fi
           for attempt in 1 2 3; do
@@ -82,6 +86,13 @@ jobs:
               print(jour, '| chaleur', c['heat'], '(', c['heat_records'], 'probables ) | froid', c['cold'], '(', c['cold_records'], ') | nuits tropicales', c['tropical'], '(', c['tropical_records'], ')')
           print('Modèles :', [(x['id'], x['debut']) for x in m['models']])
           print('Correction :', m['correction'])
+          arch = Path('records_menaces/archive')
+          nom = m['generated_at'].replace('-', '').replace(':', '')  # 2026-10-13T11:31:03Z -> 20261013T113103Z
+          for base in ('menaces', 'etat'):
+              if not (arch / f'{nom}_{base}.json.gz').exists():
+                  print('::warning::archive absente :', f'{nom}_{base}.json.gz')  # l'archive ne bloque pas la publication de l'annonce
+          fichiers = list(arch.glob('*.json.gz')) if arch.exists() else []
+          print('Archive :', len(fichiers), 'fichiers,', round(sum(f.stat().st_size for f in fichiers) / 1e6, 1), 'Mo')
           PY
 
       - name: Publier sur records-menaces-data
@@ -93,10 +104,13 @@ jobs:
             pub="$(mktemp -d)"
             git init -b records-menaces-data "$pub"
             git -C "$pub" remote add origin "$REPO_URL"
+            # Ancien état récupéré : git n'envoie alors que les fichiers nouveaux (sans cela, toute l'archive repartirait à chaque calcul)
+            git -C "$pub" fetch -q --depth=1 origin records-menaces-data || true
             cp records_menaces/menaces.json records_menaces/etat.json "$pub/"
+            if [ -d records_menaces/archive ]; then cp -r records_menaces/archive "$pub/archive"; fi
             git -C "$pub" config user.name "github-actions[bot]"
             git -C "$pub" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git -C "$pub" add menaces.json etat.json
+            git -C "$pub" add -A
             git -C "$pub" commit -m "Records température menacés v1.0.0"
             if git -C "$pub" push --force origin records-menaces-data; then exit 0; fi
             rm -rf "$pub"

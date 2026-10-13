@@ -16,11 +16,13 @@ fois (nuits claires trop douces). On garde donc d'un passage à l'autre (etat.js
 quand le jour est écoulé et mesuré, l'écart est conservé, et la correction appliquée aux prévisions suivantes est la somme d'un
 biais général récent de chaque modèle et d'un écart propre à la station (atténué tant que l'historique est court).
 
-Sorties (dossier --sortie) : menaces.json (stations dont un record est menacé, par jour) et etat.json (mémoire des écarts).
+Sorties (dossier --sortie) : menaces.json (stations dont un record est menacé, par jour) et etat.json (mémoire des écarts), plus
+archive/ : une copie compressée de chacun à chaque calcul (voir `archiver`), pour comparer plus tard ce qui était annoncé à ce qui s'est produit.
 """
 from __future__ import annotations
 
 import argparse
+import gzip
 import json
 import math
 import statistics
@@ -74,6 +76,8 @@ BIAIS_MAX = 4.0
 ECART_ABERRANT = 12.0  # un écart prévu − mesuré de plus de 12 °C vient d'un relevé ou d'une prévision aberrants : ignoré pour la correction
 MIN_STATIONS_BIAIS = 100  # en dessous, la médiane d'un jour n'est pas retenue
 HEURE_BILAN = 7  # heure UTC après laquelle la veille est considérée comme mesurée (fenêtre TX close à 6 h UTC)
+ARCHIVE_DIR = "archive"  # sous le dossier de sortie
+ARCHIVE_JOURS = 45  # durée de conservation des annonces archivées
 
 
 def utcnow() -> datetime:
@@ -654,6 +658,29 @@ def ecrire_json(chemin: Path, data: Any) -> None:
     tmp.replace(chemin)
 
 
+def archiver(sortie: Path, instant: str, now: datetime, jours: int = ARCHIVE_JOURS) -> List[str]:
+    """Copie compressée de menaces.json et etat.json dans <sortie>/archive, nommée d'après l'heure du calcul
+    (AAAAMMJJTHHMMSSZ_menaces.json.gz et AAAAMMJJTHHMMSSZ_etat.json.gz) ; supprime les copies de plus de `jours` jours. Renvoie les noms écrits.
+
+    Les fichiers publiés sont réécrits à chaque calcul, sans historique : sans cette archive, la prévision faite la veille pour un jour
+    serait perdue quand on voudrait la comparer à ce qui s'est produit. La compression est déterministe (même contenu, même fichier)."""
+    dossier = sortie / ARCHIVE_DIR
+    dossier.mkdir(parents=True, exist_ok=True)
+    nom = datetime.fromisoformat(instant.replace("Z", "+00:00")).astimezone(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    ecrits = []
+    for base in ("menaces", "etat"):
+        cible = dossier / f"{nom}_{base}.json.gz"
+        tmp = cible.with_suffix(cible.suffix + ".tmp")
+        tmp.write_bytes(gzip.compress((sortie / f"{base}.json").read_bytes(), compresslevel=9, mtime=0))
+        tmp.replace(cible)
+        ecrits.append(cible.name)
+    limite = (now - timedelta(days=jours)).strftime("%Y%m%dT%H%M%SZ")
+    for f in dossier.glob("*.json.gz"):
+        if len(f.name) > 16 and f.name[:16] < limite and f.name[8] == "T" and f.name[15] == "Z":
+            f.unlink()
+    return ecrits
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--references", default=OBS_BASE, help="URL ou dossier de références (references.json) et de relevés (cache/recent.json, cache/provisional.json)")
@@ -673,6 +700,11 @@ def main() -> int:
     sortie = Path(args.sortie)
     ecrire_json(sortie / "menaces.json", menaces)
     ecrire_json(sortie / "etat.json", etat)
+    try:
+        ecrits = archiver(sortie, menaces["generated_at"], now)
+        print("Archive :", ", ".join(ecrits), "|", len(list((sortie / ARCHIVE_DIR).glob("*.json.gz"))), "fichiers conservés")
+    except Exception as exc:  # l'archive ne doit jamais empêcher la publication de l'annonce
+        print("[WARN] archive non écrite :", exc)
     for jour, d in menaces["days"].items():
         c = d["counts"]
         print(f"{jour} : chaleur {c['heat']} ({c['heat_records']} probables), froid {c['cold']} ({c['cold_records']} probables), "
