@@ -39,7 +39,7 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import requests
 
-VERSION = "1.2.0"
+VERSION = "1.3.0"
 SCHEMA_VERSION = 1
 BUILD_ID = "records-temperature-map-20260820"
 
@@ -77,6 +77,19 @@ EQUAL_EPS = 0.05
 PACKAGE_LOOKBACK_HOURS = 4
 LIVE_HISTORY_HOURS = 32
 PACKAGE_DELAY = float(os.getenv("MF_PACKAGE_DELAY", "0.20"))
+
+# Contrôle de plausibilité des relevés horaires. Un capteur défaillant publie parfois des valeurs absurdes (0,0 °C en plein après-midi,
+# -8 °C pour 22 °C la même heure) : sans contrôle elles deviennent des « records ». Seuils réglés sur 24 h de paquets (47 700 relevés) :
+# hors capteur défaillant, l'écart tx - tn d'une même heure ne dépasse pas 9,2 °C et une extrême reste à moins de 3,4 °C des
+# températures instantanées qui l'encadrent.
+QC_VERSION = 1  # à incrémenter quand les règles changent : le jour en cours est alors reconstruit depuis les paquets
+QC_BOUNDS_C = (-60.0, 60.0)
+QC_TOLERANCE_C = 0.5  # la température instantanée peut sortir de [tn, tx] de 0,5 °C au plus (arrondis, mesures décalées dans l'heure)
+QC_RANGE_MAX_C = 15.0  # écart maximal tx - tn au sein d'une même heure
+QC_STEP_MAX_C = 15.0  # saut maximal de la température instantanée d'une heure à la suivante
+QC_SUPPORT_C = 6.0  # une extrême reste à moins de 6 °C de l'une des températures instantanées (heure précédente, heure) qui l'encadrent
+QC_MAX_LOGGED = 30
+QC_MAX_LISTED = 100
 
 # Métropole : 01-95. Le jeu quotidien de Météo-France range la Corse sous le code « 20 » (pas 2A / 2B).
 DEPARTMENTS = [f"{x:02d}" for x in range(1, 96)]
@@ -638,15 +651,59 @@ def window_dates(h: datetime) -> Tuple[str, str]:
     return (h - timedelta(hours=6)).date().isoformat(), (h + timedelta(hours=6)).date().isoformat()
 
 
-def accumulate_hour(days: Dict[str, Dict[str, list]], h: datetime, rows: List[dict], known: Any) -> None:
-    """Fusionne les extrêmes d'un paquet horaire dans `days` ({date: {station: [TX, TN]}} ; TX = maximum, TN = minimum)."""
+def check_hour(t: Optional[float], tx: Optional[float], tn: Optional[float],
+               prev_t: Optional[float] = None) -> Tuple[Optional[float], Optional[float], Optional[float], List[str]]:
+    """Contrôle de plausibilité d'une heure : (t, tx, tn) retenus et motifs de rejet (liste vide si tout est plausible).
+
+    Une ligne incohérente est rejetée en entier (bornes, tx < tn, étendue, t hors de [tn, tx], saut de t depuis `prev_t`, la
+    température retenue à l'heure précédente). Avec `prev_t`, une extrême qu'aucune des deux températures instantanées qui l'encadrent
+    n'étaye (à plus de QC_SUPPORT_C de t et de `prev_t`) est écartée seule : la température instantanée la remplace alors, comme quand
+    l'extrême est absente. Sans `prev_t`, seul le contrôle interne de la ligne s'applique : une seule température ne permet pas de juger
+    un réchauffement ou un refroidissement rapide (tn de 3,7 °C pour t de 11,0 °C à la fin d'une nuit d'inversion, par exemple)."""
+    low, high = QC_BOUNDS_C
+    reasons: List[str] = []
+    bounded: List[Optional[float]] = []
+    for name, v in (("t", t), ("tx", tx), ("tn", tn)):
+        if v is not None and not low <= v <= high:
+            reasons.append(f"{name} hors bornes ({v:g} °C)")
+            v = None
+        bounded.append(v)
+    t, tx, tn = bounded
+    if tx is not None and tn is not None:
+        if tx < tn - QC_TOLERANCE_C:
+            return None, None, None, reasons + [f"tx {tx:g} °C inférieure à tn {tn:g} °C"]
+        if tx - tn > QC_RANGE_MAX_C:
+            return None, None, None, reasons + [f"étendue tx - tn de {tx - tn:.1f} °C dans l'heure"]
+    if t is not None and ((tn is not None and t < tn - QC_TOLERANCE_C) or (tx is not None and t > tx + QC_TOLERANCE_C)):
+        return None, None, None, reasons + [f"t {t:g} °C hors de [tn, tx]"]
+    if t is not None and prev_t is not None and abs(t - prev_t) > QC_STEP_MAX_C:
+        return None, None, None, reasons + [f"saut de t de {t - prev_t:+.1f} °C en une heure"]
+    if t is not None and prev_t is not None:
+        if tn is not None and tn < min(t, prev_t) - QC_SUPPORT_C:
+            reasons.append(f"tn {tn:g} °C sans appui (t voisines : {min(t, prev_t):g} °C)")
+            tn = None
+        if tx is not None and tx > max(t, prev_t) + QC_SUPPORT_C:
+            reasons.append(f"tx {tx:g} °C sans appui (t voisines : {max(t, prev_t):g} °C)")
+            tx = None
+    return t, tx, tn, reasons
+
+
+def accumulate_hour(days: Dict[str, Dict[str, list]], h: datetime, rows: List[dict], known: Any,
+                    prev: Optional[Dict[str, float]] = None, rejected: Optional[List[dict]] = None) -> Dict[str, float]:
+    """Fusionne les extrêmes d'un paquet horaire dans `days` ({date: {station: [TX, TN]}} ; TX = maximum, TN = minimum).
+
+    `prev` : températures instantanées retenues à l'heure précédente (station -> °C), références du contrôle de plausibilité ;
+    `rejected` : liste complétée des relevés écartés ou corrigés. Renvoie les températures instantanées retenues de cette heure."""
     tx_day, tn_day = window_dates(h)
+    kept: Dict[str, float] = {}
     for row in rows:
         sid = station_id(row)
         if not sid or sid not in known: continue
-        t = celsius(fnum(first(row, ("t", "T"))))
-        tx = celsius(fnum(first(row, ("tx", "TX"))))
-        tn = celsius(fnum(first(row, ("tn", "TN"))))
+        raw = (celsius(fnum(first(row, ("t", "T")))), celsius(fnum(first(row, ("tx", "TX")))), celsius(fnum(first(row, ("tn", "TN")))))
+        t, tx, tn, reasons = check_hour(*raw, (prev or {}).get(sid))
+        if reasons and rejected is not None:
+            rejected.append({"id": sid, "hour": iso(h), "reasons": reasons, "raw": list(raw)})
+        if t is not None: kept[sid] = t
         # TX/TN horaires, T en secours.
         if tx is None: tx = t
         if tn is None: tn = t
@@ -656,6 +713,50 @@ def accumulate_hour(days: Dict[str, Dict[str, list]], h: datetime, rows: List[di
         if tn is not None:
             cell = days.setdefault(tn_day, {}).setdefault(sid, [None, None])
             cell[1] = tn if cell[1] is None else min(cell[1], tn)
+    return kept
+
+
+def accumulate_packets(days: Dict[str, Dict[str, list]], packets: Dict[datetime, List[dict]], known: Any, first_hour: datetime) -> List[dict]:
+    """Fusionne des paquets horaires (heure UTC -> lignes) dans `days`, dans l'ordre chronologique, avec contrôle de plausibilité.
+
+    La plus ancienne heure lue et celles antérieures à `first_hour` ne servent que de référence à l'heure suivante : leurs extrêmes ont
+    déjà été retenues aux passages précédents, et sans heure précédente le contrôle serait moins strict que lors du premier passage
+    (c'est ce qui rend le verdict identique d'un passage à l'autre, les mêmes heures étant relues). Une heure manquante interrompt la
+    chaîne de références. Renvoie les relevés écartés ou corrigés."""
+    rejected: List[dict] = []
+    prev: Dict[str, float] = {}
+    last: Optional[datetime] = None
+    for h in sorted(packets):
+        if last is None or h - last != timedelta(hours=1): prev = {}
+        if last is None or h < first_hour:
+            prev = accumulate_hour({}, h, packets[h], known, prev)
+        else:
+            prev = accumulate_hour(days, h, packets[h], known, prev, rejected)
+        last = h
+    return rejected
+
+
+def reset_unchecked_day(state: Any, prov_days: Dict[str, Dict[str, list]], today: date) -> bool:
+    """Retire le jour en cours de l'état provisoire si celui-ci date d'avant le contrôle de plausibilité (version absente ou différente).
+
+    Le jour en cours est relu en entier à chaque passage (fenêtres TX et TN ouvertes, l'API garde environ 24 h) : il est reconstruit sans
+    les valeurs aberrantes déjà enregistrées. Les jours précédents ne peuvent plus l'être ; les données contrôlées les remplacent sous 2 jours."""
+    if isinstance(state, dict) and state.get("qc_version") == QC_VERSION: return False
+    return prov_days.pop(today.isoformat(), None) is not None
+
+
+def quality_summary(rejected: List[dict]) -> dict:
+    """Bilan du contrôle de plausibilité publié dans live.json."""
+    stations = sorted({r["id"] for r in rejected})
+    return {"version": QC_VERSION, "rejected_rows": len(rejected), "rejected_stations": stations[:QC_MAX_LISTED]}
+
+
+def log_rejections(rejected: List[dict], names: Dict[str, dict]) -> None:
+    for r in rejected[:QC_MAX_LOGGED]:
+        t, tx, tn = r["raw"]
+        print(f"[QC] {r['id']} {(names.get(r['id']) or {}).get('name') or ''} {r['hour']} : {' ; '.join(r['reasons'])} (t={t} tx={tx} tn={tn})")
+    if len(rejected) > QC_MAX_LOGGED: print(f"[QC] … et {len(rejected) - QC_MAX_LOGGED} autres relevés écartés")
+    print("Contrôle de plausibilité :", len(rejected), "relevés écartés ou corrigés sur", len({r['id'] for r in rejected}), "stations")
 
 
 def uncovered_days(prov_days: Dict[str, Dict[str, list]], through: Optional[str], today: date) -> List[str]:
@@ -755,6 +856,8 @@ def generate_live() -> None:
     through = controlled.get("through")
     state = load_json_file(PROVISIONAL_FILE)
     prov_days: Dict[str, Dict[str, list]] = state["days"] if isinstance(state, dict) and isinstance(state.get("days"), dict) else {}
+    if reset_unchecked_day(state, prov_days, d):
+        print("Contrôle de plausibilité v%d : extrêmes du %s reconstruites depuis les paquets horaires" % (QC_VERSION, d.isoformat()))
     # TN du jour : depuis 18 h UTC la veille ; TX du jour : depuis 06 h UTC. Jusqu'à 6 h UTC, la fenêtre TX de la veille
     # (6 h → 6 h UTC) est encore ouverte : on remonte jusqu'à son début pour la compléter.
     earliest = datetime(d.year, d.month, d.day, 18, tzinfo=timezone.utc) - timedelta(days=1)
@@ -769,23 +872,25 @@ def generate_live() -> None:
         earliest = max(earliest, latest - timedelta(hours=BACKFILL_MAX_HOURS))
         print("Jours sans relevés horaires conservés :", missing, "-> reprise depuis", iso(earliest))
     hours = int((latest - earliest).total_seconds() // 3600) + 1
-    read = 0
-    for offset in range(min(BACKFILL_MAX_HOURS + 1, max(LIVE_HISTORY_HOURS, hours))):
+    # Une heure de plus que nécessaire est lue : sa température sert de référence au contrôle de plausibilité de la première heure retenue.
+    packets: Dict[datetime, List[dict]] = {}
+    for offset in range(min(BACKFILL_MAX_HOURS + 2, max(LIVE_HISTORY_HOURS, hours + 1))):
         h = latest - timedelta(hours=offset)
-        if h < earliest: break
+        if h < earliest - timedelta(hours=1): break
         try:
             raw = raw0 if offset == 0 else package_request(key, h)
         except RuntimeError as exc:  # quota dépassé : on garde ce qui a été lu, les heures manquantes seront reprises au passage suivant
             print("[WARN]", exc, "- lecture interrompue à", iso(h))
             break
         if raw is None: continue
-        accumulate_hour(prov_days, h, parse_delimited(raw), caches)
-        read += 1
+        packets[h] = parse_delimited(raw)
         time.sleep(PACKAGE_DELAY)
-    print("Paquets horaires lus :", read, "sur", hours, "heures demandées")
+    print("Paquets horaires lus :", len(packets), "sur", hours + 1, "heures demandées")
+    rejected = accumulate_packets(prov_days, packets, caches, earliest)
+    log_rejections(rejected, caches)
     cutoff = (d - timedelta(days=PROVISIONAL_KEEP_DAYS)).isoformat()
     prov_days = {day: vals for day, vals in prov_days.items() if day >= cutoff and not (through and day <= through)}
-    save_json(PROVISIONAL_FILE, {"schema_version": 1, "generated_at": iso(utcnow()), "days": prov_days})
+    save_json(PROVISIONAL_FILE, {"schema_version": 1, "qc_version": QC_VERSION, "generated_at": iso(utcnow()), "days": prov_days})
     layer = RecentLayer(merge_days(controlled.get("days"), prov_days))
     values = {sid: {"tx": cell[0], "tn": cell[1]} for sid, cell in prov_days.get(d.isoformat(), {}).items()}
     day = make_day_payload(d, values, caches, provisional=True, source="Météo-France DPPaquetObs V2", meta=meta, recent=layer)
@@ -798,7 +903,7 @@ def generate_live() -> None:
         "schema_version": SCHEMA_VERSION, "module_version": VERSION, "build_id": BUILD_ID,
         "status": "ok", "generated_at": iso(utcnow()), "latest_observation_at": iso(latest),
         "coverage_departments": len(list(CACHE_DIR.glob("dep-*.json"))), "coverage_target": len(DEPARTMENTS),
-        "recent_through": through, "provisional_days": previous,
+        "recent_through": through, "provisional_days": previous, "quality_control": quality_summary(rejected),
         "day": day,
     }
     save_json(LIVE_FILE, payload)

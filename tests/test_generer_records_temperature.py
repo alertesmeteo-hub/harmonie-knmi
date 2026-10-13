@@ -98,6 +98,74 @@ assert days["2026-10-14"]["66136001"] == [None, 14.0]
 assert days["2026-10-12"]["11144001"][0] == 12.0  # TX/TN absents : la température instantanée les remplace
 assert "99999999" not in days["2026-10-12"] and "99999999" not in days.get("2026-10-13", {})
 
+# --- Contrôle de plausibilité des relevés horaires -------------------------------------------------------------------------------
+# Relevés réels du 12-13 octobre 2026 de La Chiappa (20247001), capteur défaillant : 0,0 °C en plein après-midi, -8,4 °C pour 22 °C la même heure.
+for t, tx, tn in ((21.3, 21.5, 0.0), (17.7, 20.5, -0.7), (-8.4, 22.1, -8.5), (4.5, 22.6, -8.5)):
+    rejet = rt.check_hour(t, tx, tn, 21.2)
+    assert rejet[:3] == (None, None, None) and rejet[3], (t, tx, tn, rejet)
+# relevés plausibles : conservés tels quels
+assert rt.check_hour(21.3, 21.5, 21.0, 21.2) == (21.3, 21.5, 21.0, [])
+assert rt.check_hour(12.3, 12.0, 10.0, 11.0) == (12.3, 12.0, 10.0, [])  # t à 0,3 °C de tx : tolérance d'arrondi
+# réchauffement rapide en fin de nuit d'inversion : tn de 3,7 °C pour t de 11,0 °C, appuyé par l'heure précédente (3,8 °C)
+assert rt.check_hour(11.0, 11.0, 3.7, 3.8) == (11.0, 11.0, 3.7, [])
+# sans heure précédente, une seule température ne permet pas de juger : seul le contrôle interne de la ligne s'applique
+assert rt.check_hour(11.0, 11.0, 3.7) == (11.0, 11.0, 3.7, [])
+# refroidissement d'orage (37,5 °C puis 25,2 °C ; extrêmes de l'heure 38,0 et 24,0) : 14 °C d'écart dans l'heure, plausible
+assert rt.check_hour(25.2, 38.0, 24.0, 37.5) == (25.2, 38.0, 24.0, [])
+# lignes incohérentes : tx < tn, t hors de [tn, tx], valeurs hors bornes, plus de 15 °C d'écart dans l'heure
+assert rt.check_hour(10.0, 8.0, 10.0)[:3] == (None, None, None)
+assert rt.check_hour(15.0, 12.0, 10.0)[:3] == (None, None, None)
+hors_bornes = rt.check_hour(80.0, 80.5, 79.0)
+assert hors_bornes[:3] == (None, None, None) and len(hors_bornes[3]) == 3, hors_bornes
+assert rt.check_hour(20.0, 28.0, 12.5)[:3] == (None, None, None)  # 15,5 °C d'écart
+assert rt.check_hour(20.0, 27.0, 12.5)[:3] == (20.0, 27.0, 12.5)  # 14,5 °C d'écart
+# saut de la température instantanée : plus de 15 °C d'une heure à la suivante
+assert rt.check_hour(30.0, 30.5, 29.5, 10.0)[:3] == (None, None, None)
+# extrême sans appui (à plus de 6 °C des deux températures voisines) : écartée seule, le reste de la ligne est conservé
+res = rt.check_hour(15.0, 15.2, 4.0, 14.5)
+assert res[:3] == (15.0, 15.2, None) and len(res[3]) == 1, res
+res = rt.check_hour(15.0, 25.0, 14.8, 14.5)
+assert res[:3] == (15.0, None, 14.8) and len(res[3]) == 1, res
+
+# accumulation : la ligne aberrante n'altère pas les extrêmes du jour et ne sert pas de référence à l'heure suivante
+jours, rejetes = {}, []
+prec = rt.accumulate_hour(jours, h(13, 8), [row("66136001", t=20.0, tx=20.3, tn=19.8)], known, None, rejetes)
+assert prec == {"66136001": 20.0} and not rejetes
+prec = rt.accumulate_hour(jours, h(13, 9), [row("66136001", t=-8.4, tx=22.1, tn=-8.5)], known, prec, rejetes)
+assert prec == {} and [r["id"] for r in rejetes] == ["66136001"] and rejetes[0]["raw"] == [-8.4, 22.1, -8.5], rejetes
+assert jours["2026-10-13"]["66136001"] == [20.3, 19.8], jours
+# extrême sans appui remplacée par t (valeur de secours)
+jours, rejetes = {}, []
+rt.accumulate_hour(jours, h(13, 8), [row("66136001", t=15.0, tx=15.2, tn=4.0)], known, {"66136001": 14.5}, rejetes)
+assert jours["2026-10-13"]["66136001"] == [15.2, 15.0] and len(rejetes) == 1, jours
+
+# plusieurs heures : la plus ancienne ne sert que de référence ; l'heure douteuse (7 h : tn 9,5 °C sous t, 9,7 °C d'écart dans l'heure) est corrigée
+paquets = {h(13, 5): [row("66136001", t=8.0, tx=8.2, tn=7.8)], h(13, 6): [row("66136001", t=8.0, tx=8.3, tn=7.7)],
+           h(13, 7): [row("66136001", t=8.5, tx=8.7, tn=-1.0)], h(13, 8): [row("66136001", t=9.0, tx=9.2, tn=8.6)]}
+jours = {}
+rej = rt.accumulate_packets(jours, paquets, known, h(13, 6))
+assert jours["2026-10-13"]["66136001"] == [9.2, 7.7], jours  # le -1,0 °C n'y est pas
+assert "2026-10-12" not in jours, jours  # 5 h : référence seule
+assert len(rej) == 1 and rej[0]["hour"] == "2026-10-13T07:00:00Z", rej
+# passage suivant, la fenêtre a glissé : l'heure douteuse est la plus ancienne lue, elle ne sert que de référence (même verdict, aucune fuite)
+jours = {}
+rt.accumulate_packets(jours, {k: v for k, v in paquets.items() if k >= h(13, 7)}, known, h(13, 6))
+assert jours["2026-10-13"]["66136001"] == [9.2, 8.6], jours
+# heure manquante : la chaîne de références est interrompue, l'heure suivante est retenue avec le seul contrôle interne
+jours = {}
+rt.accumulate_packets(jours, {h(13, 6): paquets[h(13, 6)], h(13, 8): paquets[h(13, 8)]}, known, h(13, 6))
+assert jours["2026-10-13"]["66136001"] == [9.2, 8.6], jours
+
+# état antérieur au contrôle : le jour en cours est reconstruit, les jours précédents sont gardés
+etat_ancien = {"days": {"2026-10-13": {"20247001": [22.1, -8.5]}, "2026-10-12": {"20247001": [21.5, 17.0]}}}
+jp = {d: dict(v) for d, v in etat_ancien["days"].items()}
+assert rt.reset_unchecked_day(etat_ancien, jp, date(2026, 10, 13)) is True and set(jp) == {"2026-10-12"}, jp
+etat_ancien["qc_version"] = rt.QC_VERSION
+jp = {d: dict(v) for d, v in etat_ancien["days"].items()}
+assert rt.reset_unchecked_day(etat_ancien, jp, date(2026, 10, 13)) is False and set(jp) == {"2026-10-12", "2026-10-13"}, jp
+assert rt.reset_unchecked_day(None, {}, date(2026, 10, 13)) is False
+assert rt.quality_summary([{"id": "B"}, {"id": "A"}, {"id": "A"}]) == {"version": rt.QC_VERSION, "rejected_rows": 3, "rejected_stations": ["A", "B"]}
+
 # --- Couche récente : les records d'un même mois s'enchaînent ----------------------------------------------------------
 def station():
     return {
@@ -208,7 +276,7 @@ def csv_hour(rows):
     return ("\n".join(lignes) + "\n").encode()
 
 
-def lancer_live(workdir, latest, through):
+def lancer_live(workdir, latest, through, forcer=None):
     os.chdir(workdir)
     out = Path("records_temperature")
     (out / "cache").mkdir(parents=True, exist_ok=True)
@@ -218,9 +286,9 @@ def lancer_live(workdir, latest, through):
     (out / "cache" / "recent.json").write_text(_json.dumps({"schema_version": 1, "through": through, "days": {"2026-10-03": {"66136001": [35.0, 12.0]}}}), encoding="utf-8")
 
     def paquet(key, h):
-        # le 12 octobre, 34,5 °C à 14 h UTC ; sinon 15 °C
-        chaud = h.day == 12 and h.hour == 14
-        return csv_hour([("66136001", 34.0 if chaud else 15.0, 34.5 if chaud else 15.5, 14.5 if not chaud else 33.5)])
+        # le 12 octobre, pic de 34,0 °C à 14 h UTC (montée et descente de 4 °C par heure, comme dans la réalité) ; sinon 15 °C
+        t = max(15.0, 34.0 - 4.0 * abs(h.hour - 14)) if h.day == 12 else 15.0
+        return csv_hour([("66136001", *((forcer(h) if forcer else None) or (t, t + 0.5, t - 0.5)))])
 
     rt.PACKAGE_DELAY = 0
     rt.MIN_STATIONS_JOUR = 1  # une seule station dans ce jeu d'essai
@@ -238,12 +306,14 @@ with tempfile.TemporaryDirectory() as tmp:
         live = _json.loads((out / "live.json").read_text(encoding="utf-8"))
         assert live["day"]["date"] == "2026-10-13" and live["recent_through"] == "2026-10-11" and live["provisional_days"] == ["2026-10-12"], live["provisional_days"]
         assert live["coverage_target"] == 95 and live["coverage_departments"] == 1
+        assert live["quality_control"] == {"version": rt.QC_VERSION, "rejected_rows": 0, "rejected_stations": []}, live["quality_control"]
         prov = _json.loads((out / "provisional" / "2026-10-12.json").read_text(encoding="utf-8"))
         chaud = prov["day"]["events"]["heat"]
         assert len(chaud) == 1 and chaud[0]["value"] == 34.5 and "monthly" not in chaud[0]["flags"], chaud  # 35,0 relevés le 3 octobre : pas un record du mois
         assert "daily" in chaud[0]["flags"] or "near" in chaud[0], chaud
         assert chaud[0]["provisional"] is True
         etat = _json.loads((out / "cache" / "provisional.json").read_text(encoding="utf-8"))
+        assert etat["qc_version"] == rt.QC_VERSION
         assert set(etat["days"]) >= {"2026-10-12", "2026-10-13"}, etat["days"].keys()
         assert etat["days"]["2026-10-12"]["66136001"][0] == 34.5  # TX du 12 (fenêtre 6 h → 6 h UTC)
         index = _json.loads((out / "index.json").read_text(encoding="utf-8"))
@@ -263,6 +333,31 @@ with tempfile.TemporaryDirectory() as tmp:
         out = lancer_live(tmp, datetime(2026, 10, 13, 5, tzinfo=timezone.utc), "2026-10-12")
         assert not list((out / "provisional").glob("*.json"))
         assert "2026-10-12" not in _json.loads((out / "cache" / "provisional.json").read_text(encoding="utf-8"))["days"]
+    finally:
+        os.chdir(ancien)
+
+# --- LIVE de bout en bout : capteur défaillant (tn de -3,0 °C pour 15 °C = record du mois si on le croyait) et état antérieur au contrôle ----------
+with tempfile.TemporaryDirectory() as tmp:
+    ancien = os.getcwd()
+    try:
+        latest_glitch = datetime(2026, 10, 13, 9, tzinfo=timezone.utc)
+        defaillant = lambda hh: (15.0, 15.5, -3.0) if (hh.day == 13 and hh.hour == 3) else None  # noqa: E731
+        out = lancer_live(tmp, latest_glitch, "2026-10-11")  # premier passage : fichiers de base
+        # état laissé par une version sans contrôle : tn de -3,0 °C déjà enregistrée pour le 13, et une autre pour le 12 (non relisible)
+        (out / "cache" / "provisional.json").write_text(_json.dumps({"schema_version": 1, "generated_at": "2026-10-13T08:00:00Z", "days": {
+            "2026-10-13": {"66136001": [15.5, -3.0]}, "2026-10-12": {"66136001": [34.5, 14.5]}}}), encoding="utf-8")
+        out = lancer_live(tmp, latest_glitch, "2026-10-11", forcer=defaillant)
+        live = _json.loads((out / "live.json").read_text(encoding="utf-8"))
+        assert live["day"]["events"]["cold"] == [], live["day"]["events"]["cold"]  # ni l'ancienne valeur, ni la nouvelle ne deviennent un record
+        assert live["quality_control"]["rejected_stations"] == ["66136001"] and live["quality_control"]["rejected_rows"] == 1, live["quality_control"]
+        etat = _json.loads((out / "cache" / "provisional.json").read_text(encoding="utf-8"))
+        assert etat["qc_version"] == rt.QC_VERSION
+        assert etat["days"]["2026-10-13"]["66136001"][1] == 14.5, etat["days"]["2026-10-13"]  # jour reconstruit sans la valeur aberrante
+        assert etat["days"]["2026-10-12"]["66136001"][0] == 34.5  # veille : conservée
+        # les passages suivants n'effacent plus le jour en cours (état déjà contrôlé) mais gardent le verdict
+        out = lancer_live(tmp, latest_glitch, "2026-10-11", forcer=defaillant)
+        etat = _json.loads((out / "cache" / "provisional.json").read_text(encoding="utf-8"))
+        assert etat["days"]["2026-10-13"]["66136001"][1] == 14.5, etat["days"]["2026-10-13"]
     finally:
         os.chdir(ancien)
 
@@ -288,8 +383,8 @@ with tempfile.TemporaryDirectory() as tmp:
 
         def paquet_reprise(key, h):
             appeles.append(h)
-            chaud = h.day == 11 and h.hour == 14
-            return csv_hour([("66136001", 36.0 if chaud else 15.0, 36.5 if chaud else 15.5, 14.5 if not chaud else 30.0)])
+            t = max(15.0, 36.0 - 4.0 * abs(h.hour - 14)) if h.day == 11 else 15.0  # pic de 36,0 °C le 11 à 14 h UTC
+            return csv_hour([("66136001", t, t + 0.5, t - 0.5)])
 
         rt.PACKAGE_DELAY = 0
         rt.BACKFILL_MAX_HOURS = 72  # pour tester la logique de reprise sur plusieurs jours
@@ -298,16 +393,16 @@ with tempfile.TemporaryDirectory() as tmp:
         rt.find_latest_hour = lambda key: (latest, paquet_reprise(key, latest))
         rt.package_request = paquet_reprise
         rt.generate_live()
-        # premier jour manquant : le 11 ; sa TN commence le 10 à 18 h UTC
-        assert min(appeles) == datetime(2026, 10, 10, 18, tzinfo=timezone.utc), min(appeles)
+        # premier jour manquant : le 11 ; sa TN commence le 10 à 18 h UTC (une heure de plus est lue : référence du contrôle de plausibilité)
+        assert min(appeles) == datetime(2026, 10, 10, 17, tzinfo=timezone.utc), min(appeles)
         assert sorted(p.stem for p in (out / "provisional").glob("*.json")) == ["2026-10-11", "2026-10-12"]
         j11 = _json.loads((out / "provisional" / "2026-10-11.json").read_text(encoding="utf-8"))["day"]
         assert [e["value"] for e in j11["events"]["heat"]] == [36.5], j11["events"]["heat"]
         # deuxième passage : les jours sont couverts, la reprise n'a plus lieu (seules les heures courantes sont relues)
         appeles.clear()
         rt.generate_live()
-        # (avant 6 h UTC, la fenêtre TX de la veille, ouverte depuis le 12 à 6 h UTC, est relue ; rien avant)
-        assert min(appeles) >= datetime(2026, 10, 12, 6, tzinfo=timezone.utc), min(appeles)
+        # (avant 6 h UTC, la fenêtre TX de la veille, ouverte depuis le 12 à 6 h UTC, est relue ; rien avant, hormis l'heure de référence)
+        assert min(appeles) >= datetime(2026, 10, 12, 5, tzinfo=timezone.utc), min(appeles)
         # quota dépassé en cours de reprise : on garde ce qui a été lu, sans échec
         (out / "cache" / "provisional.json").unlink()
         compteur = {"n": 0}

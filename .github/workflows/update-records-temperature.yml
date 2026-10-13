@@ -78,12 +78,13 @@ jobs:
           live=json.loads(Path('records_temperature/live.json').read_text(encoding='utf-8'))
           assert idx['status']=='ok'
           assert live['status']=='ok'
-          assert live['module_version']=='1.2.0'
+          assert live['module_version']=='1.3.0'
           print('Couverture :', idx.get('coverage_departments'), '/', idx.get('coverage_target'))
           print('Date live :', live.get('day',{}).get('date'))
           print('Chaleur :', live.get('day',{}).get('counts',{}).get('heat'))
           print('Froid :', live.get('day',{}).get('counts',{}).get('cold'))
           print('Nuits tropicales :', live.get('day',{}).get('counts',{}).get('tropical'))
+          print('Contrôle de plausibilité :', live.get('quality_control'))
           print('Jours provisoires :', live.get('provisional_days'), '| données contrôlées jusqu\'au', live.get('recent_through'))
           refs=Path('records_temperature/references.json')
           if refs.exists():
