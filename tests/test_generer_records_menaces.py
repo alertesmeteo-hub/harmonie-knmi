@@ -55,16 +55,20 @@ assert g.choisir_point(doc, 47.0, 6.0, 300) is None
 assert g.choisir_point(doc, 42.5001, 2.5001, None)[0] == 0
 assert g.choisir_point({"columns": {}, "points": []}, 42, 2, 100) is None
 
-# --- Température d'un point corrigée de l'altitude : 6,5 °C par km ------------------------------------------------------------
-ech = g.echantillons(doc, 0, 100, 600)  # station 500 m plus haut : 3,25 °C plus froid
-brut = g.echantillons(doc, 0, 100, 100)
+# --- Températures brutes d'un point ; correction d'altitude sur les extrêmes : 6,5 °C par km le jour, 1 °C par km la nuit -----------------------
+brut = g.echantillons(doc, 0)
 h15 = g.heure(AUJ, 15)
-assert abs((brut[h15] - ech[h15]) - 3.25) < 1e-9, (brut[h15], ech[h15])
-assert abs(g.echantillons(doc, 0, 100, None)[h15] - brut[h15]) < 1e-9  # altitude inconnue : aucune correction
-assert g.echantillons({"columns": {"values": ["x"]}, "forecast": []}, 0, 0, 0) == {}
+assert abs(brut[h15] - 19.0) < 1e-9, brut[h15]  # 15 °C de base + 4 °C de cycle à 15 h
+assert g.echantillons({"columns": {"values": ["x"]}, "forecast": []}, 0) == {}
+sans = g.prevoir_station({"arome": [doc_modele(pts, [10, 10, 10], 5)]}, 42.5001, 2.5001, 100, [DEMAIN])["arome"]["2026-10-14"]
+haut = g.prevoir_station({"arome": [doc_modele(pts, [10, 10, 10], 5)]}, 42.5001, 2.5001, 600, [DEMAIN])["arome"]["2026-10-14"]  # 500 m plus haut que le point de grille
+assert abs((sans[1] - haut[1]) - 3.25) < 1e-9, (sans, haut)  # TX : 6,5 °C par km
+assert abs((sans[0] - haut[0]) - 0.5) < 1e-9, (sans, haut)  # TN : 1 °C par km seulement
+inconnue = g.prevoir_station({"arome": [doc_modele(pts, [10, 10, 10], 5)]}, 42.5001, 2.5001, None, [DEMAIN])["arome"]["2026-10-14"]
+assert abs(inconnue[1] - sans[1]) < 1e-9 and abs(inconnue[0] - sans[0]) < 1e-9  # altitude inconnue : aucune correction
 
 # --- TN et TX : fenêtres 18 h → 18 h UTC et 6 h → 6 h UTC -----------------------------------------------------------------------
-serie = g.echantillons(doc_modele(pts, [10, 10, 10], 5), 0, 100, 100)
+serie = g.echantillons(doc_modele(pts, [10, 10, 10], 5), 0)
 tn, tx = g.extremes_jour(serie, DEMAIN)
 assert tn is not None and tx is not None and abs(tn - 5.0) < 0.2 and abs(tx - 15.0) < 0.2, (tn, tx)
 # TX du dernier jour de la série : la fenêtre s'arrête après la fin des échantillons -> non couverte

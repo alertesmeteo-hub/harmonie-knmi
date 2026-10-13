@@ -7,7 +7,8 @@ AROME, ARPEGE, ICON-GLOBAL et ECMWF IFS. Les fichiers par département des dép�
 departements/<département>.json) donnent la température de chaque point de grille ; aucun service extérieur.
 
 Pour une station, on retient le point de grille qui minimise « distance + écart d'altitude / 100 » (au plus 15 km, sinon le
-plus proche) et on corrige la température de l'écart d'altitude (6,5 °C par km). TX = maximum de 6 h UTC à 6 h UTC le lendemain,
+plus proche) et on corrige la température de l'écart d'altitude : 6,5 °C par km pour la maximale, 1 °C par km seulement pour la
+minimale (la nuit, par temps clair et calme, la température dépend peu de l'altitude). TX = maximum de 6 h UTC à 6 h UTC le lendemain,
 TN = minimum de 18 h UTC la veille à 18 h UTC (définition des relevés de Météo-France, comme pour les records).
 
 Les modèles se trompent de façon durable sur une station (vallée froide, crête, littoral) et d'un jour à l'autre sur toutes à la
@@ -47,7 +48,10 @@ MODELES: Tuple[Tuple[str, str, str], ...] = (
 )
 JOURS_PREVUS = (1, 2)  # lendemain et surlendemain (J+1, J+2)
 
-GRADIENT = 0.0065  # °C par mètre d'écart d'altitude entre le point du modèle et la station
+# Correction de l'écart d'altitude entre le point de grille et la station (°C par mètre), différente le jour et la nuit :
+GRADIENT_TX = 0.0065  # le jour l'air est brassé et la température suit l'altitude (mesuré le 12/10/2026 sur l'IFS : l'erreur croît de 6,7 °C par km)
+GRADIENT_TN = 0.0010  # la nuit, claire et calme, elle n'en dépend presque pas (inversions) : le 13/10/2026 l'erreur des quatre modèles est
+#                       minimale entre 0 et 1 °C par km, et dépasse de 0,4 °C avec 6,5 °C par km
 RAYON_KM = 15.0  # au plus ce rayon : meilleur compromis distance + écart d'altitude / 100 ; au-delà, le point le plus proche
 RAYON_MAX_KM = 40.0
 PAS_MAX_H = 3  # écart maximal entre deux échantillons d'une fenêtre pour la juger couverte
@@ -141,18 +145,17 @@ def choisir_point(doc: dict, lat: float, lon: float, alti: Optional[float]) -> O
     return None
 
 
-def echantillons(doc: dict, point: int, alt_modele: float, alti_station: Optional[float]) -> Dict[int, float]:
-    """Températures (heure UTC -> °C) d'un point de grille, corrigées de l'écart d'altitude avec la station (6,5 °C par km)."""
+def echantillons(doc: dict, point: int) -> Dict[int, float]:
+    """Températures brutes (heure UTC -> °C) d'un point de grille ; la correction d'altitude se fait sur les extrêmes (voir `prevoir_station`)."""
     i_t = _colonne(doc, "temperature_c")
     if i_t is None:
         return {}
-    corr = GRADIENT * (alti_station - alt_modele) if alti_station is not None else 0.0
     out: Dict[int, float] = {}
     for t, rows in doc["forecast"]:
         try:
             v = fnum(rows[point][i_t])
             if v is not None:
-                out[heure_iso(t)] = v - corr
+                out[heure_iso(t)] = v
         except (IndexError, TypeError, ValueError):
             continue
     return out
@@ -196,11 +199,15 @@ def prevoir_station(docs_par_modele: Dict[str, List[dict]], lat: float, lon: flo
         if not choix:
             continue
         doc, point, alt_modele = choix
-        ech = echantillons(doc, point, alt_modele, alti)
+        ech = echantillons(doc, point)
         if not ech:
             continue
-        par_jour = {j.isoformat(): extremes_jour(ech, j) for j in jours}
-        par_jour = {j: v for j, v in par_jour.items() if v[0] is not None or v[1] is not None}
+        ecart_alt = (alti - alt_modele) if alti is not None else 0.0  # > 0 : station plus haute que le point de grille
+        par_jour = {}
+        for j in jours:
+            tn, tx = extremes_jour(ech, j)
+            if tn is not None or tx is not None:
+                par_jour[j.isoformat()] = (None if tn is None else tn - GRADIENT_TN * ecart_alt, None if tx is None else tx - GRADIENT_TX * ecart_alt)
         if par_jour:
             out[mid] = par_jour
     return out
