@@ -52,4 +52,13 @@ jobs:
           git -C "$publish_dir" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git -C "$publish_dir" add .
           git -C "$publish_dir" commit -q -m "Rivières 66 $(date -u +'%Y-%m-%d %H:%M UTC')"
-          git -C "$publish_dir" push -q --force "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:hydro-data
+          # GitHub refuse parfois un push côté serveur (« fatal error in commit_refs », 12 octobre 2026 à 23:09 UTC) : nouvel essai.
+          for attempt in 1 2 3; do
+            if git -C "$publish_dir" push -q --force "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:hydro-data; then
+              exit 0
+            fi
+            echo "::warning::Push refusé (tentative ${attempt}/3), nouvel essai."
+            sleep $((attempt * 10))
+          done
+          echo "::error::Échec de publication après 3 tentatives."
+          exit 1
