@@ -39,7 +39,7 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import requests
 
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 SCHEMA_VERSION = 1
 BUILD_ID = "records-temperature-map-20260820"
 
@@ -52,6 +52,9 @@ META_FILE = CACHE_DIR / "stations-meta.json"  # fiches des stations, version com
 RECENT_FILE = CACHE_DIR / "recent.json"  # valeurs quotidiennes contrôlées postérieures à la construction des caches
 PROVISIONAL_FILE = CACHE_DIR / "provisional.json"  # extrêmes provisoires issus des paquets horaires
 PROVISIONAL_DIR = OUT_ROOT / "provisional"  # jours récents pas encore couverts par les données contrôlées
+REFERENCES_FILE = OUT_ROOT / "references.json"  # records à battre les prochains jours, par station (lu par generer_records_menaces.py)
+REFERENCES_DAYS = 3  # jours à venir couverts : J+1 à J+3
+ACTIVE_DAYS = 3  # une station est suivie si elle a une valeur dans ces derniers jours
 
 DATASET_ID = "6569b51ae64326786e4e8e1a"
 DATASET_API = f"https://www.data.gouv.fr/api/1/datasets/{DATASET_ID}/"
@@ -691,6 +694,54 @@ def write_provisional_days(prov_days: Dict[str, Dict[str, list]], through: Optio
     return wanted
 
 
+def build_references(caches: Dict[str, dict], meta: Optional[Dict[str, dict]], layer: RecentLayer, today: date) -> dict:
+    """Records à battre les jours J+1 à J+REFERENCES_DAYS, pour chaque station suivie (une valeur dans les ACTIVE_DAYS derniers jours).
+
+    Même logique que `classify` : caches historiques, complétés par la couche récente (valeurs contrôlées, puis provisoires du jour).
+    Le record absolu ne dépend pas du jour ; ceux du mois, de la quinzaine et du jour du calendrier, si."""
+    days = [today + timedelta(days=k) for k in range(1, REFERENCES_DAYS + 1)]
+    since = (today - timedelta(days=ACTIVE_DAYS)).isoformat()
+    stations: Dict[str, dict] = {}
+    for sid, rows in layer.by_station.items():
+        if not any(day >= since and (tx is not None or tn is not None) for day, tx, tn in rows): continue
+        st = caches.get(sid)
+        if not st: continue
+        v = station_view(st, meta)
+        if v["lat"] is None or v["lon"] is None: continue
+        records: Dict[str, dict] = {}
+        for kind in ("heat", "cold", "tropical"):
+            absolute = record_ref(st, kind, "absolute", days[0], layer)
+            per_day: Dict[str, dict] = {}
+            for d in days:
+                item = {}
+                for scope in ("monthly", "fortnight", "daily"):
+                    ref = record_ref(st, kind, scope, d, layer)
+                    if ref: item[scope] = [ref["value"], ref["date"]]
+                if item: per_day[d.isoformat()] = item
+            if absolute or per_day:
+                records[kind] = {"absolute": [absolute["value"], absolute["date"]] if absolute else None, "days": per_day}
+        if not records: continue
+        stations[sid] = {
+            "name": st.get("name"), "lat": v["lat"], "lon": v["lon"], "altitude": v["altitude"],
+            "opening_year": v["opening_year"], "principal": v["principal"],
+            "department_code": st.get("department_code"), "region": st.get("region") or "France",
+            "records": records,
+        }
+    return {"days": [d.isoformat() for d in days], "stations": stations}
+
+
+def write_references(caches: Dict[str, dict], meta: Optional[Dict[str, dict]], layer: RecentLayer, today: date) -> int:
+    """Écrit references.json (nombre de stations). Le fichier n'est réécrit que si son contenu change : l'historique de la branche
+    ne grossit pas à chaque passage horaire."""
+    built = build_references(caches, meta, layer, today)
+    old = load_json_file(REFERENCES_FILE)
+    if isinstance(old, dict) and old.get("days") == built["days"] and old.get("stations") == built["stations"]:
+        return len(built["stations"])
+    save_json(REFERENCES_FILE, {"schema_version": 1, "module_version": VERSION, "build_id": BUILD_ID, "status": "ok",
+                                "generated_at": iso(utcnow()), **built})
+    return len(built["stations"])
+
+
 def generate_live() -> None:
     caches = all_station_caches()
     if not caches:
@@ -739,6 +790,10 @@ def generate_live() -> None:
     values = {sid: {"tx": cell[0], "tn": cell[1]} for sid, cell in prov_days.get(d.isoformat(), {}).items()}
     day = make_day_payload(d, values, caches, provisional=True, source="Météo-France DPPaquetObs V2", meta=meta, recent=layer)
     previous = write_provisional_days(prov_days, through, d, caches, meta, layer)
+    try:
+        print("Références pour les records menacés :", write_references(caches, meta, layer, d), "stations")
+    except Exception as exc:  # les références ne doivent jamais empêcher la publication du direct
+        print("[WARN] références non écrites :", exc)
     payload = {
         "schema_version": SCHEMA_VERSION, "module_version": VERSION, "build_id": BUILD_ID,
         "status": "ok", "generated_at": iso(utcnow()), "latest_observation_at": iso(latest),
@@ -854,6 +909,7 @@ def write_index() -> None:
     live = load_json_file(LIVE_FILE)
     recent = load_json_file(RECENT_FILE)
     meta = load_json_file(META_FILE)
+    references = load_json_file(REFERENCES_FILE)
     provisional = sorted(p.stem for p in PROVISIONAL_DIR.glob("????-??-??.json")) if PROVISIONAL_DIR.exists() else []
     payload = {
         "schema_version": SCHEMA_VERSION, "module_version": VERSION, "build_id": BUILD_ID,
@@ -864,6 +920,7 @@ def write_index() -> None:
         "recent_through": (recent or {}).get("through") if isinstance(recent, dict) else None,
         "provisional_days": provisional,
         "stations_meta_at": (meta or {}).get("generated_at") if isinstance(meta, dict) else None,
+        "references_at": (references or {}).get("generated_at") if isinstance(references, dict) else None,
         "coverage_departments": len(list(CACHE_DIR.glob("dep-*.json"))), "coverage_target": len(DEPARTMENTS),
         "near_delta_c": NEAR_DELTA_C,
         "principal_types": [0, 1, 2],

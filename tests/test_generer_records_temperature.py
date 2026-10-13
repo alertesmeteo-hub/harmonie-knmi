@@ -170,6 +170,32 @@ jours = {"2026-10-09": {str(i): [1, 1] for i in range(100)}, "2026-10-10": {str(
 assert rt.last_complete_day(jours) == "2026-10-10"
 assert rt.last_complete_day({}) is None
 
+# --- Références pour les records menacés : seules les stations qui ont une valeur récente sont suivies ----------------------------
+cache_ref = {"S1": dict(station(), id="S1"), "S2": dict(station(), id="S2", lat=None, lon=None)}
+frais = rt.RecentLayer({"2026-10-12": {"S1": [20.0, 8.0], "S2": [20.0, 8.0]}})
+ancien_layer = rt.RecentLayer({"2026-10-01": {"S1": [20.0, 8.0]}})
+r1 = rt.build_references(cache_ref, None, frais, date(2026, 10, 13))
+assert r1["days"] == ["2026-10-14", "2026-10-15", "2026-10-16"] and list(r1["stations"]) == ["S1"], r1  # S2 : sans coordonnées
+assert rt.build_references(cache_ref, None, ancien_layer, date(2026, 10, 13))["stations"] == {}  # plus de valeur depuis plus de 3 jours
+s1 = r1["stations"]["S1"]
+assert s1["records"]["heat"]["absolute"] == [42.0, "2019-06-28"] and s1["name"] == "STATION" and s1["altitude"] == 100.0
+assert s1["records"]["heat"]["days"]["2026-10-14"]["monthly"] == [33.0, "1985-10-02"]
+assert s1["records"]["cold"]["days"]["2026-10-14"]["monthly"] == [-2.0, "1974-10-28"]
+assert s1["records"]["cold"]["days"]["2026-10-14"]["fortnight"] == [8.0, "2026-10-12"]  # pas de record de 1re quinzaine dans le cache d'essai : la valeur récente en tient lieu
+assert s1["records"]["cold"]["days"]["2026-10-16"]["fortnight"] == [-2.0, "1974-10-28"]
+# une valeur récente plus forte devient le record à battre (mois, quinzaine) mais pas l'absolu ; le record du jour du calendrier est celui du jour visé
+fort = rt.RecentLayer({"2026-10-13": {"S1": [36.0, 8.0]}})
+r2 = rt.build_references(cache_ref, None, fort, date(2026, 10, 13))["stations"]["S1"]["records"]
+assert r2["heat"]["days"]["2026-10-14"]["monthly"] == [36.0, "2026-10-13"], r2
+assert r2["heat"]["days"]["2026-10-14"]["fortnight"] == [36.0, "2026-10-13"]  # le 13 est dans la même quinzaine que le 14
+assert "fortnight" not in r2["heat"]["days"]["2026-10-15"]  # la 2e quinzaine n'a pas de record dans le cache d'essai
+assert r2["heat"]["absolute"] == [42.0, "2019-06-28"]
+assert "daily" not in r2["heat"]["days"]["2026-10-14"]  # le record du 14 octobre ne se joue pas avec une valeur du 13
+# métadonnées à jour : réseau principal et année d'ouverture
+meta_ref = {"S1": {"opened": "1956-07-01", "opening_year": 1956, "type_station": 2, "principal": True, "altitude": None, "lat": None, "lon": None}}
+ref_meta = rt.build_references(cache_ref, meta_ref, frais, date(2026, 10, 13))["stations"]["S1"]
+assert ref_meta["principal"] is True and ref_meta["opening_year"] == 1956
+
 # --- LIVE de bout en bout (paquets horaires simulés) : jours provisoires, état conservé, couche récente ---------------
 import os
 import tempfile
@@ -222,10 +248,17 @@ with tempfile.TemporaryDirectory() as tmp:
         assert etat["days"]["2026-10-12"]["66136001"][0] == 34.5  # TX du 12 (fenêtre 6 h → 6 h UTC)
         index = _json.loads((out / "index.json").read_text(encoding="utf-8"))
         assert index["provisional_days"] == ["2026-10-12"] and index["latest_date"] == "2026-10-13" and index["recent_through"] == "2026-10-11"
+        refs = _json.loads((out / "references.json").read_text(encoding="utf-8"))
+        assert refs["days"] == ["2026-10-14", "2026-10-15", "2026-10-16"] and list(refs["stations"]) == ["66136001"], refs["days"]
+        assert refs["stations"]["66136001"]["records"]["heat"]["days"]["2026-10-14"]["monthly"] == [35.0, "2026-10-03"]  # relevé du 3 octobre (couche récente)
+        assert refs["stations"]["66136001"]["records"]["cold"]["absolute"] == [-15.0, "1956-02-10"]
+        assert index["references_at"] == refs["generated_at"]
+        premieres_refs = refs["generated_at"]
         # deuxième passage identique : le fichier du jour provisoire n'est pas réécrit
         premiere = prov["generated_at"]
         out = lancer_live(tmp, datetime(2026, 10, 13, 5, tzinfo=timezone.utc), "2026-10-11")
         assert _json.loads((out / "provisional" / "2026-10-12.json").read_text(encoding="utf-8"))["generated_at"] == premiere
+        assert _json.loads((out / "references.json").read_text(encoding="utf-8"))["generated_at"] == premieres_refs  # contenu identique : pas réécrit
         # données contrôlées jusqu'au 12 : le jour provisoire disparaît (fichier et état)
         out = lancer_live(tmp, datetime(2026, 10, 13, 5, tzinfo=timezone.utc), "2026-10-12")
         assert not list((out / "provisional").glob("*.json"))
