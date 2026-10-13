@@ -197,6 +197,7 @@ def lancer_live(workdir, latest, through):
         return csv_hour([("66136001", 34.0 if chaud else 15.0, 34.5 if chaud else 15.5, 14.5 if not chaud else 33.5)])
 
     rt.PACKAGE_DELAY = 0
+    rt.MIN_STATIONS_JOUR = 1  # une seule station dans ce jeu d'essai
     rt.api_key = lambda: "cle-de-test"
     rt.find_latest_hour = lambda key: (latest, paquet(key, latest))
     rt.package_request = paquet
@@ -207,9 +208,9 @@ def lancer_live(workdir, latest, through):
 with tempfile.TemporaryDirectory() as tmp:
     ancien = os.getcwd()
     try:
-        out = lancer_live(tmp, datetime(2026, 10, 13, 5, tzinfo=timezone.utc), "2026-10-10")
+        out = lancer_live(tmp, datetime(2026, 10, 13, 5, tzinfo=timezone.utc), "2026-10-11")
         live = _json.loads((out / "live.json").read_text(encoding="utf-8"))
-        assert live["day"]["date"] == "2026-10-13" and live["recent_through"] == "2026-10-10" and live["provisional_days"] == ["2026-10-12"], live["provisional_days"]
+        assert live["day"]["date"] == "2026-10-13" and live["recent_through"] == "2026-10-11" and live["provisional_days"] == ["2026-10-12"], live["provisional_days"]
         assert live["coverage_target"] == 95 and live["coverage_departments"] == 1
         prov = _json.loads((out / "provisional" / "2026-10-12.json").read_text(encoding="utf-8"))
         chaud = prov["day"]["events"]["heat"]
@@ -220,15 +221,71 @@ with tempfile.TemporaryDirectory() as tmp:
         assert set(etat["days"]) >= {"2026-10-12", "2026-10-13"}, etat["days"].keys()
         assert etat["days"]["2026-10-12"]["66136001"][0] == 34.5  # TX du 12 (fenêtre 6 h → 6 h UTC)
         index = _json.loads((out / "index.json").read_text(encoding="utf-8"))
-        assert index["provisional_days"] == ["2026-10-12"] and index["latest_date"] == "2026-10-13" and index["recent_through"] == "2026-10-10"
+        assert index["provisional_days"] == ["2026-10-12"] and index["latest_date"] == "2026-10-13" and index["recent_through"] == "2026-10-11"
         # deuxième passage identique : le fichier du jour provisoire n'est pas réécrit
         premiere = prov["generated_at"]
-        out = lancer_live(tmp, datetime(2026, 10, 13, 5, tzinfo=timezone.utc), "2026-10-10")
+        out = lancer_live(tmp, datetime(2026, 10, 13, 5, tzinfo=timezone.utc), "2026-10-11")
         assert _json.loads((out / "provisional" / "2026-10-12.json").read_text(encoding="utf-8"))["generated_at"] == premiere
         # données contrôlées jusqu'au 12 : le jour provisoire disparaît (fichier et état)
         out = lancer_live(tmp, datetime(2026, 10, 13, 5, tzinfo=timezone.utc), "2026-10-12")
         assert not list((out / "provisional").glob("*.json"))
         assert "2026-10-12" not in _json.loads((out / "cache" / "provisional.json").read_text(encoding="utf-8"))["days"]
+    finally:
+        os.chdir(ancien)
+
+# --- Reprise des heures manquantes : jours récents sans relevés horaires conservés ---------------------------------------------
+rt.MIN_STATIONS_JOUR = 1  # une seule station dans ce jeu d'essai
+assert rt.uncovered_days({}, "2026-10-10", date(2026, 10, 13)) == ["2026-10-11", "2026-10-12"]
+assert rt.uncovered_days({"2026-10-11": {"S1": [1, 1]}}, "2026-10-10", date(2026, 10, 13)) == ["2026-10-12"]
+assert rt.uncovered_days({}, None, date(2026, 10, 13)) == ["2026-10-11", "2026-10-12"]
+assert rt.uncovered_days({}, "2026-10-12", date(2026, 10, 13)) == []
+
+with tempfile.TemporaryDirectory() as tmp:
+    ancien = os.getcwd()
+    try:
+        os.chdir(tmp)
+        out = Path("records_temperature")
+        (out / "cache").mkdir(parents=True, exist_ok=True)
+        cache = {"schema_version": 1, "module_version": "1.1.0", "build_id": "t", "department": "66", "generated_at": "2026-08-20T00:00:00Z",
+                 "stations": {"66136001": dict(station(), id="66136001", name="PERPIGNAN")}, "stations_total": 1, "rows_read": 0, "last_date": None}
+        (out / "cache" / "dep-66.json").write_text(_json.dumps(cache), encoding="utf-8")
+        (out / "cache" / "recent.json").write_text(_json.dumps({"schema_version": 1, "through": "2026-10-10", "days": {}}), encoding="utf-8")
+        appeles = []
+
+        def paquet_reprise(key, h):
+            appeles.append(h)
+            chaud = h.day == 11 and h.hour == 14
+            return csv_hour([("66136001", 36.0 if chaud else 15.0, 36.5 if chaud else 15.5, 14.5 if not chaud else 30.0)])
+
+        rt.PACKAGE_DELAY = 0
+        rt.api_key = lambda: "cle-de-test"
+        latest = datetime(2026, 10, 13, 5, tzinfo=timezone.utc)
+        rt.find_latest_hour = lambda key: (latest, paquet_reprise(key, latest))
+        rt.package_request = paquet_reprise
+        rt.generate_live()
+        # premier jour manquant : le 11 ; sa TN commence le 10 à 18 h UTC
+        assert min(appeles) == datetime(2026, 10, 10, 18, tzinfo=timezone.utc), min(appeles)
+        assert sorted(p.stem for p in (out / "provisional").glob("*.json")) == ["2026-10-11", "2026-10-12"]
+        j11 = _json.loads((out / "provisional" / "2026-10-11.json").read_text(encoding="utf-8"))["day"]
+        assert [e["value"] for e in j11["events"]["heat"]] == [36.5], j11["events"]["heat"]
+        # deuxième passage : les jours sont couverts, la reprise n'a plus lieu (seules les heures courantes sont relues)
+        appeles.clear()
+        rt.generate_live()
+        # (avant 6 h UTC, la fenêtre TX de la veille, ouverte depuis le 12 à 6 h UTC, est relue ; rien avant)
+        assert min(appeles) >= datetime(2026, 10, 12, 6, tzinfo=timezone.utc), min(appeles)
+        # quota dépassé en cours de reprise : on garde ce qui a été lu, sans échec
+        (out / "cache" / "provisional.json").unlink()
+        compteur = {"n": 0}
+
+        def paquet_quota(key, h):
+            compteur["n"] += 1
+            if compteur["n"] > 5:
+                raise RuntimeError("Météo-France HTTP 429 — quota dépassé")
+            return paquet_reprise(key, h)
+
+        rt.package_request = paquet_quota
+        rt.generate_live()
+        assert (out / "live.json").exists()
     finally:
         os.chdir(ancien)
 

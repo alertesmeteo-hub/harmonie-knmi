@@ -66,6 +66,8 @@ HTTP_TIMEOUT = 120
 META_MAX_AGE_DAYS = 7  # le fichier des fiches de stations (≈ 200 Mo) n'est relu qu'une fois par semaine
 RECENT_MARGIN_DAYS = 10  # recouvrement avec la période déjà couverte par les caches
 PROVISIONAL_KEEP_DAYS = 6
+MIN_STATIONS_JOUR = 200  # en dessous, un jour récent est considéré sans relevés horaires conservés
+BACKFILL_MAX_HOURS = 72  # reprise maximale des paquets horaires manquants
 RECENT_MAX_DAYS = 240  # au-delà, les caches sont trop anciens : à reconstruire
 NEAR_DELTA_C = 1.0
 EQUAL_EPS = 0.05
@@ -653,6 +655,16 @@ def accumulate_hour(days: Dict[str, Dict[str, list]], h: datetime, rows: List[di
             cell[1] = tn if cell[1] is None else min(cell[1], tn)
 
 
+def uncovered_days(prov_days: Dict[str, Dict[str, list]], through: Optional[str], today: date) -> List[str]:
+    """Jours entre les données contrôlées (exclues) et aujourd'hui (exclu) dont les relevés horaires n'ont pas été conservés."""
+    day = date.fromisoformat(through) + timedelta(days=1) if through else today - timedelta(days=2)
+    out: List[str] = []
+    while day < today:
+        if len(prov_days.get(day.isoformat(), {})) < MIN_STATIONS_JOUR: out.append(day.isoformat())
+        day += timedelta(days=1)
+    return out
+
+
 def load_recent() -> dict:
     data = load_json_file(RECENT_FILE)
     return data if isinstance(data, dict) else {}
@@ -697,13 +709,29 @@ def generate_live() -> None:
     earliest = datetime(d.year, d.month, d.day, 18, tzinfo=timezone.utc) - timedelta(days=1)
     if latest.hour < 6:
         earliest = min(earliest, datetime(d.year, d.month, d.day, 6, tzinfo=timezone.utc) - timedelta(days=1))
-    for offset in range(LIVE_HISTORY_HOURS):
+    # Jours récents sans relevés horaires conservés (premier lancement, état perdu) : reprise des paquets manquants,
+    # depuis 18 h UTC la veille du premier jour manquant (début de sa TN), au plus BACKFILL_MAX_HOURS heures en arrière.
+    missing = uncovered_days(prov_days, through, d)
+    if missing:
+        first = date.fromisoformat(missing[0])
+        earliest = min(earliest, datetime(first.year, first.month, first.day, 18, tzinfo=timezone.utc) - timedelta(days=1))
+        earliest = max(earliest, latest - timedelta(hours=BACKFILL_MAX_HOURS))
+        print("Jours sans relevés horaires conservés :", missing, "-> reprise depuis", iso(earliest))
+    hours = int((latest - earliest).total_seconds() // 3600) + 1
+    read = 0
+    for offset in range(min(BACKFILL_MAX_HOURS + 1, max(LIVE_HISTORY_HOURS, hours))):
         h = latest - timedelta(hours=offset)
         if h < earliest: break
-        raw = raw0 if offset == 0 else package_request(key, h)
+        try:
+            raw = raw0 if offset == 0 else package_request(key, h)
+        except RuntimeError as exc:  # quota dépassé : on garde ce qui a été lu, les heures manquantes seront reprises au passage suivant
+            print("[WARN]", exc, "- lecture interrompue à", iso(h))
+            break
         if raw is None: continue
         accumulate_hour(prov_days, h, parse_delimited(raw), caches)
+        read += 1
         time.sleep(PACKAGE_DELAY)
+    print("Paquets horaires lus :", read, "sur", hours, "heures demandées")
     cutoff = (d - timedelta(days=PROVISIONAL_KEEP_DAYS)).isoformat()
     prov_days = {day: vals for day, vals in prov_days.items() if day >= cutoff and not (through and day <= through)}
     save_json(PROVISIONAL_FILE, {"schema_version": 1, "generated_at": iso(utcnow()), "days": prov_days})
