@@ -37,7 +37,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))  # module partagé plac
 from controle_plausibilite import controler_station, log_rejections, quality_summary  # noqa: E402
 
 
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 SCHEMA_VERSION = 1
 
 PACKAGE_URL = (
@@ -50,6 +50,8 @@ DPOBS_STATIONS_URL = (
 )
 
 OUTPUT = Path("observations_temperature_veille.json")
+# Cache de 72 h des classements (heures et stations de métropole), publié chaque heure sur la branche observations.
+CACHE_URL = "https://raw.githubusercontent.com/alertesmeteo-hub/harmonie-knmi/observations/cache_classements_temperature_72h.json"
 PARIS = ZoneInfo("Europe/Paris")
 HTTP_TIMEOUT = 90
 PACKAGE_DELAY = float(os.getenv("MF_PACKAGE_DELAY", "1.15"))
@@ -288,6 +290,33 @@ def previous_local_day_window(now_utc: Optional[datetime] = None):
     return target_date, start_local.astimezone(timezone.utc), end_local.astimezone(timezone.utc)
 
 
+def load_cache_hours() -> Dict[datetime, List[dict]]:
+    """Heures du cache de 72 h des classements : {heure UTC: lignes} (stations de métropole : id, validity_time, t, tn, tx, lat, lon).
+
+    L'API de Météo-France ne garde que 24 h de paquets, et le calcul de la veille, lancé par GitHub avec plusieurs heures de retard, y perd
+    le début de la journée : les « minimales de la veille » étaient alors celles de la fin de journée. Ce cache comble ces heures.
+    Vide en cas d'échec : le calcul se fait alors avec l'API seule, comme avant."""
+    try:
+        reponse = requests.get(CACHE_URL, timeout=HTTP_TIMEOUT)
+        reponse.raise_for_status()
+        hours = (reponse.json() or {}).get("hours") or {}
+    except Exception as exc:
+        print("::warning::Cache de 72 h des classements indisponible :", exc)
+        return {}
+    out: Dict[datetime, List[dict]] = {}
+    for cle, rows in hours.items():
+        dt = parse_iso(cle)
+        if dt is not None and isinstance(rows, list):
+            out[dt.replace(minute=0, second=0, microsecond=0)] = rows
+    return out
+
+
+def cache_row(row: dict) -> dict:
+    """Ligne du cache au format des lignes de l'API (températures déjà en °C)."""
+    return {"geo_id_insee": row.get("id"), "validity_time": row.get("validity_time"), "t": row.get("t"), "tn": row.get("tn"),
+            "tx": row.get("tx"), "lat": row.get("lat"), "lon": row.get("lon")}
+
+
 def load_yesterday(key: str):
     target_date, start_utc, end_utc = previous_local_day_window()
 
@@ -310,21 +339,35 @@ def load_yesterday(key: str):
 
     expected_hours = 0
     available_hours = 0
-    current = start_utc
+    from_cache = 0
+    cache_hours = load_cache_hours()
+    # Une heure de plus avant la journée : elle ne compte pas dans les extrêmes mais sert de référence au contrôle de plausibilité de la
+    # première heure (sans elle, un relevé fautif de 0 h locale n'a aucune température voisine pour être jugé).
+    current = start_utc - timedelta(hours=1)
 
     while current < end_utc:
-        expected_hours += 1
+        en_journee = current >= start_utc
+        if en_journee:
+            expected_hours += 1
         print("Paquet :", iso(current))
         response = package_request(key, current)
-        if response is None:
+        if response is not None:
+            rows = parse_csv(response.content)
+            print("  lignes :", len(rows))
+        elif current in cache_hours:
+            # L'API ne conserve plus cette heure : cache de 72 h des classements (stations de métropole seulement).
+            rows = [cache_row(r) for r in cache_hours[current]]
+            if en_journee:
+                from_cache += 1
+            print("  complété par le cache de 72 h :", len(rows), "lignes")
+        else:
             print("::warning::Paquet absent :", iso(current))
             current += timedelta(hours=1)
             time.sleep(PACKAGE_DELAY)
             continue
 
-        available_hours += 1
-        rows = parse_csv(response.content)
-        print("  lignes :", len(rows))
+        if en_journee:
+            available_hours += 1
 
         for row in rows:
             sid = station_id(row)
@@ -332,8 +375,7 @@ def load_yesterday(key: str):
                 continue
 
             validity = parse_iso(first(row, ("validity_time", "reference_time", "date"))) or current
-            validity_local = validity.astimezone(PARIS)
-            if validity_local.date() != target_date:
+            if not start_utc - timedelta(hours=1) <= validity < end_utc:
                 continue
 
             t = celsius(first(row, ("t", "T")))
@@ -364,8 +406,8 @@ def load_yesterday(key: str):
         serie = sorted(item.pop("series"), key=lambda r: r[0])
         retenus = controler_station(sid, serie, ecartes)
         for (validity, _t, _tx, _tn), (t, tx, tn) in zip(serie, retenus):
-            if t is None and tn is None and tx is None:
-                continue
+            if validity < start_utc or (t is None and tn is None and tx is None):
+                continue  # heure de référence d'avant la journée, ou relevé entièrement écarté
 
             min_candidate = tn if tn is not None else t
             max_candidate = tx if tx is not None else t
@@ -391,7 +433,7 @@ def load_yesterday(key: str):
 
             item["sample_times"].add(iso(validity))
 
-    return target_date, start_utc, end_utc, expected_hours, available_hours, dict(stations), ecartes
+    return target_date, start_utc, end_utc, expected_hours, available_hours, dict(stations), ecartes, from_cache
 
 
 # -----------------------------------------------------------------------------
@@ -407,7 +449,7 @@ def main() -> int:
         # La liste des noms n'est pas indispensable : même clé en secours.
         obs_key = package_key
 
-    target_date, start_utc, end_utc, expected_hours, available_hours, raw, ecartes = load_yesterday(package_key)
+    target_date, start_utc, end_utc, expected_hours, available_hours, raw, ecartes, from_cache = load_yesterday(package_key)
     names = load_station_names(obs_key)
     log_rejections(ecartes, names)
 
@@ -470,6 +512,7 @@ def main() -> int:
         "quality_control": quality_summary(ecartes),
         "package_hours_expected": expected_hours,
         "package_hours_available": available_hours,
+        "package_hours_from_cache": from_cache,
         "metrics": {
             "tmin_yesterday": {
                 "label": "Minimales de la veille",
@@ -493,6 +536,7 @@ def main() -> int:
             "api": "DPPaquetObs v2 - paquets horaires stations",
             "method": "Minimum de TN horaires et maximum de TX horaires ; T utilisée en secours si TN/TX absente",
             "calendar_day": "Journée civile Europe/Paris",
+            "completion": "Heures que l'API ne conserve plus : cache de 72 h des classements (stations de métropole seulement)",
         },
         "stations": stations,
     }
@@ -504,7 +548,7 @@ def main() -> int:
 
     print("=== TERMINÉ ===")
     print("Date :", output["date_label"])
-    print("Paquets :", available_hours, "/", expected_hours)
+    print("Paquets :", available_hours, "/", expected_hours, "dont", from_cache, "complétés par le cache de 72 h")
     print("Stations :", output["stations_total"])
     print("Minimales :", output["metrics"]["tmin_yesterday"]["stations"])
     print("Maximales :", output["metrics"]["tmax_yesterday"]["stations"])

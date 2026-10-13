@@ -141,12 +141,50 @@ def releve_veille(sid, heure):
 
 
 vl.package_request = lambda key, heure: SimpleNamespace(content=csv_paquet(heure, [releve_veille(sid, heure) for sid in STATIONS]))
-_, _, _, attendues, disponibles, brut, ecartes4 = vl.load_yesterday("cle")
-assert attendues == 24 and disponibles == 24
+vl.load_cache_hours = lambda: {}  # pas de cache de 72 h dans ce premier cas : l'API fournit les 24 heures
+_, _, _, attendues, disponibles, brut, ecartes4, depuis_cache = vl.load_yesterday("cle")
+assert attendues == 24 and disponibles == 24 and depuis_cache == 0
 assert brut["22222222"]["tmin_yesterday"] == 13.6, brut["22222222"]["tmin_yesterday"]  # et non 0,0 °C
 assert brut["11111111"]["tmin_yesterday"] == 13.6 and brut["22222222"]["tmax_yesterday"] == 20.4
 assert len(ecartes4) == 1 and ecartes4[0]["id"] == "22222222" and ecartes4[0]["raw"] == [21.3, 21.5, 0.0], ecartes4
 assert "series" not in brut["22222222"]  # le brouillon de chronologie n'est pas laissé dans les données agrégées
+
+# L'API ne garde que 24 h : le calcul lancé tard dans la journée n'y trouve plus les heures du début de la journée locale.
+# Elles sont complétées par le cache de 72 h des classements (stations de métropole : ici les trois stations d'essai).
+premiere_api = datetime(2026, 10, 12, 6, tzinfo=timezone.utc)
+vl.package_request = lambda key, heure: None if heure < premiere_api else SimpleNamespace(
+    content=csv_paquet(heure, [releve_veille(sid, heure) for sid in STATIONS]))
+nuit = {}
+for n in range(8):  # 22 h UTC la veille à 5 h UTC : la nuit, 8,0 °C
+    heure = debut + timedelta(hours=n)
+    nuit[heure] = [dict(id=sid, validity_time=heure.strftime("%Y-%m-%dT%H:%M:%SZ"), t=8.0, tx=8.4, tn=7.6, lat=42.0, lon=3.0) for sid in STATIONS]
+vl.load_cache_hours = lambda: nuit
+_, _, _, attendues, disponibles, brut, ecartes5, depuis_cache = vl.load_yesterday("cle")
+assert attendues == 24 and disponibles == 24 and depuis_cache == 8, (attendues, disponibles, depuis_cache)
+assert brut["11111111"]["tmin_yesterday"] == 7.6 and brut["11111111"]["tmin_time"] == "2026-10-11T22:00:00Z", brut["11111111"]  # minimale de la nuit
+assert brut["11111111"]["tmax_yesterday"] == 20.4 and len(brut["11111111"]["sample_times"]) == 24
+# sans le cache (échec du téléchargement), le calcul se fait avec l'API seule, comme avant : minimale de la fin de journée
+vl.load_cache_hours = lambda: {}
+_, _, _, attendues, disponibles, brut, _, depuis_cache = vl.load_yesterday("cle")
+assert disponibles == 16 and depuis_cache == 0 and brut["11111111"]["tmin_yesterday"] == 13.6
+# Première heure de la journée fautive (Sées, 11/10 à 22 h UTC : tn -5,7 °C pour t 8,5 °C, écart de 15,0 °C = juste au seuil de l'étendue) :
+# l'heure d'avant la journée sert de référence et la fait écarter
+def releve_premiere_heure(sid, heure):
+    if sid == "22222222" and heure == debut:
+        return (sid, 41.6, 9.3, 8.5, 9.3, -5.7)
+    return (sid, 41.6 if sid == "22222222" else 42.0, 9.3 if sid == "22222222" else 3.0, 8.5, 9.0, 8.1)
+
+
+vl.package_request = lambda key, heure: SimpleNamespace(content=csv_paquet(heure, [releve_premiere_heure(sid, heure) for sid in STATIONS]))
+vl.load_cache_hours = lambda: {}
+_, _, _, attendues, disponibles, brut, ecartes6, _ = vl.load_yesterday("cle")
+assert attendues == 24 and disponibles == 24, (attendues, disponibles)  # l'heure de référence ne compte pas dans la journée
+assert brut["22222222"]["tmin_yesterday"] == 8.1, brut["22222222"]["tmin_yesterday"]  # et non -5,7 °C
+assert len(brut["22222222"]["sample_times"]) == 24 and "2026-10-11T21:00:00Z" not in brut["22222222"]["sample_times"]
+assert any(e["id"] == "22222222" and e["hour"] == "2026-10-11T22:00:00Z" for e in ecartes6), ecartes6
+# le cache est lu depuis la branche observations : échec réseau = cache vide, sans erreur
+vl.requests = SimpleNamespace(get=lambda *a, **k: (_ for _ in ()).throw(RuntimeError("réseau coupé")))
+assert vl.load_cache_hours() == {}
 
 # --- Les scripts publient le bilan du contrôle -------------------------------------------------------------------------------------------------------
 for src in ("generer_classements_temperature.py", "generer_temperature_records.py", "generer_temperature_veille.py"):
