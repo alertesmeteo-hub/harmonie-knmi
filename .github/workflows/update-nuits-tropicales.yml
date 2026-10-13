@@ -1,0 +1,101 @@
+name: Update Nuits Tropicales
+
+# Nombre de nuits tropicales (minimale d'au moins 20 °C) par station et par année, et indicateur national depuis 1950, d'après les relevés
+# quotidiens du dépôt alertesmeteo-hub/climato (branche data). Sorties sur la branche nuits-tropicales-data (poussée à chaque passage,
+# sans historique) : stations.json et indicateur.json, lus par outils.alertes-meteo.com/outils/nuits-tropicales/.
+# Le dépôt climato est mis à jour chaque jour à 07 h 15 UTC ; le clone est partiel (seules les stations retenues, environ 400 Mo).
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '40 8 * * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: nuits-tropicales
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v7
+
+      - name: Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+
+      - name: Récupérer les relevés quotidiens (clone partiel du dépôt climato)
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            rm -rf /tmp/climato
+            if git clone --depth 1 --filter=blob:none --no-checkout --branch data https://github.com/alertesmeteo-hub/climato.git /tmp/climato; then break; fi
+            if [ "$attempt" -eq 3 ]; then echo "::error::Clone impossible"; exit 1; fi
+            sleep $((attempt * 20))
+          done
+          git -C /tmp/climato sparse-checkout init --cone
+          git -C /tmp/climato checkout data        # fichiers de la racine seulement : le catalogue des stations
+          python generer_nuits_tropicales.py --climato-dir /tmp/climato --liste-stations > /tmp/postes.txt
+          echo "Stations retenues : $(wc -l < /tmp/postes.txt)"
+          sed 's#^#stations/#' /tmp/postes.txt | git -C /tmp/climato sparse-checkout set --stdin
+          git -C /tmp/climato checkout data        # relevés quotidiens des stations retenues
+          du -sh /tmp/climato/stations
+
+      - name: Calculer les nuits tropicales
+        shell: bash
+        run: |
+          set -euo pipefail
+          python generer_nuits_tropicales.py --climato-dir /tmp/climato --sortie nuits_tropicales
+
+      - name: Contrôler les sorties
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          s = json.loads(Path('nuits_tropicales/stations.json').read_text(encoding='utf-8'))
+          i = json.loads(Path('nuits_tropicales/indicateur.json').read_text(encoding='utf-8'))
+          assert s['status'] == 'ok' and i['status'] == 'ok'
+          assert s['module_version'] == '1.0.0' and i['module_version'] == '1.0.0'
+          assert len(s['stations']) >= 1000, f"stations : {len(s['stations'])}"
+          assert i['panel']['stations'] >= 50, f"panel : {i['panel']['stations']}"
+          assert len(i['annees']) >= 60, f"années de l'indicateur : {len(i['annees'])}"
+          assert i['reference']['moyenne'] is not None
+          avec = sum(1 for x in s['stations'] if x.get('courante'))
+          assert avec >= 500, f"stations comptées à la date commune : {avec}"
+          c = i['courante']
+          print('Stations :', len(s['stations']), '| panel :', i['panel']['stations'], '| années :', len(i['annees']))
+          print('Référence', i['reference']['debut'], '-', i['reference']['fin'], ':', i['reference']['moyenne'], 'nuits par station et par an')
+          print('Décennies :', [(d['debut'], d['moyenne']) for d in i['decennies']])
+          print('Année en cours au', c['jusqu_au'], '(dernier relevé', c.get('dernier_releve'), ') :', c['moyenne'], 'nuits par station, référence', c['reference_a_ce_jour'], ', écart', c['ecart'])
+          print('Stations comptées à la date commune :', avec, '| avec un dernier relevé plus récent :', sum(1 for x in s['stations'] if x.get('derniere')))
+          PY
+          ls -la nuits_tropicales
+
+      - name: Publier sur nuits-tropicales-data
+        shell: bash
+        run: |
+          set -euo pipefail
+          REPO_URL="https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git"
+          for attempt in 1 2 3; do
+            pub="$(mktemp -d)"
+            git init -b nuits-tropicales-data "$pub"
+            git -C "$pub" remote add origin "$REPO_URL"
+            cp nuits_tropicales/stations.json nuits_tropicales/indicateur.json "$pub/"
+            git -C "$pub" config user.name "github-actions[bot]"
+            git -C "$pub" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git -C "$pub" add stations.json indicateur.json
+            git -C "$pub" commit -m "Nuits tropicales v1.0.0"
+            if git -C "$pub" push --force origin nuits-tropicales-data; then exit 0; fi
+            rm -rf "$pub"
+            sleep $((attempt * 3))
+          done
+          exit 1
