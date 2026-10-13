@@ -34,6 +34,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 VERSION = "1.0.0"
 SCHEMA_VERSION = 1
 BUILD_ID = "records-menaces-20261013"
+ETAT_VERSION = 2  # à changer quand la méthode de prévision change : les écarts mémorisés ne valent que pour la méthode qui les a produits
 
 RAW = "https://raw.githubusercontent.com/alertesmeteo-hub/"
 OBS_BASE = RAW + "harmonie-knmi/observations/records_temperature/"
@@ -315,12 +316,13 @@ def prevoir_reseau(stations: Dict[str, dict], jours: List[date], charger: Callab
 
 
 def etat_vide() -> dict:
-    return {"schema_version": SCHEMA_VERSION, "modeles": [m[0] for m in MODELES], "previsions": {}, "ecarts": {}}
+    return {"schema_version": SCHEMA_VERSION, "version_calcul": ETAT_VERSION, "modeles": [m[0] for m in MODELES], "previsions": {}, "ecarts": {}}
 
 
 def lire_etat(brut: Any) -> dict:
-    """État conservé d'un passage à l'autre ; vide si absent, illisible ou écrit avec une autre liste de modèles."""
-    if not isinstance(brut, dict) or brut.get("schema_version") != SCHEMA_VERSION or brut.get("modeles") != [m[0] for m in MODELES]:
+    """État conservé d'un passage à l'autre ; vide si absent, illisible, écrit avec une autre liste de modèles ou par une autre méthode de calcul."""
+    if (not isinstance(brut, dict) or brut.get("schema_version") != SCHEMA_VERSION or brut.get("version_calcul") != ETAT_VERSION
+            or brut.get("modeles") != [m[0] for m in MODELES]):
         return etat_vide()
     for cle in ("previsions", "ecarts"):
         if not isinstance(brut.get(cle), dict):

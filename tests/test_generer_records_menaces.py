@@ -169,6 +169,9 @@ etat = g.lire_etat(None)
 assert etat["previsions"] == {} and etat["ecarts"] == {} and etat["modeles"] == ["arome", "arpege", "icon", "cep"]
 assert g.lire_etat({"schema_version": 99}) == g.etat_vide()  # état écrit par une autre version ou avec d'autres modèles : on repart de zéro
 assert g.lire_etat({"schema_version": g.SCHEMA_VERSION, "modeles": ["x"]}) == g.etat_vide()
+ancien_calcul = dict(g.etat_vide(), version_calcul=g.ETAT_VERSION - 1, ecarts={"2026-10-12": {"S1": [[1.0, None]] * 4}})
+assert g.lire_etat(ancien_calcul) == g.etat_vide()  # écarts issus d'une ancienne méthode de correction : abandonnés
+assert g.lire_etat(dict(g.etat_vide(), ecarts={"2026-10-12": {}}))["ecarts"] == {"2026-10-12": {}}  # même méthode : conservés
 
 N = 150  # stations d'essai (au moins MIN_STATIONS_BIAIS)
 sids = [f"6600{i:04d}" for i in range(N)]
