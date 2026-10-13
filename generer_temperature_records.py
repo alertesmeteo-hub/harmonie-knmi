@@ -40,8 +40,11 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))  # module partagé placé à côté du script
+from controle_plausibilite import controler_station, log_rejections, quality_summary  # noqa: E402
 
-VERSION = "1.2.0"
+
+VERSION = "1.3.0"
 SCHEMA_VERSION = 3
 
 PACKAGE_URL = (
@@ -387,7 +390,7 @@ def find_latest_package(
 
 def load_live_history(
     key: str,
-) -> Tuple[datetime, Dict[str, dict]]:
+) -> Tuple[datetime, Dict[str, dict], List[dict]]:
 
     latest_hour, latest_response = find_latest_package(key)
 
@@ -450,6 +453,8 @@ def load_live_history(
             sample = {
                 "dt": validity,
                 "temperature": t,
+                "tx": celsius(first(row, ("tx", "TX"))),  # tx et tn ne servent qu'au contrôle de plausibilité
+                "tn": celsius(first(row, ("tn", "TN"))),
             }
             item["samples"].append(sample)
 
@@ -472,6 +477,20 @@ def load_live_history(
                     if ff is not None and ff >= 0
                     else None
                 )
+
+    # Contrôle de plausibilité (module controle_plausibilite) : relevés aberrants écartés avant tout calcul (extrêmes glissants, valeur
+    # actuelle, variation). Une station dont le dernier relevé est rejeté est retirée de cette édition plutôt que présentée avec une
+    # valeur fausse ou périmée.
+    ecartes: List[dict] = []
+    for sid in list(stations):
+        item = stations[sid]
+        samples = sorted(item["samples"], key=lambda s: s["dt"])
+        retenus = controler_station(sid, [(s["dt"], s["temperature"], s["tx"], s["tn"]) for s in samples], ecartes)
+        gardes = [{"dt": s["dt"], "temperature": r[0]} for s, r in zip(samples, retenus) if r[0] is not None]
+        if not gardes or gardes[-1]["dt"] != samples[-1]["dt"]:
+            del stations[sid]
+            continue
+        item["samples"] = gardes
 
     # Calcul métriques par station
     target_24 = latest_hour - timedelta(hours=24)
@@ -585,7 +604,7 @@ def load_live_history(
 
         item.pop("samples", None)
 
-    return latest_hour, dict(stations)
+    return latest_hour, dict(stations), ecartes
 
 
 # ------------------------------------------------------------
@@ -944,8 +963,9 @@ def main() -> int:
     package_key = get_secret("METEOFRANCE_PACKAGE_OBS_KEY")
     obs_key = get_secret("METEOFRANCE_OBS_TOKEN")
 
-    latest_hour, live = load_live_history(package_key)
+    latest_hour, live, ecartes = load_live_history(package_key)
     names = load_station_names(obs_key)
+    log_rejections(ecartes, names)
 
     raw_ids = sorted(
         sid
@@ -1138,6 +1158,7 @@ def main() -> int:
         "latest_observation_at": iso(latest_hour),
         "title": "Températures, ressentis et records",
         "unit": "°C",
+        "quality_control": quality_summary(ecartes),
 
         "current_month": {
             "id": f"{latest_hour.year:04d}-{latest_hour.month:02d}",

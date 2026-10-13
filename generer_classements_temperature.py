@@ -41,7 +41,10 @@ from zoneinfo import ZoneInfo
 
 import requests
 
-VERSION = "1.1.0"
+sys.path.insert(0, str(Path(__file__).resolve().parent))  # module partagé placé à côté du script
+from controle_plausibilite import controler_station, log_rejections, quality_summary  # noqa: E402
+
+VERSION = "1.2.0"
 SCHEMA_VERSION = 2
 BUILD_ID = "classements-observations-mf-complet-20260821"
 
@@ -813,6 +816,30 @@ def hour_records(cache: dict) -> Dict[datetime, List[dict]]:
     return out
 
 
+def controler_heures(hours: Dict[datetime, List[dict]]) -> Tuple[Dict[datetime, List[dict]], List[dict]]:
+    """Contrôle de plausibilité (module controle_plausibilite) de t, tx et tn de chaque station sur la chronologie du cache.
+
+    Renvoie les heures avec les valeurs fautives remplacées par None (les autres champs de chaque ligne sont conservés) et la liste des
+    relevés écartés ou corrigés. Appliqué à la lecture du cache, il nettoie aussi les heures déjà en cache : rien à reconstruire."""
+    par_station: Dict[str, List[Tuple[datetime, dict]]] = defaultdict(list)
+    nouvelles: Dict[datetime, List[dict]] = {dt: [] for dt in hours}
+    for dt in sorted(hours):
+        for obs in hours[dt]:
+            sid = str(obs.get("id") or "").strip()
+            if sid:
+                par_station[sid].append((dt, obs))
+            else:
+                nouvelles[dt].append(obs)
+    ecartes: List[dict] = []
+    for sid, serie in par_station.items():
+        retenus = controler_station(sid, [(dt, fnum(o.get("t")), fnum(o.get("tx")), fnum(o.get("tn"))) for dt, o in serie], ecartes)
+        for (dt, obs), (t, tx, tn) in zip(serie, retenus):
+            if (t, tx, tn) != (fnum(obs.get("t")), fnum(obs.get("tx")), fnum(obs.get("tn"))):
+                obs = dict(obs, t=t, tx=tx, tn=tn)
+            nouvelles[dt].append(obs)
+    return nouvelles, ecartes
+
+
 def enrich_row(sid: str, value: float, obs_dt: datetime, samples: int, expected: int,
                meta: Dict[str, dict], lat: Optional[float] = None, lon: Optional[float] = None) -> dict:
     info = meta.get(sid) or {}
@@ -965,8 +992,8 @@ def build_hourly_tables(cache_hours: Dict[datetime, List[dict]], meta: Dict[str,
     return output
 
 
-def build_tables(cache: dict, meta: Dict[str, dict], latest: datetime) -> Tuple[dict, List[dict]]:
-    hours = hour_records(cache)
+def build_tables(cache: dict, meta: Dict[str, dict], latest: datetime) -> Tuple[dict, List[dict], List[dict]]:
+    hours, ecartes = controler_heures(hour_records(cache))
 
     # Tn provisoire : fenêtre OMM en cours, depuis le dernier 18 UTC.
     tn_start = last_boundary(latest, 18)
@@ -1018,7 +1045,7 @@ def build_tables(cache: dict, meta: Dict[str, dict], latest: datetime) -> Tuple[
         ),
     }
     hourly = build_hourly_tables(hours, meta, latest)
-    return tables, hourly
+    return tables, hourly, ecartes
 
 
 def main() -> int:
@@ -1027,7 +1054,8 @@ def main() -> int:
     cache, latest = update_cache(key)
     meta = load_station_meta(key)
     meta = enrich_official_metadata(meta, latest)
-    tables, hourly = build_tables(cache, meta, latest)
+    tables, hourly, ecartes = build_tables(cache, meta, latest)
+    log_rejections(ecartes, meta)
 
     output = {
         "schema_version": SCHEMA_VERSION,
@@ -1054,6 +1082,7 @@ def main() -> int:
             "tx_final_period": "06 UTC J à 06 UTC J+1",
             "extreme_method": "TN/TX horaire prioritaire ; T utilisée en secours",
         },
+        "quality_control": quality_summary(ecartes),
         "hourly": hourly,
         "tables": tables,
         "cache": {

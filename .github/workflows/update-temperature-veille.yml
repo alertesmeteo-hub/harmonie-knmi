@@ -69,7 +69,7 @@ jobs:
 
           assert data["status"] == "ok"
           assert data["schema_version"] >= 1
-          assert data["module_version"] == "1.0.0"
+          assert data["module_version"] == "1.1.0"
           assert isinstance(data["stations"], list)
           assert data["stations_total"] > 100, f"Trop peu de stations : {data['stations_total']}"
 
@@ -88,6 +88,7 @@ jobs:
           print("Date :", data["date_label"])
           print("Stations :", data["stations_total"])
           print("Paquets :", available, "/", expected)
+          print("Contrôle de plausibilité :", data.get("quality_control"))
           print("Tn France :", data["metrics"]["tmin_yesterday"]["min"], "°C")
           print("Tx France :", data["metrics"]["tmax_yesterday"]["max"], "°C")
           PY
@@ -124,5 +125,5 @@ jobs:
             exit 0
           fi
 
-          git commit -m "Températures min/max de la veille v1.0.0"
+          git commit -m "Températures min/max de la veille v1.1.0"
           git push origin observations

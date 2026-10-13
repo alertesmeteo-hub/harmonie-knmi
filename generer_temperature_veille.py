@@ -33,8 +33,11 @@ from zoneinfo import ZoneInfo
 
 import requests
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))  # module partagé placé à côté du script
+from controle_plausibilite import controler_station, log_rejections, quality_summary  # noqa: E402
 
-VERSION = "1.0.0"
+
+VERSION = "1.1.0"
 SCHEMA_VERSION = 1
 
 PACKAGE_URL = (
@@ -299,6 +302,7 @@ def load_yesterday(key: str):
         "tmax_yesterday": None,
         "tmax_time": None,
         "sample_times": set(),
+        "series": [],
         "tn_count": 0,
         "tx_count": 0,
         "fallback_t_count": 0,
@@ -348,6 +352,21 @@ def load_yesterday(key: str):
                 item["lat"] = round(lat, 6)
                 item["lon"] = round(lon, 6)
 
+            # Les relevés sont agrégés après le contrôle de plausibilité (voir plus bas).
+            item["series"].append((validity, t, tx, tn))
+
+        current += timedelta(hours=1)
+        time.sleep(PACKAGE_DELAY)
+
+    # Contrôle de plausibilité (module controle_plausibilite), puis agrégation : minimum des TN et maximum des TX horaires retenus.
+    ecartes: List[dict] = []
+    for sid, item in stations.items():
+        serie = sorted(item.pop("series"), key=lambda r: r[0])
+        retenus = controler_station(sid, serie, ecartes)
+        for (validity, _t, _tx, _tn), (t, tx, tn) in zip(serie, retenus):
+            if t is None and tn is None and tx is None:
+                continue
+
             min_candidate = tn if tn is not None else t
             max_candidate = tx if tx is not None else t
 
@@ -372,10 +391,7 @@ def load_yesterday(key: str):
 
             item["sample_times"].add(iso(validity))
 
-        current += timedelta(hours=1)
-        time.sleep(PACKAGE_DELAY)
-
-    return target_date, start_utc, end_utc, expected_hours, available_hours, dict(stations)
+    return target_date, start_utc, end_utc, expected_hours, available_hours, dict(stations), ecartes
 
 
 # -----------------------------------------------------------------------------
@@ -391,8 +407,9 @@ def main() -> int:
         # La liste des noms n'est pas indispensable : même clé en secours.
         obs_key = package_key
 
-    target_date, start_utc, end_utc, expected_hours, available_hours, raw = load_yesterday(package_key)
+    target_date, start_utc, end_utc, expected_hours, available_hours, raw, ecartes = load_yesterday(package_key)
     names = load_station_names(obs_key)
+    log_rejections(ecartes, names)
 
     stations = []
     excluded_sapc = 0
@@ -450,6 +467,7 @@ def main() -> int:
         "timezone": "Europe/Paris",
         "title": "Températures minimales et maximales de la veille",
         "unit": "°C",
+        "quality_control": quality_summary(ecartes),
         "package_hours_expected": expected_hours,
         "package_hours_available": available_hours,
         "metrics": {

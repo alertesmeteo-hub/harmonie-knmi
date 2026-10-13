@@ -93,7 +93,7 @@ jobs:
 
           assert data["status"] == "ok"
           assert data["schema_version"] >= 2
-          assert data["module_version"] == "1.1.0"
+          assert data["module_version"] == "1.2.0"
           assert data["build_id"] == "classements-observations-mf-complet-20260821"
           assert data["latest_observation_at"]
           assert isinstance(data.get("hourly"), list)
@@ -126,6 +126,7 @@ jobs:
           print("=== CLASSEMENTS TEMPÉRATURES ===")
           print("Dernier relevé :", data["latest_observation_at"])
           print("Heures cache :", data["cache"]["hours_retained"])
+          print("Contrôle de plausibilité :", data.get("quality_control"))
           print("Classements horaires :", len(data["hourly"]))
           for key in required:
               t = data["tables"][key]
@@ -194,7 +195,7 @@ jobs:
             exit 0
           fi
 
-          git commit -m "Classements observations Météo-France v1.1.0"
+          git commit -m "Classements observations Météo-France v1.2.0"
           if ! git push origin observations; then
             echo "Push concurrent détecté, nouvel essai..."
             git fetch origin observations

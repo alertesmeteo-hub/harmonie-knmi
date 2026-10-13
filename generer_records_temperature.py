@@ -39,6 +39,12 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import requests
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))  # module partagé placé à côté du script
+from controle_plausibilite import (  # noqa: E402,F401
+    QC_BOUNDS_C, QC_MAX_LISTED, QC_MAX_LOGGED, QC_RANGE_MAX_C, QC_STEP_MAX_C, QC_SUPPORT_C, QC_TOLERANCE_C, QC_VERSION,
+    check_hour, log_rejections, quality_summary,
+)
+
 VERSION = "1.3.0"
 SCHEMA_VERSION = 1
 BUILD_ID = "records-temperature-map-20260820"
@@ -78,18 +84,7 @@ PACKAGE_LOOKBACK_HOURS = 4
 LIVE_HISTORY_HOURS = 32
 PACKAGE_DELAY = float(os.getenv("MF_PACKAGE_DELAY", "0.20"))
 
-# Contrôle de plausibilité des relevés horaires. Un capteur défaillant publie parfois des valeurs absurdes (0,0 °C en plein après-midi,
-# -8 °C pour 22 °C la même heure) : sans contrôle elles deviennent des « records ». Seuils réglés sur 24 h de paquets (47 700 relevés) :
-# hors capteur défaillant, l'écart tx - tn d'une même heure ne dépasse pas 9,2 °C et une extrême reste à moins de 3,4 °C des
-# températures instantanées qui l'encadrent.
-QC_VERSION = 1  # à incrémenter quand les règles changent : le jour en cours est alors reconstruit depuis les paquets
-QC_BOUNDS_C = (-60.0, 60.0)
-QC_TOLERANCE_C = 0.5  # la température instantanée peut sortir de [tn, tx] de 0,5 °C au plus (arrondis, mesures décalées dans l'heure)
-QC_RANGE_MAX_C = 15.0  # écart maximal tx - tn au sein d'une même heure
-QC_STEP_MAX_C = 15.0  # saut maximal de la température instantanée d'une heure à la suivante
-QC_SUPPORT_C = 6.0  # une extrême reste à moins de 6 °C de l'une des températures instantanées (heure précédente, heure) qui l'encadrent
-QC_MAX_LOGGED = 30
-QC_MAX_LISTED = 100
+# Contrôle de plausibilité des relevés horaires : règles, seuils, bilan et journal dans le module partagé controle_plausibilite.py.
 
 # Métropole : 01-95. Le jeu quotidien de Météo-France range la Corse sous le code « 20 » (pas 2A / 2B).
 DEPARTMENTS = [f"{x:02d}" for x in range(1, 96)]
@@ -651,43 +646,6 @@ def window_dates(h: datetime) -> Tuple[str, str]:
     return (h - timedelta(hours=6)).date().isoformat(), (h + timedelta(hours=6)).date().isoformat()
 
 
-def check_hour(t: Optional[float], tx: Optional[float], tn: Optional[float],
-               prev_t: Optional[float] = None) -> Tuple[Optional[float], Optional[float], Optional[float], List[str]]:
-    """Contrôle de plausibilité d'une heure : (t, tx, tn) retenus et motifs de rejet (liste vide si tout est plausible).
-
-    Une ligne incohérente est rejetée en entier (bornes, tx < tn, étendue, t hors de [tn, tx], saut de t depuis `prev_t`, la
-    température retenue à l'heure précédente). Avec `prev_t`, une extrême qu'aucune des deux températures instantanées qui l'encadrent
-    n'étaye (à plus de QC_SUPPORT_C de t et de `prev_t`) est écartée seule : la température instantanée la remplace alors, comme quand
-    l'extrême est absente. Sans `prev_t`, seul le contrôle interne de la ligne s'applique : une seule température ne permet pas de juger
-    un réchauffement ou un refroidissement rapide (tn de 3,7 °C pour t de 11,0 °C à la fin d'une nuit d'inversion, par exemple)."""
-    low, high = QC_BOUNDS_C
-    reasons: List[str] = []
-    bounded: List[Optional[float]] = []
-    for name, v in (("t", t), ("tx", tx), ("tn", tn)):
-        if v is not None and not low <= v <= high:
-            reasons.append(f"{name} hors bornes ({v:g} °C)")
-            v = None
-        bounded.append(v)
-    t, tx, tn = bounded
-    if tx is not None and tn is not None:
-        if tx < tn - QC_TOLERANCE_C:
-            return None, None, None, reasons + [f"tx {tx:g} °C inférieure à tn {tn:g} °C"]
-        if tx - tn > QC_RANGE_MAX_C:
-            return None, None, None, reasons + [f"étendue tx - tn de {tx - tn:.1f} °C dans l'heure"]
-    if t is not None and ((tn is not None and t < tn - QC_TOLERANCE_C) or (tx is not None and t > tx + QC_TOLERANCE_C)):
-        return None, None, None, reasons + [f"t {t:g} °C hors de [tn, tx]"]
-    if t is not None and prev_t is not None and abs(t - prev_t) > QC_STEP_MAX_C:
-        return None, None, None, reasons + [f"saut de t de {t - prev_t:+.1f} °C en une heure"]
-    if t is not None and prev_t is not None:
-        if tn is not None and tn < min(t, prev_t) - QC_SUPPORT_C:
-            reasons.append(f"tn {tn:g} °C sans appui (t voisines : {min(t, prev_t):g} °C)")
-            tn = None
-        if tx is not None and tx > max(t, prev_t) + QC_SUPPORT_C:
-            reasons.append(f"tx {tx:g} °C sans appui (t voisines : {max(t, prev_t):g} °C)")
-            tx = None
-    return t, tx, tn, reasons
-
-
 def accumulate_hour(days: Dict[str, Dict[str, list]], h: datetime, rows: List[dict], known: Any,
                     prev: Optional[Dict[str, float]] = None, rejected: Optional[List[dict]] = None) -> Dict[str, float]:
     """Fusionne les extrêmes d'un paquet horaire dans `days` ({date: {station: [TX, TN]}} ; TX = maximum, TN = minimum).
@@ -743,20 +701,6 @@ def reset_unchecked_day(state: Any, prov_days: Dict[str, Dict[str, list]], today
     les valeurs aberrantes déjà enregistrées. Les jours précédents ne peuvent plus l'être ; les données contrôlées les remplacent sous 2 jours."""
     if isinstance(state, dict) and state.get("qc_version") == QC_VERSION: return False
     return prov_days.pop(today.isoformat(), None) is not None
-
-
-def quality_summary(rejected: List[dict]) -> dict:
-    """Bilan du contrôle de plausibilité publié dans live.json."""
-    stations = sorted({r["id"] for r in rejected})
-    return {"version": QC_VERSION, "rejected_rows": len(rejected), "rejected_stations": stations[:QC_MAX_LISTED]}
-
-
-def log_rejections(rejected: List[dict], names: Dict[str, dict]) -> None:
-    for r in rejected[:QC_MAX_LOGGED]:
-        t, tx, tn = r["raw"]
-        print(f"[QC] {r['id']} {(names.get(r['id']) or {}).get('name') or ''} {r['hour']} : {' ; '.join(r['reasons'])} (t={t} tx={tx} tn={tn})")
-    if len(rejected) > QC_MAX_LOGGED: print(f"[QC] … et {len(rejected) - QC_MAX_LOGGED} autres relevés écartés")
-    print("Contrôle de plausibilité :", len(rejected), "relevés écartés ou corrigés sur", len({r['id'] for r in rejected}), "stations")
 
 
 def uncovered_days(prov_days: Dict[str, Dict[str, list]], through: Optional[str], today: date) -> List[str]:

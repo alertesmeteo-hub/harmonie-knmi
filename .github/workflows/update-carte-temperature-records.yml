@@ -73,7 +73,7 @@ jobs:
 
           assert data["status"] == "ok"
           assert data["schema_version"] >= 3
-          assert data["module_version"] == "1.2.0"
+          assert data["module_version"] == "1.3.0"
           assert data["stations_total"] > 0
 
           required = (
@@ -106,6 +106,7 @@ jobs:
           print("=== CONTRÔLE JSON ===")
           print("Version :", data["module_version"])
           print("Stations :", data["stations_total"])
+          print("Contrôle de plausibilité :", data.get("quality_control"))
 
           for field in required:
               print(
@@ -160,7 +161,7 @@ jobs:
             exit 0
           fi
 
-          git commit -m "Températures, ressentis et records v1.2.0"
+          git commit -m "Températures, ressentis et records v1.3.0"
           for attempt in 1 2 3 4; do
             if git push origin observations; then
               exit 0
