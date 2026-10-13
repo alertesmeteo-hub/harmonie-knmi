@@ -235,6 +235,7 @@ with tempfile.TemporaryDirectory() as tmp:
 
 # --- Reprise des heures manquantes : jours récents sans relevés horaires conservés ---------------------------------------------
 rt.MIN_STATIONS_JOUR = 1  # une seule station dans ce jeu d'essai
+assert rt.BACKFILL_MAX_HOURS == 30  # l'API ne garde qu'environ 24 h de paquets horaires
 assert rt.uncovered_days({}, "2026-10-10", date(2026, 10, 13)) == ["2026-10-11", "2026-10-12"]
 assert rt.uncovered_days({"2026-10-11": {"S1": [1, 1]}}, "2026-10-10", date(2026, 10, 13)) == ["2026-10-12"]
 assert rt.uncovered_days({}, None, date(2026, 10, 13)) == ["2026-10-11", "2026-10-12"]
@@ -258,6 +259,7 @@ with tempfile.TemporaryDirectory() as tmp:
             return csv_hour([("66136001", 36.0 if chaud else 15.0, 36.5 if chaud else 15.5, 14.5 if not chaud else 30.0)])
 
         rt.PACKAGE_DELAY = 0
+        rt.BACKFILL_MAX_HOURS = 72  # pour tester la logique de reprise sur plusieurs jours
         rt.api_key = lambda: "cle-de-test"
         latest = datetime(2026, 10, 13, 5, tzinfo=timezone.utc)
         rt.find_latest_hour = lambda key: (latest, paquet_reprise(key, latest))
