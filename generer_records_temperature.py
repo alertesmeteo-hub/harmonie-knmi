@@ -64,7 +64,7 @@ PACKAGE_URL = (
 
 HTTP_TIMEOUT = 120
 META_MAX_AGE_DAYS = 7  # le fichier des fiches de stations (≈ 200 Mo) n'est relu qu'une fois par semaine
-RECENT_MARGIN_DAYS = 10  # recouvrement avec la période déjà couverte par les caches
+RECENT_MARGIN_DAYS = 30  # recouvrement avec la période déjà couverte par les caches (des stations avaient alors plusieurs semaines de retard)
 PROVISIONAL_KEEP_DAYS = 6
 MIN_STATIONS_JOUR = 200  # en dessous, un jour récent est considéré sans relevés horaires conservés
 BACKFILL_MAX_HOURS = 30  # reprise maximale des paquets horaires manquants (l'API ne garde qu'environ 24 h)
