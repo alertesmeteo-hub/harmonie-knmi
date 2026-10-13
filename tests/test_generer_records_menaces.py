@@ -137,6 +137,14 @@ assert "tropical" not in tr  # TN = 20 − 3 = 17 °C : sous le seuil de 19 °C,
 chaude2 = g.prevoir_station({"arome": [doc_modele(pts, [24, 24, 24], 3)], "arpege": [doc_modele(pts, [24, 24, 24], 3)]}, 42.51, 2.51, 100, [DEMAIN])
 tr2 = g.classer_station("S1", station_ref(), chaude2, DEMAIN, 1.8, {}, {})["tropical"]
 assert tr2["value"] == 21.0 and tr2["flags"] == ["daily"] and tr2["near"] == ["monthly"], tr2  # 21 °C ≥ 19 °C (record du jour) et à 1 °C de 22 °C (record du mois)
+# nuit tropicale : la médiane doit atteindre 20 °C pour un record « probable » ; entre 19 et 20 °C, « possible » seulement
+chaude3 = g.prevoir_station({"arome": [doc_modele(pts, [22.3, 22.3, 22.3], 3)], "arpege": [doc_modele(pts, [22.3, 22.3, 22.3], 3)]}, 42.51, 2.51, 100, [DEMAIN])  # TN = 22,3 − 3 = 19,3 °C
+tr3 = g.classer_station("S1", station_ref(), chaude3, DEMAIN, 1.8, {}, {})["tropical"]
+assert tr3["flags"] == [] and "daily" in tr3["near"] and tr3["value"] == 19.3, tr3  # record du jour (19,0) dépassé, mais la nuit n'est pas tropicale
+# un modèle à plus de 20 °C suffit à garder la station en « possible », même avec une médiane plus basse
+mixte = g.prevoir_station({"arome": [doc_modele(pts, [23.5, 23.5, 23.5], 3)], "arpege": [doc_modele(pts, [20.0, 20.0, 20.0], 3)], "icon": [doc_modele(pts, [20.0, 20.0, 20.0], 3)]}, 42.51, 2.51, 100, [DEMAIN])
+tr4 = g.classer_station("S1", station_ref(), mixte, DEMAIN, 0.5, {}, {})  # sigma faible : seule la règle « un modèle atteint 20 °C » peut garder la station
+assert tr4["tropical"]["flags"] == [] and tr4["tropical"]["near"] == ["daily"], tr4.get("tropical")
 # jour sans références : rien
 assert g.classer_station("S1", station_ref(), par_modele, date(2026, 10, 20), 1.8, {}, {}) == {}
 

@@ -56,7 +56,7 @@ H = 3600.0
 EQUAL_EPS = 0.05  # même tolérance d'égalité que le pipeline des records
 
 MIN_MODELES = 2  # au moins deux modèles pour annoncer un record menacé
-TROPICAL_MIN_C = 19.0  # nuit tropicale : TN d'au moins 20 °C ; on examine les stations prévues à plus de 19 °C
+TROPICAL_C = 20.0  # nuit tropicale : TN d'au moins 20 °C (comme pour les records observés, où seules les valeurs d'au moins 20 °C comptent)
 SIGMA_DEFAUT = {1: 1.8, 2: 2.0}  # °C : incertitude d'une prévision de TX ou de TN (médiane des modèles corrigée), J+1 et J+2
 SIGMA_MIN, SIGMA_MAX = 1.2, 2.8
 Z_POSSIBLE = 0.674  # « possible » : une chance sur quatre au moins (loi normale d'écart-type sigma)
@@ -521,14 +521,18 @@ def classer_station(sid: str, s: dict, par_modele: dict, jour: date, sigma: floa
             continue
         valeurs = list(corrigees.values())
         centre = statistics.median(valeurs)
-        if kind == "tropical" and max(valeurs) < TROPICAL_MIN_C:
+        marge = Z_POSSIBLE * sigma
+        meilleur = max(valeurs) if mode == "max" else min(valeurs)  # le modèle le plus favorable au record
+        # Nuit tropicale : la minimale doit aussi atteindre 20 °C, sinon ce n'est pas une nuit tropicale (« probable » : médiane d'au moins 20 °C ;
+        # « possible » : médiane à moins de 0,67 sigma de 20 °C, ou un modèle l'atteint)
+        tropicale_probable = kind != "tropical" or centre >= TROPICAL_C - EQUAL_EPS
+        if kind == "tropical" and not (tropicale_probable or centre + marge >= TROPICAL_C or meilleur >= TROPICAL_C):
             continue
         jour_refs = (bloc.get("days") or {}).get(cle) or {}
         refs: Dict[str, Optional[dict]] = {}
         for scope in ("absolute", "monthly", "fortnight", "daily"):
             r = bloc.get("absolute") if scope == "absolute" else jour_refs.get(scope)
             refs[scope] = {"value": r[0], "date": r[1]} if isinstance(r, list) and len(r) == 2 and fnum(r[0]) is not None else None
-        meilleur = max(valeurs) if mode == "max" else min(valeurs)  # le modèle le plus favorable au record
         flags, near, deltas = [], [], {}
         for scope, ref in refs.items():
             if not ref:
@@ -537,9 +541,9 @@ def classer_station(sid: str, s: dict, par_modele: dict, jour: date, sigma: floa
             delta = (rv - centre) if mode == "max" else (centre - rv)
             delta_meilleur = (rv - meilleur) if mode == "max" else (meilleur - rv)
             deltas[scope] = round(delta, 2)
-            if delta <= EQUAL_EPS:
+            if delta <= EQUAL_EPS and tropicale_probable:
                 flags.append(scope)  # probable : la médiane des modèles atteint le record
-            elif scope in ("absolute", "monthly", "daily") and (delta <= Z_POSSIBLE * sigma or delta_meilleur <= EQUAL_EPS):
+            elif scope in ("absolute", "monthly", "daily") and (delta <= marge or delta_meilleur <= EQUAL_EPS):
                 near.append(scope)  # possible : médiane à moins de 0,67 sigma du record, ou un modèle l'atteint
         if not flags and not near:
             continue
