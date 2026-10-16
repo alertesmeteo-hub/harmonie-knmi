@@ -4,7 +4,9 @@
 Lit les fichiers departements/66.json publiés par chaque dépôt modèle de l'organisation et écrit,
 pour chacune des 226 communes, un petit fichier communes/<INSEE>.json :
   - quotidien : pluie, Tmax, Tmin et rafale maxi par jour (heure de Paris) et par modèle, sur 15 jours ;
-  - ensembles : moyenne, p10 et p90 des ensembles GEFS, AIGEFS, PEARP et AIFS ENS ;
+  - ensembles : moyenne, p10 et p90 des ensembles GEFS, AIGEFS, PEARP et AIFS ENS, calculés jour par jour
+                membre par membre quand le dépôt publie ses membres (membres/66.json, AIFS ENS), sinon
+                à partir des séries moyenne / p10 / p90 publiées ;
   - horaire   : 48 h heure par heure (meilleur modèle disponible à chaque heure) pour la frise du
                 risque, avec la pluie horaire de chaque modèle à maille fine pour mesurer l'accord.
 Ces fichiers alimentent la fiche « Ma commune », la frise horaire et l'indice de confiance du site.
@@ -174,6 +176,65 @@ def lire_icon_eu() -> tuple[dict[str, Serie], str]:
     return out, d.get("model_run", "")
 
 
+def lire_membres(repo: str) -> tuple[list[list[Serie]], dict[str, int], str] | None:
+    """Séries de chaque membre d'un ensemble (membres/66.json), ou None si le dépôt ne les publie pas.
+
+    Renvoie series[membre][point], le point de grille de chaque commune et l'heure du run. Mêmes points et
+    communes que departements/66.json : une série par point, partagée par les communes de la même maille.
+    """
+    r = S.get(f"{RAW}{repo}/data/membres/66.json", timeout=120)
+    if r.status_code == 404:
+        return None
+    r.raise_for_status()
+    d = r.json()
+    temps = [parse_t(t) for t in d["times"]]
+    it, ip = d["columns"].index("temperature_c"), d["columns"].index("precipitation_total_mm")
+    n = len(d["points"])
+    series = [
+        [Serie(temps, {"temp": [pas[i][it] for pas in membre], "total": [pas[i][ip] for pas in membre]}) for i in range(n)]
+        for membre in d["values"]
+    ]
+    if len(series) != d["members"] or any(len(membre) != len(temps) for membre in d["values"]):
+        raise ValueError(f"{repo} : membres/66.json incomplet")
+    return series, {c[0]: c[-1] for c in d["communes"]}, d.get("run_time", "")
+
+
+def quantile(valeurs: list[float], q: float) -> float:
+    """Quantile à interpolation linéaire (comme numpy.quantile par défaut)."""
+    v = sorted(valeurs)
+    pos = (len(v) - 1) * q
+    i = int(pos)
+    return v[i] if i + 1 >= len(v) else v[i] + (v[i + 1] - v[i]) * (pos - i)
+
+
+def arrondi(x: float, champ: str) -> float | int:
+    """Comme quotidien() : rafale en km/h entiers, le reste au dixième."""
+    return round(x) if champ == "rafale" else round(x, 1)
+
+
+def stats_membres(par_membre: list[dict[str, list]]) -> dict[str, dict[str, list]]:
+    """Moyenne, p10 et p90, jour par jour, des valeurs quotidiennes de chaque membre (sorties de quotidien()).
+
+    Le p90 de la pluie du jour est celui des pluies du jour des membres : pas la différence des p90 des cumuls
+    (qui peut valoir 0 quand la moyenne annonce plusieurs millimètres). Un jour n'a de statistique que si tous
+    les membres en ont une, pour que p10 et p90 portent toujours sur tout l'ensemble.
+    """
+    out: dict[str, dict[str, list]] = {k: {} for k in ("moyenne", "p10", "p90")}
+    for champ in ("pluie", "tmax", "tmin", "rafale"):
+        for k in out:
+            out[k][champ] = []
+        for j in range(len(par_membre[0][champ])):
+            vals = [q[champ][j] for q in par_membre]
+            if any(v is None for v in vals):
+                for k in out:
+                    out[k][champ].append(None)
+                continue
+            out["moyenne"][champ].append(arrondi(sum(vals) / len(vals), champ))
+            out["p10"][champ].append(arrondi(quantile(vals, 0.1), champ))
+            out["p90"][champ].append(arrondi(quantile(vals, 0.9), champ))
+    return out
+
+
 def bornes_jours(maintenant: datetime) -> list[tuple[datetime, datetime, str]]:
     j0 = maintenant.astimezone(PARIS).replace(hour=0, minute=0, second=0, microsecond=0)
     out = []
@@ -226,7 +287,20 @@ def main() -> int:
             infos[mid] = {"nom": nom, "run": run, "type": "deterministe"}
 
     ensembles: dict[str, dict[str, dict[str, Serie]]] = {}
+    # ensembles publiés membre par membre : statistiques jour par jour par point de grille, et point de chaque commune
+    par_membres: dict[str, tuple[list[dict[str, dict[str, list]]], dict[str, int]]] = {}
     for mid, repo, nom in ENSEMBLES:
+        try:
+            m = lire_membres(repo)
+        except Exception as e:  # noqa: BLE001 - on retombe sur les séries moyenne / p10 / p90
+            print(f"  {mid} : membres illisibles ({e}), calcul à partir des séries", flush=True)
+            m = None
+        if m is not None:
+            series, point_de, run = m
+            par_point = [stats_membres([quotidien(membre[i], jours, maintenant) for membre in series]) for i in range(len(series[0]))]
+            par_membres[mid] = (par_point, point_de)
+            infos[mid] = {"nom": nom, "run": run, "type": "ensemble", "calcul": f"jour par jour sur {len(series)} membres"}
+            continue
         try:
             moy, run = lire_departement(repo)
             p10, _ = lire_departement(repo, "p10")
@@ -249,10 +323,14 @@ def main() -> int:
     for code in codes:
         q = {mid: quotidien(series[code], jours, maintenant) for mid, series in modeles.items() if code in series}
         ens = {}
-        for mid, e in ensembles.items():
-            if code not in e["moyenne"]:
-                continue
-            ens[mid] = {k: quotidien(e[k][code], jours, maintenant) for k in ("moyenne", "p10", "p90")}
+        for mid, _repo, _nom in ENSEMBLES:
+            if mid in par_membres:
+                par_point, point_de = par_membres[mid]
+                if code in point_de:
+                    ens[mid] = par_point[point_de[code]]
+            elif mid in ensembles and code in ensembles[mid]["moyenne"]:
+                e = ensembles[mid]
+                ens[mid] = {k: quotidien(e[k][code], jours, maintenant) for k in ("moyenne", "p10", "p90")}
 
         # horaire : meilleur modèle à chaque heure
         h = {"pluie": [], "rafale": [], "cape": [], "neige": [], "temp": [], "source": []}
