@@ -1,1 +1,1 @@
-{"schema_version":1,"date_utc":"2026-10-16","cell_deg":0.05,"source":"EUMETSAT MTG LI LFL","updated_at":"2026-10-16T10:01:22Z","total":2,"hours":[{"h":"2026-10-16T05","cells":[[50.5,-0.2,1]]},{"h":"2026-10-16T09","cells":[[46.5,-5.2,1]]}]}
+{"schema_version":1,"date_utc":"2026-10-16","cell_deg":0.05,"source":"EUMETSAT MTG LI LFL","updated_at":"2026-10-16T10:15:52Z","total":5,"hours":[{"h":"2026-10-16T05","cells":[[50.5,-0.2,1]]},{"h":"2026-10-16T09","cells":[[46.5,-5.2,1]]},{"h":"2026-10-16T10","cells":[[44.9,-0.9,1],[42.6,-1.65,1],[44.85,-0.95,1]]}]}
