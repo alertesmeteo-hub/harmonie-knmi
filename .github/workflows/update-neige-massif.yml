@@ -1,0 +1,116 @@
+name: Update Neige du massif
+
+# Extrait des prévisions de nos modèles (AROME, ARPEGE, ECMWF, GFS, AIFS) sur les Pyrénées et le Languedoc-Roussillon : température, précipitations
+# totales et relief de chaque maille, échéance par échéance. La carte /meteo-montagne (dépôt meteo-saas) en tire la neige cumulée depuis le
+# début de la prévision à l'altitude choisie, sans télécharger 20 à 45 Mo de grilles par modèle. Sorties sur la branche neige-massif-data
+# (poussée à chaque passage, sans historique) : index.json (le run de chaque modèle et les échéances de son fichier) et <modèle>.nsm.gz.
+# Un modèle dont le run n'a pas changé depuis la publication précédente est repris tel quel : un passage sans nouveauté dure moins d'une minute.
+# Déclenché toutes les 30 minutes par le VPS (trigger-harmonie-66.sh update-neige-massif.yml) ; le planning ci-dessous n'est que le filet de sécurité.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '40 1,4,7,10,13,16,19,22 * * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: neige-massif
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v7
+
+      - name: Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+
+      - name: Installer les dépendances
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests==2.33.0 "numpy>=2.0,<3"
+
+      - name: Récupérer la publication précédente
+        shell: bash
+        run: |
+          rm -rf /tmp/neige-etat
+          mkdir -p /tmp/neige-etat
+          if git ls-remote --exit-code --heads origin neige-massif-data >/dev/null 2>&1; then
+            git clone --depth 1 --branch neige-massif-data "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git" /tmp/neige-etat
+          fi
+
+      - name: Extraire les prévisions du massif
+        shell: bash
+        run: |
+          # Coupures passagères de la source (connexion fermée, 429/5xx, délai dépassé) : jusqu'à 3 tentatives.
+          set -o pipefail
+          for attempt in 1 2 3; do
+            if python generer_neige_massif.py --etat /tmp/neige-etat --sortie neige_massif 2>&1 | tee "$RUNNER_TEMP/tentative.log"; then
+              break
+            fi
+            if [ "$attempt" -eq 3 ] || ! grep -qiE 'RemoteDisconnected|Connection(Error|Reset|refused| aborted)|IncompleteRead|ReadTimeout|ConnectTimeout|ChunkedEncodingError|ProtocolError|Max retries exceeded|Temporary failure in name resolution|Name or service not known|SSLError|HTTP ?(Error)?:? ?(429|500|502|503|504)|(429|502|503|504) (Too Many|Bad Gateway|Service Unavailable|Gateway Time|Server)|ECONNRESET|ETIMEDOUT|EAI_AGAIN|timed out|Read timed|aucun modèle publié' "$RUNNER_TEMP/tentative.log"; then
+              echo "::error::Échec (tentative $attempt)"
+              exit 1
+            fi
+            echo "Erreur réseau passagère (tentative $attempt), nouvelle tentative dans 60 s"
+            sleep 60
+          done
+
+      - name: Contrôler les sorties
+        shell: bash
+        run: |
+          python - <<'PY'
+          import importlib.util, json
+          from pathlib import Path
+          spec = importlib.util.spec_from_file_location('neige_massif', 'generer_neige_massif.py')
+          g = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(g)
+          dossier = Path('neige_massif')
+          m = json.loads((dossier / 'index.json').read_text(encoding='utf-8'))
+          assert m['schema_version'] == g.SCHEMA_VERSION
+          assert m['modeles'], 'aucun modèle publié'
+          for modele, e in m['modeles'].items():
+              octets = (dossier / e['fichier']).read_bytes()
+              assert len(octets) == e['octets'], (modele, len(octets), e['octets'])
+              ex = g.lire_extrait(octets)
+              assert ex['modele'] == modele and ex['run_time'] == e['run_time']
+              assert len(ex['etapes']) == len(e['etapes']) >= 10, (modele, len(ex['etapes']))
+              assert (ex['w'], ex['h']) == (e['w'], e['h'])
+              # relief des modèles sur le cadre : du niveau de la mer (quelques mètres sous zéro chez ECMWF) à 2 000-2 900 m (AIFS 1 985 m, AROME 2 885 m le 17/10/2026)
+              assert -100 <= int(ex['relief'].min()) and int(ex['relief'].max()) <= 3500, (modele, ex['relief'].min(), ex['relief'].max())
+              assert int(ex['relief'].max()) >= 1500, (modele, 'relief trop plat', int(ex['relief'].max()))
+              lues = (ex['temperature'] != g.T_MANQUANT).mean()
+              assert lues >= 0.95, (modele, 'température manquante', 1 - lues)
+              print(modele, '| run', e['run_time'], '|', len(ex['etapes']), 'échéances |', ex['w'], 'x', ex['h'], 'mailles |', round(len(octets) / 1e3), 'Ko | relief', int(ex['relief'].min()), 'à', int(ex['relief'].max()), 'm')
+          print('Modèles publiés :', sorted(m['modeles']))
+          PY
+
+      - name: Publier sur neige-massif-data
+        shell: bash
+        run: |
+          set -euo pipefail
+          REPO_URL="https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git"
+          for attempt in 1 2 3; do
+            pub="$(mktemp -d)"
+            git init -b neige-massif-data "$pub"
+            git -C "$pub" remote add origin "$REPO_URL"
+            # Ancienne publication récupérée : git n'envoie alors que les fichiers nouveaux (un modèle inchangé ne repart pas)
+            git -C "$pub" fetch -q --depth=1 origin neige-massif-data || true
+            cp neige_massif/* "$pub/"
+            git -C "$pub" config user.name "github-actions[bot]"
+            git -C "$pub" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git -C "$pub" add -A
+            git -C "$pub" commit -m "Neige du massif v1.0.0"
+            if git -C "$pub" push --force origin neige-massif-data; then exit 0; fi
+            rm -rf "$pub"
+            sleep $((attempt * 3))
+          done
+          exit 1
