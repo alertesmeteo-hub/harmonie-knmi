@@ -190,7 +190,7 @@ BORNES_ESSAI = {"south": 41.0, "west": -1.0, "north": 44.0, "east": 5.0}
 W0, H0 = 20, 10
 
 
-def index_essai(run="2026-10-17T03:00:00Z", sans_neige=(), n=4, composition=("pluie_1h", "neige")):
+def index_essai(run="2026-10-17T03:00:00Z", sans_neige=(), n=4, composition=("pluie_1h", "neige"), genere="2026-10-17T06:00:00Z"):
     steps = []
     for k in range(n):
         sondes = {"temperature": f"maps/values/temperature/{k:03d}.hkv.gz"}
@@ -200,7 +200,7 @@ def index_essai(run="2026-10-17T03:00:00Z", sans_neige=(), n=4, composition=("pl
         if k == 0:
             sondes["altitude"] = "maps/values/altitude/000.hkv.gz"
         steps.append({"lead_hour": k, "valid_time": f"2026-10-17T{3 + k:02d}:00:00Z", "probes": sondes, "files": {}})
-    return {"run_time": run, "generated_at": "2026-10-17T06:00:00Z", "bounds": BORNES_ESSAI, "steps": steps}
+    return {"run_time": run, "generated_at": genere, "bounds": BORNES_ESSAI, "steps": steps}
 
 
 def fichiers_essai(depot, n=4, composition=("pluie_1h", "neige"), manquants=()):
@@ -284,6 +284,8 @@ class Passage(unittest.TestCase):
         self.racine = Path(self.tmp.name)
         self.maintenant = datetime(2026, 10, 17, 9, 0, tzinfo=timezone.utc)
         self.runs = {"arome-meteofrance": "2026-10-17T03:00:00Z", "gfs": "2026-10-17T00:00:00Z"}
+        self.generes = {"arome-meteofrance": "2026-10-17T06:00:00Z", "gfs": "2026-10-17T06:00:00Z"}  # heure de génération de l'index de chaque modèle
+        self.etapes = {"arome-meteofrance": 4, "gfs": 4}  # échéances que l'index annonce (un run se publie au fil du calcul)
         self.pannes = set()
 
     def tearDown(self):
@@ -293,11 +295,11 @@ class Passage(unittest.TestCase):
         if depot in self.pannes:
             raise RuntimeError("panne du réseau")
         composition = ("pluie_1h", "neige") if depot == "arome-meteofrance" else ("pluie_1h",)
-        return index_essai(run=self.runs[depot], composition=composition)
+        return index_essai(run=self.runs[depot], composition=composition, n=self.etapes[depot], genere=self.generes[depot])
 
     def source(self):
-        f = fichiers_essai("arome-meteofrance")
-        f.update(fichiers_essai("gfs", composition=("pluie_1h",)))
+        f = fichiers_essai("arome-meteofrance", n=8)  # les grilles de toutes les échéances que l'index pourra annoncer
+        f.update(fichiers_essai("gfs", n=8, composition=("pluie_1h",)))
         return SourceFictive(f)
 
     def passer(self, sortie, etat=None):
@@ -324,6 +326,41 @@ class Passage(unittest.TestCase):
         self.assertEqual((second / "arome.nsm.gz").read_bytes(), (premier / "arome.nsm.gz").read_bytes())
         self.assertNotEqual((second / "gfs.nsm.gz").read_bytes(), (premier / "gfs.nsm.gz").read_bytes())
 
+    def test_reprend_un_modele_dont_l_index_n_a_pas_bouge_et_reconstruit_celui_dont_le_run_a_avance(self):
+        # AROME et GFS publient un run au fil du calcul : même run, mais l'index annonce de plus en plus d'échéances
+        premier = self.racine / "a"
+        self.passer(premier)
+        self.assertEqual(len(json.loads((premier / "index.json").read_text(encoding="utf-8"))["modeles"]["arome"]["etapes"]), 4)
+        self.etapes["arome-meteofrance"] = 7
+        self.generes["arome-meteofrance"] = "2026-10-17T06:12:00Z"
+        second = self.racine / "b"
+        manifeste = self.passer(second, premier)
+        self.assertEqual(len(manifeste["modeles"]["arome"]["etapes"]), 7)  # même run (03Z), échéances ajoutées : reconstruit
+        self.assertEqual(manifeste["modeles"]["arome"]["run_time"], "2026-10-17T03:00:00Z")
+        self.assertEqual(manifeste["modeles"]["arome"]["index_etapes"], 7)
+        self.assertEqual((second / "gfs.nsm.gz").read_bytes(), (premier / "gfs.nsm.gz").read_bytes())  # GFS n'a pas bougé : repris
+        # troisième passage sans rien de neuf : tout est repris
+        troisieme = self.racine / "c"
+        manifeste = self.passer(troisieme, second)
+        self.assertEqual((troisieme / "arome.nsm.gz").read_bytes(), (second / "arome.nsm.gz").read_bytes())
+        self.assertEqual(manifeste["modeles"]["arome"], json.loads((second / "index.json").read_text(encoding="utf-8"))["modeles"]["arome"])
+
+    def test_reconstruit_quand_l_index_a_ete_regenere_avec_le_meme_nombre_d_echeances(self):
+        premier = self.racine / "a"
+        self.passer(premier)
+        self.generes["gfs"] = "2026-10-17T07:30:00Z"
+        second = self.racine / "b"
+        manifeste = self.passer(second, premier)
+        self.assertEqual(manifeste["modeles"]["gfs"]["index_generated_at"], "2026-10-17T07:30:00Z")
+
+    def test_reconstruit_un_modele_publie_par_une_version_sans_etat_d_index(self):
+        etat = self.racine / "etat"
+        etat.mkdir()
+        (etat / "index.json").write_text(json.dumps({"schema_version": 1, "modeles": {"gfs": {"run_time": "2026-10-17T00:00:00Z", "fichier": "gfs.nsm.gz"}}}), encoding="utf-8")
+        (etat / "gfs.nsm.gz").write_bytes(b"ancien")
+        manifeste = self.passer(self.racine / "a", etat)
+        self.assertGreater(manifeste["modeles"]["gfs"]["octets"], 100)  # pas repris : l'entrée ne dit pas de quel état de l'index elle vient
+
     def test_un_modele_en_panne_garde_sa_derniere_version(self):
         premier = self.racine / "a"
         self.passer(premier)
@@ -337,6 +374,16 @@ class Passage(unittest.TestCase):
         self.pannes.add("gfs")
         manifeste = self.passer(self.racine / "a")
         self.assertEqual(sorted(manifeste["modeles"]), ["arome"])
+
+    def test_ne_publie_pas_un_melange_quand_des_echeances_sont_ajoutees_pendant_la_lecture(self):
+        appels = {"n": 0}
+
+        def index_qui_grandit(depot):
+            appels["n"] += 1
+            return index_essai(run="2026-10-17T00:00:00Z", composition=("pluie_1h",), n=4 if appels["n"] == 1 else 6, genere="2026-10-17T06:00:00Z" if appels["n"] == 1 else "2026-10-17T06:03:00Z")
+
+        manifeste = g.passer(self.racine / "a", None, source=SourceFictive(fichiers_essai("gfs", n=8, composition=("pluie_1h",))), modeles=("gfs",), fils=2, maintenant=self.maintenant, lire_index=index_qui_grandit)
+        self.assertEqual(manifeste["modeles"], {})
 
     def test_ne_publie_pas_un_melange_quand_un_nouveau_run_sort_pendant_la_lecture(self):
         appels = {"n": 0}

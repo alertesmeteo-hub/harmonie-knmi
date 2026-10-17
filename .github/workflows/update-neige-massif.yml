@@ -4,8 +4,10 @@ name: Update Neige du massif
 # totales et relief de chaque maille, échéance par échéance. La carte /meteo-montagne (dépôt meteo-saas) en tire la neige cumulée depuis le
 # début de la prévision à l'altitude choisie, sans télécharger 20 à 45 Mo de grilles par modèle. Sorties sur la branche neige-massif-data
 # (poussée à chaque passage, sans historique) : index.json (le run de chaque modèle et les échéances de son fichier) et <modèle>.nsm.gz.
-# Un modèle dont le run n'a pas changé depuis la publication précédente est repris tel quel : un passage sans nouveauté dure moins d'une minute.
-# Déclenché toutes les 30 minutes par le VPS (trigger-harmonie-66.sh update-neige-massif.yml) ; le planning ci-dessous n'est que le filet de sécurité.
+# Un modèle dont l'index n'a pas changé depuis la publication précédente (même run, même heure de génération, même nombre d'échéances) est repris
+# tel quel : un passage sans nouveauté dure une douzaine de secondes. AROME et GFS publient un run au fil du calcul (19 échéances, puis 30, puis 49) :
+# le passage suivant reconstruit alors le modèle.
+# Déclenché toutes les 15 minutes par le VPS (trigger-harmonie-66.sh update-neige-massif.yml) ; le planning ci-dessous n'est que le filet de sécurité.
 
 on:
   workflow_dispatch:
@@ -82,7 +84,7 @@ jobs:
               assert len(octets) == e['octets'], (modele, len(octets), e['octets'])
               ex = g.lire_extrait(octets)
               assert ex['modele'] == modele and ex['run_time'] == e['run_time']
-              assert len(ex['etapes']) == len(e['etapes']) >= 10, (modele, len(ex['etapes']))
+              assert len(ex['etapes']) == len(e['etapes']) >= 1, (modele, len(ex['etapes']))
               assert (ex['w'], ex['h']) == (e['w'], e['h'])
               # relief des modèles sur le cadre : du niveau de la mer (quelques mètres sous zéro chez ECMWF) à 2 000-2 900 m (AIFS 1 985 m, AROME 2 885 m le 17/10/2026)
               assert -100 <= int(ex['relief'].min()) and int(ex['relief'].max()) <= 3500, (modele, ex['relief'].min(), ex['relief'].max())
