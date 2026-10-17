@@ -98,6 +98,35 @@ jobs:
           # Branche écrasée à chaque passage : seul l'état courant compte, pas d'historique à conserver.
           git -C "$publish_dir" push -q --force \
             "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:foudre-data
+          git -C "$publish_dir" rev-parse HEAD > "$RUNNER_TEMP/foudre-commit"
+
+      # Alerte « orage à proximité » du SaaS : contrôle lancé dès la publication, sur la version exacte qui vient
+      # d'être écrite (adresse au numéro de commit, que le cache de raw.githubusercontent.com ne sert jamais périmée).
+      # Sans le secret CRON_SECRET, l'étape est sautée : le contrôle du quart d'heure (lancer-modeles) reste le secours.
+      # Dépôt public : on n'affiche que le code HTTP et des compteurs, jamais le détail du bilan (noms de clients).
+      - name: Prévenir le SaaS (alerte orage)
+        continue-on-error: true
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then echo "Secret CRON_SECRET absent : contrôle laissé au passage du quart d'heure."; exit 0; fi
+          commit=$(cat "$RUNNER_TEMP/foudre-commit" 2>/dev/null || true)
+          if [ -z "$commit" ]; then echo "Rien de publié à ce passage."; exit 0; fi
+          code=$(curl -sS -o "$RUNNER_TEMP/orage.json" -w "%{http_code}" --max-time 90 \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "https://app.alertes-meteo.com/api/cron/orage-proche?commit=$commit") || code="échec"
+          python - "$RUNNER_TEMP/orage.json" "$code" <<'PY'
+          import json, sys
+          code = sys.argv[2]
+          try:
+              b = json.load(open(sys.argv[1], encoding="utf-8"))
+          except Exception:
+              b = {}
+          f = b.get("foudre") or {}
+          print(f"Contrôle orage : HTTP {code} ; communes {b.get('communes', '?')}, alertes {b.get('alertes', '?')}, SMS {b.get('sms', '?')}, e-mails {b.get('emails', '?')}, erreurs {len(b.get('erreurs') or [])} ; foudre générée {f.get('genere', '?')}, lue {f.get('lu', '?')}")
+          if code != "200":
+              print(f"::warning title=Contrôle orage::HTTP {code}")
+          PY
 
       # Archives quotidiennes des impacts (une par jour UTC, ~quelques dizaines de Ko) :
       # branche foudre-archives, jamais écrasée, on y ajoute/met à jour les fichiers du jour.
