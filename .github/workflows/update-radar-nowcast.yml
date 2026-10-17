@@ -78,6 +78,21 @@ jobs:
             echo "::warning::Pas d'échantillons radar par commune"
           fi
 
+      # Historique 3 h des images observées (animation de la carte radar) : radar-data étant écrasée à chaque
+      # passage, on relit l'historique déjà publié (seul le dossier map/historique) avant d'y ajouter ce passage.
+      - name: Historique 3 h des images radar
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          prec="$RUNNER_TEMP/radar-precedent"
+          rm -rf "$prec"
+          if git clone --quiet --depth 1 --filter=blob:none --sparse --branch radar-data               "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$prec" 2>/dev/null; then
+            git -C "$prec" sparse-checkout set map/historique
+          else
+            echo "Pas d'historique précédent."
+          fi
+          python scripts/radar_historique.py build/radar --precedent "$prec" --heures 3             || echo "::warning::Historique radar non mis à jour"
+
       - name: Publier sur la branche radar-data
         env:
           GITHUB_TOKEN: ${{ github.token }}
