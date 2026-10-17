@@ -74,6 +74,17 @@ P_MANQUANT = 65535
 ETAPES_MIN = 0.5  # on ne publie pas un modèle dont moins de la moitié des échéances ont pu être lues
 
 
+def meme_etat(entree: Dict[str, Any], index: Dict[str, Any]) -> bool:
+    """Vrai si l'entrée du manifeste (publiée au passage précédent) a été construite à partir de CET état de l'index du modèle. Un run n'est pas publié
+    d'un coup : AROME et GFS ajoutent leurs échéances au fil du calcul (19 échéances, puis 30, puis 49 pour le même run). Le run seul ne suffit donc pas
+    à dire qu'il n'y a rien de neuf : on compare aussi l'heure de génération de l'index et son nombre d'échéances."""
+    return (
+        entree.get("run_time") == index.get("run_time")
+        and entree.get("index_generated_at") == index.get("generated_at")
+        and entree.get("index_etapes") == len(index.get("steps") or [])
+    )
+
+
 # ---------------------------------------------------------------------------------------------------------------------
 # Géométrie : le cadre en mailles de la grille d'origine
 # ---------------------------------------------------------------------------------------------------------------------
@@ -315,6 +326,8 @@ def construire_modele(
         "h": h,
         "bounds": bloc["bounds"],
         "etapes": [e["valid_time"] for e, _ in retenues],
+        "index_generated_at": index.get("generated_at"),  # l'état de l'index dont il est tiré (voir meme_etat)
+        "index_etapes": len(index.get("steps") or []),
     }
     return octets, entree
 
@@ -344,8 +357,9 @@ def passer(
     maintenant: Optional[datetime] = None,
     lire_index: Optional[Callable[[str], Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
-    """Un passage : pour chaque modèle dont le run a changé depuis le passage précédent (`etat`, dossier de la dernière publication), lit ses grilles
-    et écrit son fichier ; les autres sont repris tels quels. Rend le manifeste écrit dans `sortie`/index.json."""
+    """Un passage : pour chaque modèle dont l'index a changé depuis le passage précédent (`etat`, dossier de la dernière publication) : nouveau run, ou
+    même run dont le calcul a avancé (échéances ajoutées), lit ses grilles et écrit son fichier ; les autres sont repris tels quels. Rend le manifeste
+    écrit dans `sortie`/index.json."""
     source = source or Source(fils)
     lire_index = lire_index or source.index
     sortie.mkdir(parents=True, exist_ok=True)
@@ -358,16 +372,17 @@ def passer(
         try:
             index = lire_index(depot)
             run = index.get("run_time")
-            if ancien and etat and ancien.get("run_time") == run and (etat / ancien["fichier"]).is_file():
+            if ancien and etat and meme_etat(ancien, index) and (etat / ancien["fichier"]).is_file():
                 shutil.copyfile(etat / ancien["fichier"], sortie / ancien["fichier"])
                 entrees[modele] = ancien
-                print(f"{modele} : run {run} déjà publié")
+                print(f"{modele} : run {run} déjà publié ({ancien.get('index_etapes')} échéances)")
                 continue
             debut = time.time()
             octets, entree = construire_modele(source, modele, depot, composition, index, fils)
-            # les grilles ont pu changer pendant la lecture (nouveau run publié) : on ne publie pas un mélange
-            if lire_index(depot).get("run_time") != run:
-                raise ValueError(f"{modele} : nouveau run publié pendant la lecture")
+            # les grilles ont pu changer pendant la lecture (nouveau run, ou échéances ajoutées au run) : on ne publie pas un mélange,
+            # le passage suivant reprendra le modèle
+            if not meme_etat(entree, lire_index(depot)):
+                raise ValueError(f"{modele} : l'index du modèle a changé pendant la lecture")
             (sortie / entree["fichier"]).write_bytes(octets)
             entrees[modele] = entree
             print(f"{modele} : run {run}, {len(entree['etapes'])} échéances, {len(octets) / 1e3:.0f} Ko, {time.time() - debut:.0f} s")
@@ -391,7 +406,7 @@ def passer(
 def main(argv: Optional[Sequence[str]] = None) -> int:
     parseur = argparse.ArgumentParser(description="Extrait de la neige du massif (température, précipitations, relief) de nos modèles.")
     parseur.add_argument("--sortie", required=True, help="dossier des fichiers publiés")
-    parseur.add_argument("--etat", help="dossier de la publication précédente : les modèles dont le run n'a pas changé en sont repris")
+    parseur.add_argument("--etat", help="dossier de la publication précédente : les modèles dont l'index n'a pas changé en sont repris")
     parseur.add_argument("--modeles", help="liste d'identifiants séparés par des virgules (par défaut tous)")
     parseur.add_argument("--fils", type=int, default=8, help="lectures simultanées")
     args = parseur.parse_args(argv)
