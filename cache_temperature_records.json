@@ -470,7 +470,7 @@
       "record_month_old_date": "20231009",
       "record_absolute_old": 40.0,
       "record_absolute_old_date": "20230823",
-      "current_month_txab": 23.4,
+      "current_month_txab": 23.3,
       "current_month_txab_date": "20261015"
     },
     "04230001": {
@@ -10638,8 +10638,8 @@
       "record_month_old_date": "20111001",
       "record_absolute_old": 41.0,
       "record_absolute_old_date": "20220719",
-      "current_month_txab": 22.5,
-      "current_month_txab_date": "20261006"
+      "current_month_txab": 23.9,
+      "current_month_txab_date": "20261015"
     },
     "80248001": {
       "record_month_old": 25.5,
@@ -11878,8 +11878,8 @@
       "record_month_old_date": "19971016",
       "record_absolute_old": 34.9,
       "record_absolute_old_date": "19980709",
-      "current_month_txab": 30.7,
-      "current_month_txab_date": "20261017"
+      "current_month_txab": 31.0,
+      "current_month_txab_date": "20261018"
     },
     "97108001": {
       "record_month_old": 33.0,
@@ -11894,8 +11894,8 @@
       "record_month_old_date": "20211018",
       "record_absolute_old": 31.7,
       "record_absolute_old_date": "20200925",
-      "current_month_txab": 30.3,
-      "current_month_txab_date": "20261015"
+      "current_month_txab": 30.6,
+      "current_month_txab_date": "20261018"
     },
     "97110001": {
       "record_month_old": 34.3,
@@ -11926,8 +11926,8 @@
       "record_month_old_date": "20151004",
       "record_absolute_old": 34.4,
       "record_absolute_old_date": "20100915",
-      "current_month_txab": 31.9,
-      "current_month_txab_date": "20261008"
+      "current_month_txab": 32.0,
+      "current_month_txab_date": "20261018"
     },
     "97113003": {
       "record_month_old": 33.1,
@@ -11958,8 +11958,8 @@
       "record_month_old_date": "20251002",
       "record_absolute_old": 35.1,
       "record_absolute_old_date": "20240920",
-      "current_month_txab": 33.4,
-      "current_month_txab_date": "20261004"
+      "current_month_txab": 33.5,
+      "current_month_txab_date": "20261018"
     },
     "97118009": {
       "record_month_old": 34.0,
@@ -11974,8 +11974,8 @@
       "record_month_old_date": "20241019",
       "record_absolute_old": 35.2,
       "record_absolute_old_date": "20250822",
-      "current_month_txab": 33.1,
-      "current_month_txab_date": "20261017"
+      "current_month_txab": 33.3,
+      "current_month_txab_date": "20261018"
     },
     "97121002": {
       "record_month_old": 32.3,
@@ -12030,8 +12030,8 @@
       "record_month_old_date": "20161005",
       "record_absolute_old": 30.0,
       "record_absolute_old_date": "20161005",
-      "current_month_txab": 22.1,
-      "current_month_txab_date": "20261009"
+      "current_month_txab": 22.7,
+      "current_month_txab_date": "20261018"
     },
     "97125001": {
       "record_month_old": 35.2,
@@ -12206,8 +12206,8 @@
       "record_month_old_date": "20231004",
       "record_absolute_old": 36.9,
       "record_absolute_old_date": "20230910",
-      "current_month_txab": 32.7,
-      "current_month_txab_date": "20261011"
+      "current_month_txab": 33.0,
+      "current_month_txab_date": "20261018"
     },
     "97212007": {
       "record_month_old": 33.8,
@@ -12374,8 +12374,8 @@
       "record_month_old_date": "20231019",
       "record_absolute_old": 38.4,
       "record_absolute_old_date": "20240906",
-      "current_month_txab": 32.6,
-      "current_month_txab_date": "20261004"
+      "current_month_txab": 32.7,
+      "current_month_txab_date": "20261018"
     },
     "97227001": {
       "record_month_old": 35.3,
@@ -12470,8 +12470,8 @@
       "record_month_old_date": "19991021",
       "record_absolute_old": 34.4,
       "record_absolute_old_date": "20190730",
-      "current_month_txab": 31.7,
-      "current_month_txab_date": "20261003"
+      "current_month_txab": 32.4,
+      "current_month_txab_date": "20261018"
     },
     "97303001": {
       "record_month_old": 36.6,
@@ -12518,8 +12518,8 @@
       "record_month_old_date": "20211011",
       "record_absolute_old": 35.5,
       "record_absolute_old_date": "20211011",
-      "current_month_txab": 33.0,
-      "current_month_txab_date": "20261017"
+      "current_month_txab": 33.1,
+      "current_month_txab_date": "20261018"
     },
     "97306007": {
       "record_month_old": 35.5,
@@ -12534,8 +12534,8 @@
       "record_month_old_date": "20231017",
       "record_absolute_old": 36.2,
       "record_absolute_old_date": "20231017",
-      "current_month_txab": 34.0,
-      "current_month_txab_date": "20261017"
+      "current_month_txab": 34.4,
+      "current_month_txab_date": "20261018"
     },
     "97307003": {
       "record_month_old": 36.2,
@@ -12550,8 +12550,8 @@
       "record_month_old_date": "20151022",
       "record_absolute_old": 37.0,
       "record_absolute_old_date": "20151022",
-      "current_month_txab": 36.1,
-      "current_month_txab_date": "20261012"
+      "current_month_txab": 36.8,
+      "current_month_txab_date": "20261018"
     },
     "97309005": {
       "record_month_old": 34.7,
@@ -12574,8 +12574,8 @@
       "record_month_old_date": "20231014",
       "record_absolute_old": 38.8,
       "record_absolute_old_date": "20231014",
-      "current_month_txab": null,
-      "current_month_txab_date": null
+      "current_month_txab": 37.2,
+      "current_month_txab_date": "20261015"
     },
     "97310009": {
       "record_month_old": 34.8,
@@ -12598,16 +12598,16 @@
       "record_month_old_date": "20231014",
       "record_absolute_old": 38.8,
       "record_absolute_old_date": "20231014",
-      "current_month_txab": 36.9,
-      "current_month_txab_date": "20261007"
+      "current_month_txab": 37.4,
+      "current_month_txab_date": "20261018"
     },
     "97312002": {
       "record_month_old": 36.2,
       "record_month_old_date": "20201018",
       "record_absolute_old": 36.2,
       "record_absolute_old_date": "20201018",
-      "current_month_txab": null,
-      "current_month_txab_date": null
+      "current_month_txab": 36.6,
+      "current_month_txab_date": "20261017"
     },
     "97312009": {
       "record_month_old": 35.4,
@@ -12758,16 +12758,16 @@
       "record_month_old_date": "20241030",
       "record_absolute_old": 36.7,
       "record_absolute_old_date": "20250214",
-      "current_month_txab": 31.6,
-      "current_month_txab_date": "20261014"
+      "current_month_txab": 32.0,
+      "current_month_txab_date": "20261019"
     },
     "97415536": {
       "record_month_old": 25.3,
       "record_month_old_date": "20111027",
       "record_absolute_old": 29.1,
       "record_absolute_old_date": "20070223",
-      "current_month_txab": 18.8,
-      "current_month_txab_date": "20261009"
+      "current_month_txab": 20.5,
+      "current_month_txab_date": "20261019"
     },
     "97415566": {
       "record_month_old": 25.0,
@@ -12830,8 +12830,8 @@
       "record_month_old_date": "20111026",
       "record_absolute_old": 25.5,
       "record_absolute_old_date": "20240122",
-      "current_month_txab": 18.9,
-      "current_month_txab_date": "20261014"
+      "current_month_txab": 19.1,
+      "current_month_txab_date": "20261019"
     },
     "97421210": {
       "record_month_old": 27.8,
@@ -12998,8 +12998,8 @@
       "record_month_old_date": "20021015",
       "record_absolute_old": 35.5,
       "record_absolute_old_date": "19950320",
-      "current_month_txab": 26.9,
-      "current_month_txab_date": "20261017"
+      "current_month_txab": 28.0,
+      "current_month_txab_date": "20261018"
     },
     "98714002": {
       "record_month_old": 33.9,
@@ -13038,8 +13038,8 @@
       "record_month_old_date": "19931016",
       "record_absolute_old": 32.6,
       "record_absolute_old_date": "19931016",
-      "current_month_txab": 28.0,
-      "current_month_txab_date": "20261017"
+      "current_month_txab": 28.8,
+      "current_month_txab_date": "20261018"
     },
     "98719005": {
       "record_month_old": 28.5,
@@ -13054,16 +13054,16 @@
       "record_month_old_date": "20021027",
       "record_absolute_old": 32.9,
       "record_absolute_old_date": "20010430",
-      "current_month_txab": 27.6,
-      "current_month_txab_date": "20261003"
+      "current_month_txab": 27.9,
+      "current_month_txab_date": "20261018"
     },
     "98722003": {
       "record_month_old": 31.9,
       "record_month_old_date": "20251001",
       "record_absolute_old": 37.4,
       "record_absolute_old_date": "20250430",
-      "current_month_txab": 29.7,
-      "current_month_txab_date": "20261016"
+      "current_month_txab": 30.0,
+      "current_month_txab_date": "20261018"
     },
     "98722026": {
       "record_month_old": 30.1,
@@ -13078,8 +13078,8 @@
       "record_month_old_date": "19871015",
       "record_absolute_old": 36.1,
       "record_absolute_old_date": "19721215",
-      "current_month_txab": 33.1,
-      "current_month_txab_date": "20261007"
+      "current_month_txab": 33.2,
+      "current_month_txab_date": "20261018"
     },
     "98723003": {
       "record_month_old": 32.5,
@@ -13102,8 +13102,8 @@
       "record_month_old_date": "20161026",
       "record_absolute_old": 35.5,
       "record_absolute_old_date": "20160318",
-      "current_month_txab": 28.8,
-      "current_month_txab_date": "20261017"
+      "current_month_txab": 31.1,
+      "current_month_txab_date": "20261018"
     },
     "98724007": {
       "record_month_old": 32.3,
@@ -13134,8 +13134,8 @@
       "record_month_old_date": "20241026",
       "record_absolute_old": 36.7,
       "record_absolute_old_date": "20240430",
-      "current_month_txab": 28.4,
-      "current_month_txab_date": "20261017"
+      "current_month_txab": 28.7,
+      "current_month_txab_date": "20261018"
     },
     "98729003": {
       "record_month_old": 34.4,
@@ -13174,8 +13174,8 @@
       "record_month_old_date": "20231007",
       "record_absolute_old": 33.2,
       "record_absolute_old_date": "20240406",
-      "current_month_txab": 28.7,
-      "current_month_txab_date": "20261014"
+      "current_month_txab": 30.9,
+      "current_month_txab_date": "20261018"
     },
     "98731002": {
       "record_month_old": 31.4,
@@ -13214,32 +13214,32 @@
       "record_month_old_date": "20201027",
       "record_absolute_old": 33.5,
       "record_absolute_old_date": "20260308",
-      "current_month_txab": 28.8,
-      "current_month_txab_date": "20261017"
+      "current_month_txab": 29.8,
+      "current_month_txab_date": "20261018"
     },
     "98735002": {
       "record_month_old": 34.1,
       "record_month_old_date": "20241022",
       "record_absolute_old": 36.2,
       "record_absolute_old_date": "20241207",
-      "current_month_txab": 31.2,
-      "current_month_txab_date": "20261016"
+      "current_month_txab": 32.8,
+      "current_month_txab_date": "20261018"
     },
     "98736001": {
       "record_month_old": 33.2,
       "record_month_old_date": "19501012",
       "record_absolute_old": 34.9,
       "record_absolute_old_date": "19680315",
-      "current_month_txab": 30.2,
-      "current_month_txab_date": "20261017"
+      "current_month_txab": 30.4,
+      "current_month_txab_date": "20261018"
     },
     "98738006": {
       "record_month_old": 33.9,
       "record_month_old_date": "20141016",
       "record_absolute_old": 35.5,
       "record_absolute_old_date": "20160212",
-      "current_month_txab": 31.3,
-      "current_month_txab_date": "20261017"
+      "current_month_txab": 32.1,
+      "current_month_txab_date": "20261018"
     },
     "98738007": {
       "record_month_old": 33.1,
@@ -13262,16 +13262,16 @@
       "record_month_old_date": "19631020",
       "record_absolute_old": 35.4,
       "record_absolute_old_date": "19631231",
-      "current_month_txab": 29.6,
-      "current_month_txab_date": "20261014"
+      "current_month_txab": 29.7,
+      "current_month_txab_date": "20261018"
     },
     "98741001": {
       "record_month_old": 26.4,
       "record_month_old_date": "19701012",
       "record_absolute_old": 31.6,
       "record_absolute_old_date": "19710307",
-      "current_month_txab": 21.0,
-      "current_month_txab_date": "20261017"
+      "current_month_txab": 21.9,
+      "current_month_txab_date": "20261018"
     },
     "98743003": {
       "record_month_old": 28.2,
@@ -13310,16 +13310,16 @@
       "record_month_old_date": "20251026",
       "record_absolute_old": 32.6,
       "record_absolute_old_date": "20250803",
-      "current_month_txab": 28.8,
-      "current_month_txab_date": "20261016"
+      "current_month_txab": 29.4,
+      "current_month_txab_date": "20261018"
     },
     "98747011": {
       "record_month_old": 32.5,
       "record_month_old_date": "20231010",
       "record_absolute_old": 34.6,
       "record_absolute_old_date": "20240217",
-      "current_month_txab": 27.2,
-      "current_month_txab_date": "20261017"
+      "current_month_txab": 27.6,
+      "current_month_txab_date": "20261018"
     },
     "98747016": {
       "record_month_old": 29.7,
@@ -13334,8 +13334,8 @@
       "record_month_old_date": "19931005",
       "record_absolute_old": 34.5,
       "record_absolute_old_date": "19950309",
-      "current_month_txab": 29.4,
-      "current_month_txab_date": "20261017"
+      "current_month_txab": 30.1,
+      "current_month_txab_date": "20261018"
     },
     "98748012": {
       "record_month_old": 31.3,
@@ -13382,8 +13382,8 @@
       "record_month_old_date": "20231008",
       "record_absolute_old": 32.1,
       "record_absolute_old_date": "20170302",
-      "current_month_txab": 25.6,
-      "current_month_txab_date": "20261016"
+      "current_month_txab": 25.9,
+      "current_month_txab_date": "20261018"
     },
     "98755002": {
       "record_month_old": 30.1,
@@ -14214,8 +14214,8 @@
       "record_absolute_old_date": "20260626"
     },
     "97415557": {
-      "current_month_txab": 20.5,
-      "current_month_txab_date": "20261009",
+      "current_month_txab": 21.3,
+      "current_month_txab_date": "20261019",
       "record_month_old": 23.6,
       "record_month_old_date": "20230921",
       "record_absolute_old": 29.3,
@@ -15581,6 +15581,6 @@
   "record_baseline_month_id": "2026-10",
   "records_generated_at": "2026-10-01T05:28:28Z",
   "current_month_id": "2026-10",
-  "current_month_generated_at": "2026-10-20T06:04:01Z",
+  "current_month_generated_at": "2026-10-20T12:34:28Z",
   "module_version": "1.3.0"
 }
