@@ -1,7 +1,7 @@
 {
  "schema_version": 3,
  "status": "ok",
- "generated_at": "2026-10-20T17:41:18+02:00",
+ "generated_at": "2026-10-22T01:26:47+02:00",
  "source": {
   "provider": "Météo-France",
   "product": "Prévision des phénomènes dangereux",
@@ -10,8 +10,8 @@
   "retrieval_mode": "pdf"
  },
  "bulletin": {
-  "issued_at": "2026-10-20T14:32:00+02:00",
-  "issued_label": "Émise le mardi 20/10/2026 à 14h32 (heure de Paris)"
+  "issued_at": "2026-10-21T12:55:00+02:00",
+  "issued_label": "Émise le mercredi 21/10/2026 à 12h55 (heure de Paris)"
  },
  "legend": {
   "levels": [
@@ -41,20 +41,19 @@
    "pluie_inondation",
    "orages",
    "neige_verglas",
-   "vagues_submersion",
-   "grand_froid"
+   "vagues_submersion"
   ]
  },
  "summaries": {
-  "j2_j3": "Au cours de ces deux jours, le vent se renforce très nettement sur le nord-ouest du pays : - jeudi, le vent se renforce sur la pointe Bretagne et les bords de Manche jusqu'au Cotentin avec un risque faible de passage en vigilance orange, à l'approche de la nouvelle perturbation en fin de journée. - vendredi, le risque devient modéré sur tous les départements de bord de Manche, et faible sur la région Île- de-France avec le passage de la perturbation. Même si les coefficients de marée ne sont pas élevés, on surveillera l'intensité des vagues sur nord Bretagne autour de la marée haute de fin de nuit de jeudi à vendredi.",
-  "j4_j7": "Des perturbations se succèdent sur le pays, mais il n'y a pas de phénomène météorologique dangereux prévu."
+  "j2_j3": "Vendredi, la tempête \"Austen\" circule en Manche. Les rafales les plus fortes ont lieu sur le littoral notamment en direction de la Bretagne et du département de la Manche où le risque de passer en vigilance orange \"vent\" est fort. Dans les terres, le vent sera plus modéré. Il y a encore de l'incertitude sur la trajectoire de la tempête, possiblement plus sud, avec un risque faible de passage en vigilance orange '\"vent\" des Pays de la Loire à la région parisienne. Vendredi matin, même si les coefficients de marée sont peu élevés, au passage de la tempête \"AUSTEN\", un passage en vigilance \"vagues-submersion\" de niveau orange pour le nord de la Bretagne n'est pas exclu. Samedi, une nouvelle perturbation concerne une majorité du pays avec des pluies copieuses et généralisées. Le risque de passage en vigilance orange \"pluie-inondation\" est cependant quasi-nul.",
+  "j4_j7": "Dimanche, une perturbation pluvieuse active concerne le pays, sans à ce stade occasionner un risque de futur passage en vigilance orange. Les conditions deviennent plus calmes ensuite."
  },
  "cards": [
   {
    "label": "J+2",
-   "date_label": "Jeudi 22/10/2026",
+   "date_label": "Vendredi 23/10/2026",
    "granularity": "department",
-   "max_level": "low",
+   "max_level": "high",
    "departments": {
     "01": {
      "name": "Ain",
@@ -63,8 +62,10 @@
     },
     "02": {
      "name": "Aisne",
-     "level": "none",
-     "phenomena": []
+     "level": "medium",
+     "phenomena": [
+      "vent"
+     ]
     },
     "03": {
      "name": "Allier",
@@ -123,8 +124,9 @@
     },
     "14": {
      "name": "Calvados",
-     "level": "low",
+     "level": "high",
      "phenomena": [
+      "vagues_submersion",
       "vent"
      ]
     },
@@ -145,8 +147,10 @@
     },
     "18": {
      "name": "Cher",
-     "level": "none",
-     "phenomena": []
+     "level": "low",
+     "phenomena": [
+      "vent"
+     ]
     },
     "19": {
      "name": "Corrèze",
@@ -160,8 +164,9 @@
     },
     "22": {
      "name": "Côtes-d'Armor",
-     "level": "low",
+     "level": "high",
      "phenomena": [
+      "vagues_submersion",
       "vent"
      ]
     },
@@ -187,18 +192,23 @@
     },
     "27": {
      "name": "Eure",
-     "level": "none",
-     "phenomena": []
+     "level": "medium",
+     "phenomena": [
+      "vent"
+     ]
     },
     "28": {
      "name": "Eure-et-Loir",
-     "level": "none",
-     "phenomena": []
+     "level": "low",
+     "phenomena": [
+      "vent"
+     ]
     },
     "29": {
      "name": "Finistère",
-     "level": "low",
+     "level": "high",
      "phenomena": [
+      "vagues_submersion",
       "vent"
      ]
     },
@@ -239,20 +249,25 @@
     },
     "35": {
      "name": "Ille-et-Vilaine",
-     "level": "low",
+     "level": "high",
      "phenomena": [
+      "vagues_submersion",
       "vent"
      ]
     },
     "36": {
      "name": "Indre",
-     "level": "none",
-     "phenomena": []
+     "level": "low",
+     "phenomena": [
+      "vent"
+     ]
     },
     "37": {
      "name": "Indre-et-Loire",
-     "level": "none",
-     "phenomena": []
+     "level": "low",
+     "phenomena": [
+      "vent"
+     ]
     },
     "38": {
      "name": "Isère",
@@ -271,8 +286,10 @@
     },
     "41": {
      "name": "Loir-et-Cher",
-     "level": "none",
-     "phenomena": []
+     "level": "low",
+     "phenomena": [
+      "vent"
+     ]
     },
     "42": {
      "name": "Loire",
@@ -286,13 +303,17 @@
     },
     "44": {
      "name": "Loire-Atlantique",
-     "level": "none",
-     "phenomena": []
+     "level": "low",
+     "phenomena": [
+      "vent"
+     ]
     },
     "45": {
      "name": "Loiret",
-     "level": "none",
-     "phenomena": []
+     "level": "low",
+     "phenomena": [
+      "vent"
+     ]
     },
     "46": {
      "name": "Lot",
@@ -311,13 +332,16 @@
     },
     "49": {
      "name": "Maine-et-Loire",
-     "level": "none",
-     "phenomena": []
+     "level": "low",
+     "phenomena": [
+      "vent"
+     ]
     },
     "50": {
      "name": "Manche",
-     "level": "low",
+     "level": "high",
      "phenomena": [
+      "vagues_submersion",
       "vent"
      ]
     },
@@ -333,8 +357,10 @@
     },
     "53": {
      "name": "Mayenne",
-     "level": "none",
-     "phenomena": []
+     "level": "low",
+     "phenomena": [
+      "vent"
+     ]
     },
     "54": {
      "name": "Meurthe-et-Moselle",
@@ -348,8 +374,9 @@
     },
     "56": {
      "name": "Morbihan",
-     "level": "low",
+     "level": "high",
      "phenomena": [
+      "vagues_submersion",
       "vent"
      ]
     },
@@ -365,25 +392,32 @@
     },
     "59": {
      "name": "Nord",
-     "level": "none",
-     "phenomena": []
+     "level": "medium",
+     "phenomena": [
+      "vent"
+     ]
     },
     "60": {
      "name": "Oise",
-     "level": "none",
-     "phenomena": []
+     "level": "medium",
+     "phenomena": [
+      "vent"
+     ]
     },
     "61": {
      "name": "Orne",
-     "level": "low",
+     "level": "high",
      "phenomena": [
+      "vagues_submersion",
       "vent"
      ]
     },
     "62": {
      "name": "Pas-de-Calais",
-     "level": "none",
-     "phenomena": []
+     "level": "medium",
+     "phenomena": [
+      "vent"
+     ]
     },
     "63": {
      "name": "Puy-de-Dôme",
@@ -432,8 +466,10 @@
     },
     "72": {
      "name": "Sarthe",
-     "level": "none",
-     "phenomena": []
+     "level": "low",
+     "phenomena": [
+      "vent"
+     ]
     },
     "73": {
      "name": "Savoie",
@@ -447,23 +483,31 @@
     },
     "75": {
      "name": "Paris",
-     "level": "none",
-     "phenomena": []
+     "level": "low",
+     "phenomena": [
+      "vent"
+     ]
     },
     "76": {
      "name": "Seine-Maritime",
-     "level": "none",
-     "phenomena": []
+     "level": "medium",
+     "phenomena": [
+      "vent"
+     ]
     },
     "77": {
      "name": "Seine-et-Marne",
-     "level": "none",
-     "phenomena": []
+     "level": "low",
+     "phenomena": [
+      "vent"
+     ]
     },
     "78": {
      "name": "Yvelines",
-     "level": "none",
-     "phenomena": []
+     "level": "low",
+     "phenomena": [
+      "vent"
+     ]
     },
     "79": {
      "name": "Deux-Sèvres",
@@ -472,8 +516,10 @@
     },
     "80": {
      "name": "Somme",
-     "level": "none",
-     "phenomena": []
+     "level": "medium",
+     "phenomena": [
+      "vent"
+     ]
     },
     "81": {
      "name": "Tarn",
@@ -497,8 +543,10 @@
     },
     "85": {
      "name": "Vendée",
-     "level": "none",
-     "phenomena": []
+     "level": "low",
+     "phenomena": [
+      "vent"
+     ]
     },
     "86": {
      "name": "Vienne",
@@ -527,38 +575,104 @@
     },
     "91": {
      "name": "Essonne",
-     "level": "none",
-     "phenomena": []
+     "level": "low",
+     "phenomena": [
+      "vent"
+     ]
     },
     "92": {
      "name": "Hauts-de-Seine",
-     "level": "none",
-     "phenomena": []
+     "level": "low",
+     "phenomena": [
+      "vent"
+     ]
     },
     "93": {
      "name": "Seine-Saint-Denis",
-     "level": "none",
-     "phenomena": []
+     "level": "low",
+     "phenomena": [
+      "vent"
+     ]
     },
     "94": {
      "name": "Val-de-Marne",
-     "level": "none",
-     "phenomena": []
+     "level": "low",
+     "phenomena": [
+      "vent"
+     ]
     },
     "95": {
      "name": "Val-d'Oise",
-     "level": "none",
-     "phenomena": []
+     "level": "low",
+     "phenomena": [
+      "vent"
+     ]
     }
    },
    "markers": [
+    {
+     "phenomenon": "vagues_submersion",
+     "x": 0.08019,
+     "y": 0.25089,
+     "svg_x": 339.0154,
+     "svg_y": 12.2175,
+     "level": "high"
+    },
+    {
+     "phenomenon": "vent",
+     "x": 0.55555,
+     "y": 0.18804,
+     "svg_x": 383.9078,
+     "svg_y": 8.4409,
+     "level": "medium"
+    },
+    {
+     "phenomenon": "vent",
+     "x": 0.33884,
+     "y": 0.39699,
+     "svg_x": 363.4509,
+     "svg_y": 21.007,
+     "level": "low"
+    },
+    {
+     "phenomenon": "vent",
+     "x": 0.52707,
+     "y": 0.08057,
+     "svg_x": 381.2135,
+     "svg_y": 1.9773,
+     "level": "medium"
+    },
+    {
+     "phenomenon": "vent",
+     "x": 0.53994,
+     "y": 0.28356,
+     "svg_x": 382.4387,
+     "svg_y": 14.186,
+     "level": "low"
+    },
+    {
+     "phenomenon": "vent",
+     "x": 0.44353,
+     "y": 0.22386,
+     "svg_x": 373.3295,
+     "svg_y": 10.5945,
+     "level": "medium"
+    },
+    {
+     "phenomenon": "vent",
+     "x": 0.4876,
+     "y": 0.39699,
+     "svg_x": 377.5007,
+     "svg_y": 21.0081,
+     "level": "low"
+    },
     {
      "phenomenon": "vent",
      "x": 0.19835,
      "y": 0.34326,
      "svg_x": 350.1791,
      "svg_y": 17.7743,
-     "level": "low"
+     "level": "high"
     },
     {
      "phenomenon": "vent",
@@ -566,15 +680,15 @@
      "y": 0.26565,
      "svg_x": 364.6582,
      "svg_y": 13.1074,
-     "level": "low"
+     "level": "high"
     }
    ]
   },
   {
    "label": "J+3",
-   "date_label": "Vendredi 23/10/2026",
+   "date_label": "Samedi 24/10/2026",
    "granularity": "department",
-   "max_level": "medium",
+   "max_level": "none",
    "departments": {
     "01": {
      "name": "Ain",
@@ -583,11 +697,8 @@
     },
     "02": {
      "name": "Aisne",
-     "level": "medium",
-     "phenomena": [
-      "vent",
-      "vagues_submersion"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "03": {
      "name": "Allier",
@@ -646,11 +757,8 @@
     },
     "14": {
      "name": "Calvados",
-     "level": "medium",
-     "phenomena": [
-      "vent",
-      "vagues_submersion"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "15": {
      "name": "Cantal",
@@ -684,11 +792,8 @@
     },
     "22": {
      "name": "Côtes-d'Armor",
-     "level": "medium",
-     "phenomena": [
-      "vent",
-      "vagues_submersion"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "23": {
      "name": "Creuse",
@@ -712,11 +817,8 @@
     },
     "27": {
      "name": "Eure",
-     "level": "medium",
-     "phenomena": [
-      "vent",
-      "vagues_submersion"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "28": {
      "name": "Eure-et-Loir",
@@ -725,11 +827,8 @@
     },
     "29": {
      "name": "Finistère",
-     "level": "medium",
-     "phenomena": [
-      "vent",
-      "vagues_submersion"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "2A": {
      "name": "Corse-du-Sud",
@@ -768,11 +867,8 @@
     },
     "35": {
      "name": "Ille-et-Vilaine",
-     "level": "medium",
-     "phenomena": [
-      "vent",
-      "vagues_submersion"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "36": {
      "name": "Indre",
@@ -846,11 +942,8 @@
     },
     "50": {
      "name": "Manche",
-     "level": "medium",
-     "phenomena": [
-      "vent",
-      "vagues_submersion"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "51": {
      "name": "Marne",
@@ -879,11 +972,8 @@
     },
     "56": {
      "name": "Morbihan",
-     "level": "medium",
-     "phenomena": [
-      "vent",
-      "vagues_submersion"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "57": {
      "name": "Moselle",
@@ -897,35 +987,23 @@
     },
     "59": {
      "name": "Nord",
-     "level": "medium",
-     "phenomena": [
-      "vent",
-      "vagues_submersion"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "60": {
      "name": "Oise",
-     "level": "medium",
-     "phenomena": [
-      "vent",
-      "vagues_submersion"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "61": {
      "name": "Orne",
-     "level": "medium",
-     "phenomena": [
-      "vent",
-      "vagues_submersion"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "62": {
      "name": "Pas-de-Calais",
-     "level": "medium",
-     "phenomena": [
-      "vent",
-      "vagues_submersion"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "63": {
      "name": "Puy-de-Dôme",
@@ -989,32 +1067,23 @@
     },
     "75": {
      "name": "Paris",
-     "level": "low",
-     "phenomena": [
-      "vent"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "76": {
      "name": "Seine-Maritime",
-     "level": "medium",
-     "phenomena": [
-      "vent",
-      "vagues_submersion"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "77": {
      "name": "Seine-et-Marne",
-     "level": "low",
-     "phenomena": [
-      "vent"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "78": {
      "name": "Yvelines",
-     "level": "low",
-     "phenomena": [
-      "vent"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "79": {
      "name": "Deux-Sèvres",
@@ -1023,11 +1092,8 @@
     },
     "80": {
      "name": "Somme",
-     "level": "medium",
-     "phenomena": [
-      "vent",
-      "vagues_submersion"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "81": {
      "name": "Tarn",
@@ -1081,125 +1147,34 @@
     },
     "91": {
      "name": "Essonne",
-     "level": "low",
-     "phenomena": [
-      "vent"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "92": {
      "name": "Hauts-de-Seine",
-     "level": "low",
-     "phenomena": [
-      "vent"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "93": {
      "name": "Seine-Saint-Denis",
-     "level": "low",
-     "phenomena": [
-      "vent"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "94": {
      "name": "Val-de-Marne",
-     "level": "low",
-     "phenomena": [
-      "vent"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "95": {
      "name": "Val-d'Oise",
-     "level": "low",
-     "phenomena": [
-      "vent"
-     ]
+     "level": "none",
+     "phenomena": []
     }
    },
-   "markers": [
-    {
-     "phenomenon": "vent",
-     "x": 0.55693,
-     "y": 0.18804,
-     "svg_x": 384.0379,
-     "svg_y": 8.4409,
-     "level": "medium"
-    },
-    {
-     "phenomenon": "vent",
-     "x": 0.52845,
-     "y": 0.08057,
-     "svg_x": 381.3436,
-     "svg_y": 1.9773,
-     "level": "medium"
-    },
-    {
-     "phenomenon": "vent",
-     "x": 0.54132,
-     "y": 0.28356,
-     "svg_x": 382.5688,
-     "svg_y": 14.186,
-     "level": "low"
-    },
-    {
-     "phenomenon": "vent",
-     "x": 0.4449,
-     "y": 0.22386,
-     "svg_x": 373.4596,
-     "svg_y": 10.5945,
-     "level": "medium"
-    },
-    {
-     "phenomenon": "vent",
-     "x": 0.19972,
-     "y": 0.34326,
-     "svg_x": 350.3092,
-     "svg_y": 17.7743,
-     "level": "medium"
-    },
-    {
-     "phenomenon": "vent",
-     "x": 0.35307,
-     "y": 0.26565,
-     "svg_x": 364.7882,
-     "svg_y": 13.1074,
-     "level": "medium"
-    },
-    {
-     "phenomenon": "vagues_submersion",
-     "x": 0.08157,
-     "y": 0.25089,
-     "svg_x": 339.1455,
-     "svg_y": 12.2175,
-     "level": "medium"
-    }
-   ]
+   "markers": []
   },
   {
    "label": "J+4",
-   "date_label": "Samedi 24/10/2026",
-   "granularity": "quadrant",
-   "max_level": "none",
-   "zones": {
-    "NO": {
-     "level": "none",
-     "phenomena": []
-    },
-    "NE": {
-     "level": "none",
-     "phenomena": []
-    },
-    "SO": {
-     "level": "none",
-     "phenomena": []
-    },
-    "SE": {
-     "level": "none",
-     "phenomena": []
-    }
-   }
-  },
-  {
-   "label": "J+5",
    "date_label": "Dimanche 25/10/2026",
    "granularity": "quadrant",
    "max_level": "none",
@@ -1223,8 +1198,32 @@
    }
   },
   {
+   "label": "J+5",
+   "date_label": "Lundi 26/10/2026",
+   "granularity": "quadrant",
+   "max_level": "none",
+   "zones": {
+    "NO": {
+     "level": "none",
+     "phenomena": []
+    },
+    "NE": {
+     "level": "none",
+     "phenomena": []
+    },
+    "SO": {
+     "level": "none",
+     "phenomena": []
+    },
+    "SE": {
+     "level": "none",
+     "phenomena": []
+    }
+   }
+  },
+  {
    "label": "J+6 et J+7",
-   "date_label": "Lundi 26/10/2026 et Mardi 27/10/2026",
+   "date_label": "Mardi 27/10/2026 et Mercredi 28/10/2026",
    "granularity": "national",
    "max_level": "none",
    "national": {
