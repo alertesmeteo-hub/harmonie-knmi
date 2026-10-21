@@ -25,16 +25,30 @@ jobs:
           python-version: "3.12"
 
       - name: Lire Hub'Eau et Vigicrues
+        id: lire
         run: |
           set -o pipefail
           pip install --disable-pip-version-check -q "requests>=2.32,<3"
+          reseau='injoignable|RemoteDisconnected|Connection(Error|Reset|refused| aborted)|ReadTimeout|ConnectTimeout|HTTP ?(Error)?:? ?(429|500|502|503|504)|timed out'
           for attempt in 1 2 3; do
             if python scripts/update_hydro_66.py --out-dir build/hydro \
                  --previous-url "https://raw.githubusercontent.com/${{ github.repository }}/hydro-data/66.json" 2>&1 | tee "$RUNNER_TEMP/tentative.log"; then
+              echo "publier=1" >> "$GITHUB_OUTPUT"
               break
             fi
-            if [ "$attempt" -eq 3 ] || ! grep -qiE 'injoignable|RemoteDisconnected|Connection(Error|Reset|refused| aborted)|ReadTimeout|ConnectTimeout|HTTP ?(Error)?:? ?(429|500|502|503|504)|timed out' "$RUNNER_TEMP/tentative.log"; then
+            if ! grep -qiE "$reseau" "$RUNNER_TEMP/tentative.log"; then
               echo "::error::Échec (tentative $attempt)"
+              exit 1
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              # Hub'Eau en panne (21 octobre 2026 : connexions coupées pendant des heures). Les données déjà publiées
+              # restent en ligne : on ne signale un échec (et un courriel) que si elles ont plus de 6 h.
+              age_h=$(python scripts/age_publication.py "https://raw.githubusercontent.com/${{ github.repository }}/hydro-data/66.json" || echo 999)
+              if [ "$age_h" -lt 6 ]; then
+                echo "::warning::Hub'Eau injoignable : données précédentes gardées (publiées il y a ${age_h} h)."
+                exit 0
+              fi
+              echo "::error::Hub'Eau injoignable et données publiées il y a ${age_h} h"
               exit 1
             fi
             echo "Erreur réseau passagère (tentative $attempt), nouvelle tentative dans 60 s"
@@ -42,6 +56,7 @@ jobs:
           done
 
       - name: Publier la branche hydro-data
+        if: steps.lire.outputs.publier == '1'
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
