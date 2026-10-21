@@ -7,8 +7,10 @@ de RAYON_KM d'une commune du 66 : les orages et les pluies qui arrivent par le s
 avant d'atteindre le département. Les stations du 66 viennent des fichiers déjà publiés sur la branche
 observations (température, rafales, pluie horaire Météo-France).
 
-Publie stations-66.json : dernière température, pluie sur 30 min à 72 h, rafale maximale de la dernière
-heure, et pour Meteocat les 12 dernières heures au pas de 30 min.
+Publie stations-66.json : dernière température, ressenti au vent, humidité, point de rosée, vent moyen et
+direction, pression ramenée au niveau de la mer, maxi et mini du jour (minuit UTC), variation sur 24 h,
+pluie sur 30 min à 72 h, rafale maximale de la dernière heure ; pour Meteocat aussi le rayonnement solaire
+et la neige au sol, et les 12 dernières heures au pas de 30 min.
 
 Publie aussi stations-vent.json (page « Vent en direct » du SaaS) : vent moyen, direction et rafale des stations
 Météo-France des Pyrénées-Orientales et de l'Aude, et des stations Meteocat de la province de Gérone jusqu'à Blanes
@@ -33,6 +35,8 @@ OBS = "https://raw.githubusercontent.com/alertesmeteo-hub/harmonie-knmi/observat
 CATALOGUE = Path(__file__).resolve().parent.parent / "config" / "communes-66-mairies.json"
 RAYON_KM = 45
 VARIABLES = {"32": "t", "35": "ppt", "30": "vent", "31": "dir", "50": "rafale10", "53": "rafale6", "56": "rafale2"}
+# Lues sur 25 h seulement (dernière valeur, maxi et mini du jour) pour rester loin de la limite de lignes de l'API.
+VARIABLES_25H = {"33": "hr", "34": "p", "36": "rs", "38": "neige", "40": "tx", "42": "tn", "48": "vent6", "46": "vent2"}
 FENETRES_H = [0.5, 1, 3, 6, 24, 48, 72]
 # Page « Vent en direct » : Pyrénées-Orientales, Aude, Gérone et Costa Brava jusqu'à Blanes (sud, ouest, nord, est).
 ZONE_VENT = (41.62, 1.65, 43.47, 3.45)
@@ -65,6 +69,75 @@ def iso(dt: datetime) -> str:
     return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def point_de_rosee(t: float | None, hr: float | None) -> float | None:
+    """Formule de Magnus (°C)."""
+    if t is None or hr is None or hr <= 0:
+        return None
+    g = math.log(min(hr, 100) / 100) + 17.62 * t / (243.12 + t)
+    return round(243.12 * g / (17.62 - g), 1)
+
+
+def ressenti_vent(t: float | None, vent_kmh: float | None) -> float | None:
+    """Refroidissement éolien, sinon la température réelle : même calcul que le ressenti des stations
+    Météo-France (generer_temperature_records.calc_wind_chill)."""
+    if t is None:
+        return None
+    if vent_kmh is not None and t <= 10.0 and vent_kmh >= 4.8:
+        q = vent_kmh ** 0.16
+        return round(13.12 + 0.6215 * t - 11.37 * q + 0.3965 * t * q, 1)
+    return round(t, 1)
+
+
+def humidex(t: float | None, td: float | None) -> float | None:
+    """Indice de chaleur canadien, seulement par temps chaud (même règle que les stations Météo-France)."""
+    if t is None or td is None or t < 20.0:
+        return None
+    e = 6.11 * math.exp(5417.7530 * (1 / 273.15 - 1 / (td + 273.15)))
+    h = t + 0.5555 * (e - 10.0)
+    return round(h, 1) if h >= t + 1.0 else None
+
+
+def pression_mer(p: float | None, alt: float | None, t: float | None) -> float | None:
+    """Pression de la station ramenée au niveau de la mer (nivellement barométrique)."""
+    if p is None or alt is None or t is None or not 500 < p < 1100:
+        return None
+    return round(p * (1 - 0.0065 * alt / (t + 0.0065 * alt + 273.15)) ** -5.257, 1)
+
+
+def series_xema(codes: list[str], variables: dict[str, str], debut: datetime, limite: int) -> dict[str, dict[str, dict[datetime, float]]]:
+    rows = get(DONNEES_XEMA, {
+        "$where": f"codi_estacio in({','.join(repr(c) for c in codes)}) AND codi_variable in({','.join(repr(v) for v in variables)}) "
+                  f"AND data_lectura >= '{debut.strftime('%Y-%m-%dT%H:%M:%S')}'",
+        "$select": "codi_estacio,codi_variable,data_lectura,valor_lectura",
+        "$limit": limite,
+    })
+    if len(rows) >= limite:
+        print(f"Attention : {len(rows)} lignes XEMA, limite atteinte", flush=True)
+    series: dict[str, dict[str, dict[datetime, float]]] = {}
+    for r in rows:
+        try:
+            v = float(r["valor_lectura"])
+        except (TypeError, ValueError):
+            continue
+        # la lecture de hh:00 couvre hh:00-hh:30 (UTC) : on la date à la fin de la période
+        t = datetime.fromisoformat(r["data_lectura"]).replace(tzinfo=timezone.utc) + timedelta(minutes=30)
+        series.setdefault(r["codi_estacio"], {}).setdefault(variables[r["codi_variable"]], {})[t] = v
+    return series
+
+
+def derniere(serie: dict[datetime, float] | None, fin: datetime, max_age_h: float = 1.5) -> float | None:
+    """Dernière valeur d'une série, si elle n'a pas plus de max_age_h heures de retard sur la station."""
+    if not serie:
+        return None
+    t = max(serie)
+    return serie[t] if t >= fin - timedelta(hours=max_age_h) else None
+
+
+def du_jour(serie: dict[datetime, float] | None, fin: datetime) -> list[float]:
+    """Valeurs des périodes de la journée UTC de `fin` (une période finissant à 00:00 appartient à la veille)."""
+    return [v for t, v in (serie or {}).items() if (t - timedelta(seconds=1)).date() == (fin - timedelta(seconds=1)).date()]
+
+
 def meteocat(communes: list, maintenant: datetime) -> tuple[list[dict], str | None]:
     meta = get(STATIONS_XEMA, {"$limit": 2000})
     proches = {}
@@ -77,26 +150,13 @@ def meteocat(communes: list, maintenant: datetime) -> tuple[list[dict], str | No
             proches[s["codi_estacio"]] = {"id": s["codi_estacio"], "nom": s["nom_estacio"], "lat": la, "lon": lo,
                                           "alt": float(s.get("altitud") or 0), "comarca": s.get("nom_comarca", ""),
                                           "km_66": round(dm), "commune_proche": plus_proche}
-    debut = (maintenant - timedelta(hours=73)).strftime("%Y-%m-%dT%H:%M:%S")
-    codes = ",".join(f"'{c}'" for c in proches)
-    vars_ = ",".join(f"'{v}'" for v in VARIABLES)
-    rows = get(DONNEES_XEMA, {
-        "$where": f"codi_estacio in({codes}) AND codi_variable in({vars_}) AND data_lectura >= '{debut}'",
-        "$select": "codi_estacio,codi_variable,data_lectura,valor_lectura",
-        "$limit": 100000,
-    })
-    series: dict[str, dict[str, dict[datetime, float]]] = {}
-    derniere = None
-    for r in rows:
-        try:
-            v = float(r["valor_lectura"])
-        except (TypeError, ValueError):
-            continue
-        # la lecture de hh:00 couvre hh:00-hh:30 (UTC) : on la date à la fin de la période
-        t = datetime.fromisoformat(r["data_lectura"]).replace(tzinfo=timezone.utc) + timedelta(minutes=30)
-        series.setdefault(r["codi_estacio"], {}).setdefault(VARIABLES[r["codi_variable"]], {})[t] = v
-        if derniere is None or t > derniere:
-            derniere = t
+    series = series_xema(list(proches), VARIABLES, maintenant - timedelta(hours=73), 100000)
+    derniere_mesure = max((t for d in series.values() for x in d.values() for t in x), default=None)
+    try:
+        for code, d25 in series_xema(list(proches), VARIABLES_25H, maintenant - timedelta(hours=25), 50000).items():
+            series.setdefault(code, {}).update(d25)
+    except RuntimeError as e:  # les paramètres complémentaires ne doivent pas bloquer la pluie et les rafales
+        print(f"Paramètres complémentaires Meteocat indisponibles : {e}", flush=True)
     out = []
     for code, s in proches.items():
         d = series.get(code)
@@ -114,29 +174,55 @@ def meteocat(communes: list, maintenant: datetime) -> tuple[list[dict], str | No
         raf = d.get("rafale10") or d.get("rafale6") or d.get("rafale2") or {}
         raf_1h = [raf[t] for t in raf if t > fin - timedelta(hours=1)]
         t_last = max(d["t"]) if d.get("t") else None
+        t = derniere(d.get("t"), fin)
+        hr = derniere(d.get("hr"), fin)
+        vent_ms = derniere(d.get("vent") or d.get("vent6") or d.get("vent2"), fin)
+        vent = round(vent_ms * 3.6) if vent_ms is not None else None
+        td = point_de_rosee(t, hr)
+        # maxi et mini du jour UTC, comme les stations Météo-France (tx_today / tn_today)
+        tx = du_jour(d.get("tx"), fin) or du_jour(d.get("t"), fin)
+        tn = du_jour(d.get("tn"), fin) or du_jour(d.get("t"), fin)
+        t_24 = d["t"].get(t_last - timedelta(hours=24)) if t_last else None
+        rs = derniere(d.get("rs"), fin)
+        neige = derniere(d.get("neige"), fin, 3)
         pas = [fin - timedelta(minutes=30 * k) for k in range(23, -1, -1)]
         out.append({
             **s, "source": "meteocat",
             "a": iso(fin),
             "t": d["t"][t_last] if t_last else None,
+            "ressenti": ressenti_vent(t, vent),
+            "humidex": humidex(t, td),
+            "hr": round(hr) if hr is not None else None,
+            "td": td,
+            "pression": pression_mer(derniere(d.get("p"), fin), s["alt"], t),
+            "tx": max(tx) if tx else None,
+            "tn": min(tn) if tn else None,
+            "var_24h": round(d["t"][t_last] - t_24, 1) if t_24 is not None else None,
+            "rs": round(rs) if rs is not None else None,
+            "neige": round(neige) if neige is not None and neige >= 0 else None,
             "pluie": pluie,
             "couverture": couverture,
             "rafale_1h": round(max(raf_1h) * 3.6) if raf_1h else None,
-            "vent": round(d["vent"][max(d["vent"])] * 3.6) if d.get("vent") else None,
-            "dir": d["dir"][max(d["dir"])] if d.get("dir") else None,
+            "vent": vent,
+            "dir": derniere(d.get("dir"), fin),
             "serie": {
                 "pas_min": 30,
                 "pluie": [ppt.get(t) for t in pas],
                 "rafale": [round(raf[t] * 3.6) if t in raf else None for t in pas],
             },
         })
-    return out, iso(derniere) if derniere else None
+    return out, iso(derniere_mesure) if derniere_mesure else None
 
 
 def meteo_france() -> tuple[list[dict], str | None]:
     pluie = get(OBS + "observations_pluie.json")
     temp = get(OBS + "observations_temperature.json")
     raf = get(OBS + "observations_rafales.json")
+    try:
+        pres = get(OBS + "observations_pression.json")["stations"]
+    except RuntimeError as e:
+        print(f"Pression Météo-France indisponible : {e}", flush=True)
+        pres = []
     st: dict[str, dict] = {}
     for s in pluie["stations"]:
         if s.get("department") == "66":
@@ -147,6 +233,11 @@ def meteo_france() -> tuple[list[dict], str | None]:
         if str(s.get("id", "")).startswith("66") and s.get("temperature") is not None:
             e = st.setdefault(s["id"], {"id": s["id"], "nom": s["name"].title(), "lat": s["lat"], "lon": s["lon"], "source": "meteofrance", "pluie": {}})
             e["t"], e["a"] = s["temperature"], s.get("date")
+            e["ressenti"], e["humidex"] = s.get("wind_feels_like"), s.get("humidex")
+            e["hr"] = round(s["humidity"]) if s.get("humidity") is not None else None
+            e["td"] = s.get("dewpoint")
+            e["tx"], e["tn"] = s.get("tx_today"), s.get("tn_today")
+            e["var_24h"] = s.get("variation_24h")
     for s in raf["stations"]:
         if s.get("department_code") == "66":
             e = st.setdefault(s["id"], {"id": s["id"], "nom": s["name"].title(), "lat": s["lat"], "lon": s["lon"], "source": "meteofrance", "pluie": {}})
@@ -155,6 +246,10 @@ def meteo_france() -> tuple[list[dict], str | None]:
             e["vent"] = round(s["latest_mean_wind_kmh"]) if s.get("latest_mean_wind_kmh") is not None else None
             e["dir"] = s.get("latest_direction_deg")
             e["alt"] = s.get("altitude_m")
+    for s in pres:
+        e = st.get(s.get("id"))
+        if e is not None and s.get("pressure") is not None:
+            e["pression"], e["pression_a"], e["pression_3h"] = s["pressure"], s.get("time"), s.get("var3")
     latest = max((x.get("a") or x.get("pluie_a") or "" for x in st.values()), default=None)
     return list(st.values()), latest
 
