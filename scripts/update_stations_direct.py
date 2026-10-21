@@ -9,6 +9,10 @@ observations (température, rafales, pluie horaire Météo-France).
 
 Publie stations-66.json : dernière température, pluie sur 30 min à 72 h, rafale maximale de la dernière
 heure, et pour Meteocat les 12 dernières heures au pas de 30 min.
+
+Publie aussi stations-vent.json (page « Vent en direct » du SaaS) : vent moyen, direction et rafale des stations
+Météo-France des Pyrénées-Orientales et de l'Aude, et des stations Meteocat de la province de Gérone jusqu'à Blanes
+(ZONE_VENT), avec les 12 dernières heures de vent au pas de 30 min pour Meteocat.
 """
 from __future__ import annotations
 
@@ -30,6 +34,10 @@ CATALOGUE = Path(__file__).resolve().parent.parent / "config" / "communes-66-mai
 RAYON_KM = 45
 VARIABLES = {"32": "t", "35": "ppt", "30": "vent", "31": "dir", "50": "rafale10", "53": "rafale6", "56": "rafale2"}
 FENETRES_H = [0.5, 1, 3, 6, 24, 48, 72]
+# Page « Vent en direct » : Pyrénées-Orientales, Aude, Gérone et Costa Brava jusqu'à Blanes (sud, ouest, nord, est).
+ZONE_VENT = (41.62, 1.65, 43.47, 3.45)
+DEPARTEMENTS_VENT = ("66", "11")
+VARIABLES_VENT = {"30": "vent", "31": "dir", "50": "rafale10", "53": "rafale6", "56": "rafale2"}
 S = requests.Session()
 S.headers["User-Agent"] = "alertes-meteo-stations-direct/1.0 (+https://app.alertes-meteo.com)"
 
@@ -151,6 +159,106 @@ def meteo_france() -> tuple[list[dict], str | None]:
     return list(st.values()), latest
 
 
+def dans_zone(lat: float, lon: float) -> bool:
+    return ZONE_VENT[0] <= lat <= ZONE_VENT[2] and ZONE_VENT[1] <= lon <= ZONE_VENT[3]
+
+
+def vent_meteocat(maintenant: datetime) -> list[dict]:
+    """Stations Meteocat de la zone : dernier vent moyen (10 m), direction, rafale, et 12 h de vent au pas de 30 min."""
+    meta = get(STATIONS_XEMA, {"$limit": 2000})
+    zone = {}
+    for st in meta:
+        if st.get("codi_estat_ema") != "2":
+            continue
+        la, lo = float(st["latitud"]), float(st["longitud"])
+        if dans_zone(la, lo):
+            zone[st["codi_estacio"]] = {"id": st["codi_estacio"], "nom": st["nom_estacio"], "lat": la, "lon": lo,
+                                        "alt": float(st.get("altitud") or 0), "comarca": st.get("nom_comarca", "")}
+    if not zone:
+        return []
+    debut = (maintenant - timedelta(hours=13)).strftime("%Y-%m-%dT%H:%M:%S")
+    rows = get(DONNEES_XEMA, {
+        "$where": f"codi_estacio in({','.join(repr(c) for c in zone)}) AND codi_variable in({','.join(repr(v) for v in VARIABLES_VENT)}) AND data_lectura >= '{debut}'",
+        "$select": "codi_estacio,codi_variable,data_lectura,valor_lectura",
+        "$limit": 50000,
+    })
+    series: dict[str, dict[str, dict[datetime, float]]] = {}
+    for r in rows:
+        try:
+            v = float(r["valor_lectura"])
+        except (TypeError, ValueError):
+            continue
+        t = datetime.fromisoformat(r["data_lectura"]).replace(tzinfo=timezone.utc) + timedelta(minutes=30)
+        series.setdefault(r["codi_estacio"], {}).setdefault(VARIABLES_VENT[r["codi_variable"]], {})[t] = v
+    out = []
+    for code, info in zone.items():
+        d = series.get(code, {})
+        vent = d.get("vent", {})
+        raf = d.get("rafale10") or d.get("rafale6") or d.get("rafale2") or {}
+        if not vent and not raf:
+            continue  # station sans anémomètre
+        fin = max([*vent, *raf])
+        if fin < maintenant - timedelta(hours=3):
+            continue  # station muette
+        pas = [fin - timedelta(minutes=30 * k) for k in range(23, -1, -1)]
+        dernier_vent = max(vent) if vent else None
+        out.append({
+            **info, "source": "meteocat", "a": iso(fin),
+            # m/s → km/h ; direction d'où vient le vent (degrés)
+            "vent": round(vent[dernier_vent] * 3.6) if dernier_vent else None,
+            "dir": d.get("dir", {}).get(dernier_vent) if dernier_vent else None,
+            "rafale": round(raf[max(raf)] * 3.6) if raf else None,
+            "serie": {"pas_min": 30, "vent": [round(vent[t] * 3.6) if t in vent else None for t in pas],
+                      "rafale": [round(raf[t] * 3.6) if t in raf else None for t in pas]},
+        })
+    return out
+
+
+def vent_meteo_france() -> list[dict]:
+    """Stations Météo-France du 66 et de l'Aude : dernier vent moyen, direction, rafale, maxima sur 24 h."""
+    raf = get(OBS + "observations_rafales.json")
+    out = []
+    for st in raf["stations"]:
+        if st.get("department_code") not in DEPARTEMENTS_VENT or st.get("latest_mean_wind_kmh") is None:
+            continue
+        arrondi = lambda v: round(v) if v is not None else None  # noqa: E731
+        out.append({
+            "id": st["id"], "nom": st["name"].title(), "lat": st["lat"], "lon": st["lon"], "alt": st.get("altitude_m"),
+            "departement": st["department_code"], "source": "meteofrance",
+            "a": st.get("latest_mean_wind_time") or st.get("latest_gust_time"),
+            "vent": arrondi(st.get("latest_mean_wind_kmh")),
+            "dir": st.get("latest_mean_wind_direction_deg") if st.get("latest_mean_wind_direction_deg") is not None else st.get("latest_direction_deg"),
+            "rafale": arrondi(st.get("latest_gust_kmh")),
+            "vent_max_24h": arrondi(st.get("mean_wind_24h_max_kmh")),
+            "rafale_max_24h": arrondi(st.get("gust_24h_kmh")),
+        })
+    return out
+
+
+def ecrire_vent(od: Path, maintenant: datetime) -> None:
+    """stations-vent.json ; une source en panne n'empêche pas l'autre, et rien n'empêche stations-66.json."""
+    stations, sources_ok = [], []
+    for nom, f in (("meteofrance", vent_meteo_france), ("meteocat", lambda: vent_meteocat(maintenant))):
+        try:
+            stations += f()
+            sources_ok.append(nom)
+        except Exception as e:  # noqa: BLE001 - une source de vent ne doit pas faire échouer les stations du 66
+            print(f"Vent {nom} indisponible : {e}", flush=True)
+    if not stations:
+        print("Aucune station de vent : stations-vent.json non publié", flush=True)
+        return
+    (od / "stations-vent.json").write_text(json.dumps({
+        "schema_version": 1,
+        "generated_at": iso(maintenant),
+        "zone": {"sud": ZONE_VENT[0], "ouest": ZONE_VENT[1], "nord": ZONE_VENT[2], "est": ZONE_VENT[3]},
+        "unite": "km/h ; dir = direction d'où vient le vent (degrés)",
+        "sources_ok": sources_ok,
+        "stations": stations,
+    }, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    fort = max(stations, key=lambda x: x.get("vent") or 0)
+    print(f"Vent : {len(stations)} stations ({', '.join(sources_ok)}), plus fort {fort['nom']} {fort.get('vent')} km/h")
+
+
 def main() -> int:
     p = argparse.ArgumentParser()
     p.add_argument("--out-dir", default="build/direct")
@@ -179,6 +287,7 @@ def main() -> int:
         },
         "stations": cat + mf,
     }, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    ecrire_vent(od, maintenant)
     fortes = sorted(((x["pluie"].get("1") or 0, x["nom"]) for x in cat), reverse=True)[:3]
     print(f"{len(cat)} stations Meteocat (dernière mesure {cat_at}), {len(mf)} Météo-France ; pluie 1 h maxi : {fortes}")
     return 0
