@@ -729158,6 +729158,18 @@
       "cloud_cover_octas": null
     },
     {
+      "id": "10350001",
+      "time": "2026-10-22T19:00:00Z",
+      "lat": 48.169833,
+      "lon": 3.789,
+      "gust_kmh": 28.1,
+      "gust_direction_deg": 180,
+      "gust_source": "raf",
+      "mean_wind_kmh": 20.2,
+      "mean_wind_direction_deg": 180,
+      "cloud_cover_octas": null
+    },
+    {
       "id": "11004001",
       "time": "2026-10-22T19:00:00Z",
       "lat": 43.1125,
@@ -729227,6 +729239,18 @@
       "gust_source": "raf",
       "mean_wind_kmh": 5.4,
       "mean_wind_direction_deg": 50,
+      "cloud_cover_octas": null
+    },
+    {
+      "id": "11124003",
+      "time": "2026-10-22T19:00:00Z",
+      "lat": 42.993333,
+      "lon": 2.819167,
+      "gust_kmh": 8.3,
+      "gust_direction_deg": 210,
+      "gust_source": "raf",
+      "mean_wind_kmh": 2.5,
+      "mean_wind_direction_deg": 340,
       "cloud_cover_octas": null
     },
     {
@@ -736790,6 +736814,42 @@
       "cloud_cover_octas": null
     },
     {
+      "id": "97104005",
+      "time": "2026-10-22T19:00:00Z",
+      "lat": 16.012167,
+      "lon": -61.740167,
+      "gust_kmh": 31.7,
+      "gust_direction_deg": 120,
+      "gust_source": "raf",
+      "mean_wind_kmh": 14.8,
+      "mean_wind_direction_deg": 140,
+      "cloud_cover_octas": null
+    },
+    {
+      "id": "97107002",
+      "time": "2026-10-22T19:00:00Z",
+      "lat": 16.0785,
+      "lon": -61.6,
+      "gust_kmh": 20.2,
+      "gust_direction_deg": 130,
+      "gust_source": "raf",
+      "mean_wind_kmh": 9.7,
+      "mean_wind_direction_deg": 150,
+      "cloud_cover_octas": null
+    },
+    {
+      "id": "97109003",
+      "time": "2026-10-22T19:00:00Z",
+      "lat": 16.003167,
+      "lon": -61.6725,
+      "gust_kmh": 9.4,
+      "gust_direction_deg": 130,
+      "gust_source": "FXY",
+      "mean_wind_kmh": 9.4,
+      "mean_wind_direction_deg": 130,
+      "cloud_cover_octas": null
+    },
+    {
       "id": "97110002",
       "time": "2026-10-22T19:00:00Z",
       "lat": 16.335,
@@ -737042,6 +737102,18 @@
       "cloud_cover_octas": null
     },
     {
+      "id": "97232003",
+      "time": "2026-10-22T19:00:00Z",
+      "lat": 14.551833,
+      "lon": -60.836667,
+      "gust_kmh": 21.6,
+      "gust_direction_deg": 110,
+      "gust_source": "raf",
+      "mean_wind_kmh": 16.9,
+      "mean_wind_direction_deg": 120,
+      "cloud_cover_octas": null
+    },
+    {
       "id": "97302005",
       "time": "2026-10-22T19:00:00Z",
       "lat": 4.929667,
@@ -737051,6 +737123,18 @@
       "gust_source": "raf",
       "mean_wind_kmh": 11.5,
       "mean_wind_direction_deg": 70,
+      "cloud_cover_octas": null
+    },
+    {
+      "id": "97304003",
+      "time": "2026-10-22T19:00:00Z",
+      "lat": 5.209167,
+      "lon": -52.748,
+      "gust_kmh": 30.6,
+      "gust_direction_deg": 70,
+      "gust_source": "raf",
+      "mean_wind_kmh": 16.2,
+      "mean_wind_direction_deg": 80,
       "cloud_cover_octas": null
     },
     {
@@ -737978,6 +738062,6 @@
       "cloud_cover_octas": null
     }
   ],
-  "generated_at": "2026-10-22T20:03:26Z",
+  "generated_at": "2026-10-22T20:10:32Z",
   "latest_observation_at": "2026-10-22T19:00:00Z"
 }
