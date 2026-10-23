@@ -1,7 +1,7 @@
 {
  "schema_version": 3,
  "status": "ok",
- "generated_at": "2026-10-22T17:55:44+02:00",
+ "generated_at": "2026-10-24T01:13:29+02:00",
  "source": {
   "provider": "Météo-France",
   "product": "Prévision des phénomènes dangereux",
@@ -10,8 +10,8 @@
   "retrieval_mode": "pdf"
  },
  "bulletin": {
-  "issued_at": "2026-10-22T12:49:00+02:00",
-  "issued_label": "Émise le jeudi 22/10/2026 à 12h49 (heure de Paris)"
+  "issued_at": "2026-10-23T12:49:00+02:00",
+  "issued_label": "Émise le vendredi 23/10/2026 à 12h49 (heure de Paris)"
  },
  "legend": {
   "levels": [
@@ -45,13 +45,13 @@
   ]
  },
  "summaries": {
-  "j2_j3": "Entre samedi et dimanche, une perturbation active balaie le pays, apportant des cumuls significatifs sur un large quart nord-est. A ce stade, la probabilité de vigilance orange pour ce phénomène est faible, et concerne principalement le littoral du Pas de Calais et les Ardennes. Sur le reste du pays pour la période, pluie modérée et vent assez fort sont prévus, mais la probabilité de passage en vigilance orange pour ces paramètres est quasi nulle.",
+  "j2_j3": "Dimanche, les pluies sont encore soutenues, en particulier des Hauts-de-France aux Ardennes. Les cumuls viennent s'ajouter aux précédentes précipitations et sont à surveiller. Néanmoins, le risque de passage en vigilance orange \"pluie- inondation\" est, pour l'heure, faible. Lundi, pas de risque de phénomènes dangereux.",
   "j4_j7": "Pas de phénomène météorologique dangereux prévu. Les conditions sont faiblement perturbées sur le nord-ouest en début de semaine, avant la généralisation de conditions anticycloniques sur le pays."
  },
  "cards": [
   {
    "label": "J+2",
-   "date_label": "Samedi 24/10/2026",
+   "date_label": "Dimanche 25/10/2026",
    "granularity": "department",
    "max_level": "low",
    "departments": {
@@ -583,9 +583,9 @@
   },
   {
    "label": "J+3",
-   "date_label": "Dimanche 25/10/2026",
+   "date_label": "Lundi 26/10/2026",
    "granularity": "department",
-   "max_level": "low",
+   "max_level": "none",
    "departments": {
     "01": {
      "name": "Ain",
@@ -594,10 +594,8 @@
     },
     "02": {
      "name": "Aisne",
-     "level": "low",
-     "phenomena": [
-      "pluie_inondation"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "03": {
      "name": "Allier",
@@ -626,10 +624,8 @@
     },
     "08": {
      "name": "Ardennes",
-     "level": "low",
-     "phenomena": [
-      "pluie_inondation"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "09": {
      "name": "Ariège",
@@ -638,10 +634,8 @@
     },
     "10": {
      "name": "Aube",
-     "level": "low",
-     "phenomena": [
-      "pluie_inondation"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "11": {
      "name": "Aude",
@@ -850,17 +844,13 @@
     },
     "51": {
      "name": "Marne",
-     "level": "low",
-     "phenomena": [
-      "pluie_inondation"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "52": {
      "name": "Haute-Marne",
-     "level": "low",
-     "phenomena": [
-      "pluie_inondation"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "53": {
      "name": "Mayenne",
@@ -894,17 +884,13 @@
     },
     "59": {
      "name": "Nord",
-     "level": "low",
-     "phenomena": [
-      "pluie_inondation"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "60": {
      "name": "Oise",
-     "level": "low",
-     "phenomena": [
-      "pluie_inondation"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "61": {
      "name": "Orne",
@@ -913,10 +899,8 @@
     },
     "62": {
      "name": "Pas-de-Calais",
-     "level": "low",
-     "phenomena": [
-      "pluie_inondation"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "63": {
      "name": "Puy-de-Dôme",
@@ -1005,10 +989,8 @@
     },
     "80": {
      "name": "Somme",
-     "level": "low",
-     "phenomena": [
-      "pluie_inondation"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "81": {
      "name": "Tarn",
@@ -1086,59 +1068,10 @@
      "phenomena": []
     }
    },
-   "markers": [
-    {
-     "phenomenon": "pluie_inondation",
-     "x": 0.55693,
-     "y": 0.18764,
-     "svg_x": 384.0379,
-     "svg_y": 8.417,
-     "level": "low"
-    },
-    {
-     "phenomenon": "pluie_inondation",
-     "x": 0.52845,
-     "y": 0.08018,
-     "svg_x": 381.3436,
-     "svg_y": 1.9534,
-     "level": "low"
-    },
-    {
-     "phenomenon": "pluie_inondation",
-     "x": 0.6561,
-     "y": 0.28018,
-     "svg_x": 393.4089,
-     "svg_y": 13.9834,
-     "level": "low"
-    }
-   ]
+   "markers": []
   },
   {
    "label": "J+4",
-   "date_label": "Lundi 26/10/2026",
-   "granularity": "quadrant",
-   "max_level": "none",
-   "zones": {
-    "NO": {
-     "level": "none",
-     "phenomena": []
-    },
-    "NE": {
-     "level": "none",
-     "phenomena": []
-    },
-    "SO": {
-     "level": "none",
-     "phenomena": []
-    },
-    "SE": {
-     "level": "none",
-     "phenomena": []
-    }
-   }
-  },
-  {
-   "label": "J+5",
    "date_label": "Mardi 27/10/2026",
    "granularity": "quadrant",
    "max_level": "none",
@@ -1162,8 +1095,32 @@
    }
   },
   {
+   "label": "J+5",
+   "date_label": "Mercredi 28/10/2026",
+   "granularity": "quadrant",
+   "max_level": "none",
+   "zones": {
+    "NO": {
+     "level": "none",
+     "phenomena": []
+    },
+    "NE": {
+     "level": "none",
+     "phenomena": []
+    },
+    "SO": {
+     "level": "none",
+     "phenomena": []
+    },
+    "SE": {
+     "level": "none",
+     "phenomena": []
+    }
+   }
+  },
+  {
    "label": "J+6 et J+7",
-   "date_label": "Mercredi 28/10/2026 et Jeudi 29/10/2026",
+   "date_label": "Jeudi 29/10/2026 et Vendredi 30/10/2026",
    "granularity": "national",
    "max_level": "none",
    "national": {
