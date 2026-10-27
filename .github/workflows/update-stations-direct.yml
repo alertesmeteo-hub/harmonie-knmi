@@ -25,12 +25,21 @@ jobs:
           python-version: "3.12"
 
       - name: Lire Meteocat (XEMA) et Météo-France
+        id: collect
         run: |
           set -o pipefail
           pip install --disable-pip-version-check -q "requests>=2.32,<3"
           for attempt in 1 2 3; do
-            if python scripts/update_stations_direct.py --out-dir build/direct 2>&1 | tee "$RUNNER_TEMP/tentative.log"; then
-              break
+            python scripts/update_stations_direct.py --out-dir build/direct 2>&1 | tee "$RUNNER_TEMP/tentative.log"
+            status="${PIPESTATUS[0]}"
+            if [ "$status" -eq 0 ]; then
+              echo "publish=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            if [ "$status" -eq 2 ]; then
+              echo "publish=false" >> "$GITHUB_OUTPUT"
+              echo "::warning::Flux XEMA Meteocat retardé : publication ignorée, dernières données valides conservées."
+              exit 0
             fi
             if [ "$attempt" -eq 3 ] || ! grep -qiE 'injoignable|RemoteDisconnected|Connection(Error|Reset|refused| aborted)|ReadTimeout|ConnectTimeout|HTTP ?(Error)?:? ?(429|500|502|503|504)|timed out' "$RUNNER_TEMP/tentative.log"; then
               echo "::error::Échec (tentative $attempt)"
@@ -41,6 +50,7 @@ jobs:
           done
 
       - name: Publier la branche direct-data
+        if: steps.collect.outputs.publish == 'true'
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
