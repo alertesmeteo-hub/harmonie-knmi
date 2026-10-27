@@ -30,8 +30,10 @@ jobs:
           set -o pipefail
           pip install --disable-pip-version-check -q "requests>=2.32,<3"
           for attempt in 1 2 3; do
+            set +e
             python scripts/update_stations_direct.py --out-dir build/direct 2>&1 | tee "$RUNNER_TEMP/tentative.log"
             status="${PIPESTATUS[0]}"
+            set -e
             if [ "$status" -eq 0 ]; then
               echo "publish=true" >> "$GITHUB_OUTPUT"
               exit 0
