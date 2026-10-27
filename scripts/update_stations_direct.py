@@ -367,6 +367,15 @@ def main() -> int:
         print(f"Météo-France indisponible : {e}", flush=True)
         mf, mf_at = [], None
     if len(cat) < 10:
+        if cat_at:
+            latest = datetime.fromisoformat(cat_at.replace("Z", "+00:00"))
+            age_h = (maintenant - latest).total_seconds() / 3600
+            if age_h > 6:
+                print(
+                    f"Flux Meteocat retardé ({cat_at}, {age_h:.1f} h) : pas de publication",
+                    file=sys.stderr,
+                )
+                return 2
         print(f"Seulement {len(cat)} stations Meteocat : pas de publication", file=sys.stderr)
         return 1
     od = Path(a.out_dir)
