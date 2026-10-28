@@ -15580,11 +15580,15 @@
     "98729008": {
       "current_month_txab": 28.5,
       "current_month_txab_date": "20261025"
+    },
+    "97358001": {
+      "current_month_txab": null,
+      "current_month_txab_date": null
     }
   },
   "record_baseline_month_id": "2026-10",
   "records_generated_at": "2026-10-01T05:28:28Z",
   "current_month_id": "2026-10",
-  "current_month_generated_at": "2026-10-28T11:33:52Z",
+  "current_month_generated_at": "2026-10-28T17:44:00Z",
   "module_version": "1.3.0"
 }
