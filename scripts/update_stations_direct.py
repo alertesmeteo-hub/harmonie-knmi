@@ -366,18 +366,29 @@ def main() -> int:
     except RuntimeError as e:
         print(f"Météo-France indisponible : {e}", flush=True)
         mf, mf_at = [], None
+    seul_mf = False
     if len(cat) < 10:
         if cat_at:
             latest = datetime.fromisoformat(cat_at.replace("Z", "+00:00"))
             age_h = (maintenant - latest).total_seconds() / 3600
             if age_h > 6:
+                if len(mf) < 10:
+                    print(
+                        f"Flux Meteocat retardé ({cat_at}, {age_h:.1f} h) : pas de publication",
+                        file=sys.stderr,
+                    )
+                    return 2
+                # Meteocat en retard (panne côté Generalitat) mais Météo-France à jour : on publie les seules stations
+                # Météo-France plutôt que de figer toute la page ; les stations catalanes réapparaîtront au retour du flux.
                 print(
-                    f"Flux Meteocat retardé ({cat_at}, {age_h:.1f} h) : pas de publication",
-                    file=sys.stderr,
+                    f"Flux Meteocat retardé ({cat_at}, {age_h:.1f} h) : publication des seules stations Météo-France",
+                    flush=True,
                 )
-                return 2
-        print(f"Seulement {len(cat)} stations Meteocat : pas de publication", file=sys.stderr)
-        return 1
+                cat = []
+                seul_mf = True
+        if not seul_mf:
+            print(f"Seulement {len(cat)} stations Meteocat : pas de publication", file=sys.stderr)
+            return 1
     od = Path(a.out_dir)
     od.mkdir(parents=True, exist_ok=True)
     (od / "stations-66.json").write_text(json.dumps({
