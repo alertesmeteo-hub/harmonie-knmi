@@ -42,6 +42,7 @@ DETERMINISTES = [
     ("iconeu", "ICON-EU-7-km", "ICON-EU 7 km (DWD)"),
     ("iconglobal", "ICON-GLOBAL-13-km", "ICON Global 13 km (DWD)"),
     ("ukmo", "UKMO-GLOBAL-10-km", "UKMO 10 km (Met Office)"),
+    ("wrf", "WRF-MeteoGalicia-12-km", "WRF 12 km (MeteoGalicia)"),
     ("cep", "cep", "ECMWF IFS (CEP)"),
     ("aifs", "aifs", "ECMWF AIFS (IA)"),
     ("gfs", "gfs", "GFS 25 km (NOAA)"),
