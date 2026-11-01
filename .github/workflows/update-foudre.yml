@@ -112,6 +112,13 @@ jobs:
           if [ -z "$CRON_SECRET" ]; then echo "Secret CRON_SECRET absent : contrôle laissé au passage du quart d'heure."; exit 0; fi
           commit=$(cat "$RUNNER_TEMP/foudre-commit" 2>/dev/null || true)
           if [ -z "$commit" ]; then echo "Rien de publié à ce passage."; exit 0; fi
+          # Ciel calme (aucun éclair sur la dernière heure) : le SaaS n'est prévenu qu'une fois par heure, au premier passage (minute 04).
+          # Chaque appel est une exécution de fonction chez Vercel, dont le CPU est limité sur l'offre gratuite. Avec de la foudre : à chaque passage.
+          eclairs=$(python -c "import json; print(int((json.load(open('observations_foudre_lfl.json', encoding='utf-8')).get('last_60_minutes') or 0)))" 2>/dev/null || echo 1)
+          if [ "$eclairs" -eq 0 ] && [ "$(date -u +%M)" -ge 10 ]; then
+            echo "Aucun éclair sur la dernière heure : le SaaS sera prévenu au prochain passage horaire."
+            exit 0
+          fi
           code=$(curl -sS -o "$RUNNER_TEMP/orage.json" -w "%{http_code}" --max-time 90 \
             -H "Authorization: Bearer $CRON_SECRET" \
             "https://app.alertes-meteo.com/api/cron/orage-proche?commit=$commit") || code="échec"
