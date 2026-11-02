@@ -1,7 +1,7 @@
 {
  "schema_version": 3,
  "status": "ok",
- "generated_at": "2026-11-01T12:54:24+01:00",
+ "generated_at": "2026-11-02T14:38:01+01:00",
  "source": {
   "provider": "Météo-France",
   "product": "Prévision des phénomènes dangereux",
@@ -10,8 +10,8 @@
   "retrieval_mode": "pdf"
  },
  "bulletin": {
-  "issued_at": "2026-11-01T12:28:00+01:00",
-  "issued_label": "Émise le dimanche 01/11/2026 à 12h28 (heure de Paris)"
+  "issued_at": "2026-11-02T12:50:00+01:00",
+  "issued_label": "Émise le lundi 02/11/2026 à 12h50 (heure de Paris)"
  },
  "legend": {
   "levels": [
@@ -46,15 +46,15 @@
   ]
  },
  "summaries": {
-  "j2_j3": "Mardi, il n'y a pas de phénomène prévu qui soit susceptible de justifier une vigilance orange. Mercredi, les pluies s'organisent et deviennent plus intenses sur le pourtour méditerranéen, particulièrement de l'ouest de PACA au Languedoc-Roussillon.",
-  "j4_j7": "À partir de mercredi et jusqu'au weekend, des pluies concernent le pourtour méditerranéen,. Elles pourraient être fortes jeudi 5 novembre sur le Languedoc-Roussillon, représentant un risque modéré de passage en vigilance orange."
+  "j2_j3": "Un épisode méditerranéen pouvant générer des cumuls de précipitations importants se met en place la nuit de mardi à mercredi sur le Languedoc Roussillon. De l'incertitude concerne toutefois la position et l'intensité des fortes pluies associées qui pourraient aussi s'étendre sur l'ouest de la région PACA. Cet épisode devrait se maintenir jusqu'en fin de journée jeudi et pourrait, par ailleurs, être associé à des orages localement soutenus. La Corse pourrait également être concernée par un épisode de fortes précipitations jeudi mais celui-ci est en revanche plus incertain.",
+  "j4_j7": "Pas de phénomène météorologique dangereux prévu."
  },
  "cards": [
   {
    "label": "J+2",
-   "date_label": "Mardi 03/11/2026",
+   "date_label": "Mercredi 04/11/2026",
    "granularity": "department",
-   "max_level": "none",
+   "max_level": "medium",
    "departments": {
     "01": {
      "name": "Ain",
@@ -73,18 +73,27 @@
     },
     "04": {
      "name": "Alpes-de-Haute-Provence",
-     "level": "none",
-     "phenomena": []
+     "level": "low",
+     "phenomena": [
+      "pluie_inondation",
+      "orages"
+     ]
     },
     "05": {
      "name": "Hautes-Alpes",
-     "level": "none",
-     "phenomena": []
+     "level": "low",
+     "phenomena": [
+      "pluie_inondation",
+      "orages"
+     ]
     },
     "06": {
      "name": "Alpes-Maritimes",
-     "level": "none",
-     "phenomena": []
+     "level": "low",
+     "phenomena": [
+      "pluie_inondation",
+      "orages"
+     ]
     },
     "07": {
      "name": "Ardèche",
@@ -108,8 +117,11 @@
     },
     "11": {
      "name": "Aude",
-     "level": "none",
-     "phenomena": []
+     "level": "medium",
+     "phenomena": [
+      "pluie_inondation",
+      "orages"
+     ]
     },
     "12": {
      "name": "Aveyron",
@@ -118,8 +130,11 @@
     },
     "13": {
      "name": "Bouches-du-Rhône",
-     "level": "none",
-     "phenomena": []
+     "level": "low",
+     "phenomena": [
+      "pluie_inondation",
+      "orages"
+     ]
     },
     "14": {
      "name": "Calvados",
@@ -208,8 +223,11 @@
     },
     "30": {
      "name": "Gard",
-     "level": "none",
-     "phenomena": []
+     "level": "medium",
+     "phenomena": [
+      "pluie_inondation",
+      "orages"
+     ]
     },
     "31": {
      "name": "Haute-Garonne",
@@ -228,8 +246,11 @@
     },
     "34": {
      "name": "Hérault",
-     "level": "none",
-     "phenomena": []
+     "level": "medium",
+     "phenomena": [
+      "pluie_inondation",
+      "orages"
+     ]
     },
     "35": {
      "name": "Ille-et-Vilaine",
@@ -298,8 +319,11 @@
     },
     "48": {
      "name": "Lozère",
-     "level": "none",
-     "phenomena": []
+     "level": "medium",
+     "phenomena": [
+      "pluie_inondation",
+      "orages"
+     ]
     },
     "49": {
      "name": "Maine-et-Loire",
@@ -388,8 +412,11 @@
     },
     "66": {
      "name": "Pyrénées-Orientales",
-     "level": "none",
-     "phenomena": []
+     "level": "medium",
+     "phenomena": [
+      "pluie_inondation",
+      "orages"
+     ]
     },
     "67": {
      "name": "Bas-Rhin",
@@ -473,13 +500,19 @@
     },
     "83": {
      "name": "Var",
-     "level": "none",
-     "phenomena": []
+     "level": "low",
+     "phenomena": [
+      "pluie_inondation",
+      "orages"
+     ]
     },
     "84": {
      "name": "Vaucluse",
-     "level": "none",
-     "phenomena": []
+     "level": "low",
+     "phenomena": [
+      "pluie_inondation",
+      "orages"
+     ]
     },
     "85": {
      "name": "Vendée",
@@ -537,13 +570,46 @@
      "phenomena": []
     }
    },
-   "markers": []
+   "markers": [
+    {
+     "phenomenon": "pluie_inondation",
+     "x": 0.77961,
+     "y": 0.73389,
+     "svg_x": 405.096,
+     "svg_y": 41.2728,
+     "level": "low"
+    },
+    {
+     "phenomenon": "pluie_inondation",
+     "x": 0.62259,
+     "y": 0.7309,
+     "svg_x": 390.2656,
+     "svg_y": 41.0921,
+     "level": "medium"
+    },
+    {
+     "phenomenon": "orages",
+     "x": 0.77961,
+     "y": 0.78015,
+     "svg_x": 405.0982,
+     "svg_y": 44.0556,
+     "level": "low"
+    },
+    {
+     "phenomenon": "orages",
+     "x": 0.62259,
+     "y": 0.77717,
+     "svg_x": 390.2678,
+     "svg_y": 43.875,
+     "level": "medium"
+    }
+   ]
   },
   {
    "label": "J+3",
-   "date_label": "Mercredi 04/11/2026",
+   "date_label": "Jeudi 05/11/2026",
    "granularity": "department",
-   "max_level": "low",
+   "max_level": "medium",
    "departments": {
     "01": {
      "name": "Ain",
@@ -564,21 +630,24 @@
      "name": "Alpes-de-Haute-Provence",
      "level": "low",
      "phenomena": [
-      "pluie_inondation"
+      "pluie_inondation",
+      "orages"
      ]
     },
     "05": {
      "name": "Hautes-Alpes",
      "level": "low",
      "phenomena": [
-      "pluie_inondation"
+      "pluie_inondation",
+      "orages"
      ]
     },
     "06": {
      "name": "Alpes-Maritimes",
      "level": "low",
      "phenomena": [
-      "pluie_inondation"
+      "pluie_inondation",
+      "orages"
      ]
     },
     "07": {
@@ -603,9 +672,10 @@
     },
     "11": {
      "name": "Aude",
-     "level": "low",
+     "level": "medium",
      "phenomena": [
-      "pluie_inondation"
+      "pluie_inondation",
+      "orages"
      ]
     },
     "12": {
@@ -617,7 +687,8 @@
      "name": "Bouches-du-Rhône",
      "level": "low",
      "phenomena": [
-      "pluie_inondation"
+      "pluie_inondation",
+      "orages"
      ]
     },
     "14": {
@@ -697,19 +768,24 @@
     },
     "2A": {
      "name": "Corse-du-Sud",
-     "level": "none",
-     "phenomena": []
-    },
-    "2B": {
-     "name": "Haute-Corse",
-     "level": "none",
-     "phenomena": []
-    },
-    "30": {
-     "name": "Gard",
      "level": "low",
      "phenomena": [
       "pluie_inondation"
+     ]
+    },
+    "2B": {
+     "name": "Haute-Corse",
+     "level": "low",
+     "phenomena": [
+      "pluie_inondation"
+     ]
+    },
+    "30": {
+     "name": "Gard",
+     "level": "medium",
+     "phenomena": [
+      "pluie_inondation",
+      "orages"
      ]
     },
     "31": {
@@ -729,9 +805,10 @@
     },
     "34": {
      "name": "Hérault",
-     "level": "low",
+     "level": "medium",
      "phenomena": [
-      "pluie_inondation"
+      "pluie_inondation",
+      "orages"
      ]
     },
     "35": {
@@ -801,9 +878,10 @@
     },
     "48": {
      "name": "Lozère",
-     "level": "low",
+     "level": "medium",
      "phenomena": [
-      "pluie_inondation"
+      "pluie_inondation",
+      "orages"
      ]
     },
     "49": {
@@ -893,9 +971,10 @@
     },
     "66": {
      "name": "Pyrénées-Orientales",
-     "level": "low",
+     "level": "medium",
      "phenomena": [
-      "pluie_inondation"
+      "pluie_inondation",
+      "orages"
      ]
     },
     "67": {
@@ -982,14 +1061,16 @@
      "name": "Var",
      "level": "low",
      "phenomena": [
-      "pluie_inondation"
+      "pluie_inondation",
+      "orages"
      ]
     },
     "84": {
      "name": "Vaucluse",
      "level": "low",
      "phenomena": [
-      "pluie_inondation"
+      "pluie_inondation",
+      "orages"
      ]
     },
     "85": {
@@ -1052,52 +1133,47 @@
     {
      "phenomenon": "pluie_inondation",
      "x": 0.78099,
-     "y": 0.75779,
-     "svg_x": 405.2273,
-     "svg_y": 42.7105,
+     "y": 0.73389,
+     "svg_x": 405.2261,
+     "svg_y": 41.2728,
      "level": "low"
     },
     {
      "phenomenon": "pluie_inondation",
      "x": 0.62397,
-     "y": 0.7548,
-     "svg_x": 390.3968,
-     "svg_y": 42.5298,
+     "y": 0.7309,
+     "svg_x": 390.3956,
+     "svg_y": 41.0921,
+     "level": "medium"
+    },
+    {
+     "phenomenon": "pluie_inondation",
+     "x": 0.9573,
+     "y": 0.92495,
+     "svg_x": 421.8868,
+     "svg_y": 52.766,
      "level": "low"
+    },
+    {
+     "phenomenon": "orages",
+     "x": 0.78099,
+     "y": 0.78015,
+     "svg_x": 405.2283,
+     "svg_y": 44.0557,
+     "level": "low"
+    },
+    {
+     "phenomenon": "orages",
+     "x": 0.62397,
+     "y": 0.77717,
+     "svg_x": 390.3979,
+     "svg_y": 43.875,
+     "level": "medium"
     }
    ]
   },
   {
    "label": "J+4",
-   "date_label": "Jeudi 05/11/2026",
-   "granularity": "quadrant",
-   "max_level": "medium",
-   "zones": {
-    "NO": {
-     "level": "none",
-     "phenomena": []
-    },
-    "NE": {
-     "level": "none",
-     "phenomena": []
-    },
-    "SO": {
-     "level": "none",
-     "phenomena": []
-    },
-    "SE": {
-     "level": "medium",
-     "phenomena": [
-      {
-       "phenomenon": "pluie_inondation",
-       "level": "medium"
-      }
-     ]
-    }
-   }
-  },
-  {
-   "label": "J+5",
    "date_label": "Vendredi 06/11/2026",
    "granularity": "quadrant",
    "max_level": "none",
@@ -1121,8 +1197,32 @@
    }
   },
   {
+   "label": "J+5",
+   "date_label": "Samedi 07/11/2026",
+   "granularity": "quadrant",
+   "max_level": "none",
+   "zones": {
+    "NO": {
+     "level": "none",
+     "phenomena": []
+    },
+    "NE": {
+     "level": "none",
+     "phenomena": []
+    },
+    "SO": {
+     "level": "none",
+     "phenomena": []
+    },
+    "SE": {
+     "level": "none",
+     "phenomena": []
+    }
+   }
+  },
+  {
    "label": "J+6 et J+7",
-   "date_label": "Samedi 07/11/2026 et Dimanche 08/11/2026",
+   "date_label": "Dimanche 08/11/2026 et Lundi 09/11/2026",
    "granularity": "national",
    "max_level": "none",
    "national": {
