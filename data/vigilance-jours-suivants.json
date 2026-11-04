@@ -1,7 +1,7 @@
 {
  "schema_version": 3,
  "status": "ok",
- "generated_at": "2026-11-04T14:04:38+01:00",
+ "generated_at": "2026-11-04T22:27:42+01:00",
  "source": {
   "provider": "Météo-France",
   "product": "Prévision des phénomènes dangereux",
@@ -10,8 +10,8 @@
   "retrieval_mode": "pdf"
  },
  "bulletin": {
-  "issued_at": "2026-11-04T13:02:00+01:00",
-  "issued_label": "Émise le mercredi 04/11/2026 à 13h02 (heure de Paris)"
+  "issued_at": "2026-11-04T14:11:00+01:00",
+  "issued_label": "Émise le mercredi 04/11/2026 à 14h11 (heure de Paris)"
  },
  "legend": {
   "levels": [
@@ -46,8 +46,8 @@
   ]
  },
  "summaries": {
-  "j2_j3": "L'épisode méditerranéen qui a débuté ce mercredi persiste jusqu'à vendredi. Bien que les zones de plus fortes précipitations soit encore incertaines, l'ouest du Languedoc- Roussillon, le sud PACA et l'est de la Corse pourront être concernés. Samedi il n'y a pas de phénomène météorologique dangereux prévu.",
-  "j4_j7": "A partir de lundi, d'importantes précipitations pourront concerner le sud-est. Toutefois, les cumuls prévus ne présentent pas de caractère exceptionnel."
+  "j2_j3": "L'épisode méditerranéen qui a débuté ce mercredi persiste jusqu'à vendredi. Bien que les zones de plus fortes précipitations soit encore incertaines, l'est du Languedoc- Roussillon, le sud PACA et l'est de la Corse pourront être concernés. Samedi il n'y a pas de phénomène météorologique dangereux prévu.",
+  "j4_j7": "Pas de phénomène météorologique dangereux prévu."
  },
  "cards": [
   {
