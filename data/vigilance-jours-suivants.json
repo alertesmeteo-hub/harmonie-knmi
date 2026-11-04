@@ -1,7 +1,7 @@
 {
  "schema_version": 3,
  "status": "ok",
- "generated_at": "2026-11-03T13:52:29+01:00",
+ "generated_at": "2026-11-04T14:04:38+01:00",
  "source": {
   "provider": "Météo-France",
   "product": "Prévision des phénomènes dangereux",
@@ -10,8 +10,8 @@
   "retrieval_mode": "pdf"
  },
  "bulletin": {
-  "issued_at": "2026-11-03T12:28:00+01:00",
-  "issued_label": "Émise le mardi 03/11/2026 à 12h28 (heure de Paris)"
+  "issued_at": "2026-11-04T13:02:00+01:00",
+  "issued_label": "Émise le mercredi 04/11/2026 à 13h02 (heure de Paris)"
  },
  "legend": {
   "levels": [
@@ -46,13 +46,13 @@
   ]
  },
  "summaries": {
-  "j2_j3": "Un épisode méditerranéen débutant mercredi se poursuit sur le Languedoc Roussillon et le sud de PACA. Bien que la position des plus forts cumuls reste encore incertaine, les départements de l'Hérault et du Gard sont les plus concernés. Cet épisode pourrait être associé à des orages localement forts. L'est de la Corse devrait également être concerné par un épisode de fortes précipitations jeudi. Vendredi, les pluies orageuses persistent en matinée avant de s'atténuer en cours d'après-midi.",
+  "j2_j3": "L'épisode méditerranéen qui a débuté ce mercredi persiste jusqu'à vendredi. Bien que les zones de plus fortes précipitations soit encore incertaines, l'ouest du Languedoc- Roussillon, le sud PACA et l'est de la Corse pourront être concernés. Samedi il n'y a pas de phénomène météorologique dangereux prévu.",
   "j4_j7": "A partir de lundi, d'importantes précipitations pourront concerner le sud-est. Toutefois, les cumuls prévus ne présentent pas de caractère exceptionnel."
  },
  "cards": [
   {
    "label": "J+2",
-   "date_label": "Jeudi 05/11/2026",
+   "date_label": "Vendredi 06/11/2026",
    "granularity": "department",
    "max_level": "medium",
    "departments": {
@@ -114,7 +114,7 @@
     },
     "11": {
      "name": "Aude",
-     "level": "medium",
+     "level": "low",
      "phenomena": [
       "pluie_inondation"
      ]
@@ -222,7 +222,7 @@
     },
     "30": {
      "name": "Gard",
-     "level": "medium",
+     "level": "low",
      "phenomena": [
       "pluie_inondation"
      ]
@@ -244,7 +244,7 @@
     },
     "34": {
      "name": "Hérault",
-     "level": "medium",
+     "level": "low",
      "phenomena": [
       "pluie_inondation"
      ]
@@ -316,7 +316,7 @@
     },
     "48": {
      "name": "Lozère",
-     "level": "medium",
+     "level": "low",
      "phenomena": [
       "pluie_inondation"
      ]
@@ -408,7 +408,7 @@
     },
     "66": {
      "name": "Pyrénées-Orientales",
-     "level": "medium",
+     "level": "low",
      "phenomena": [
       "pluie_inondation"
      ]
@@ -578,7 +578,7 @@
      "y": 0.7548,
      "svg_x": 390.2667,
      "svg_y": 42.5298,
-     "level": "medium"
+     "level": "low"
     },
     {
      "phenomenon": "pluie_inondation",
@@ -592,9 +592,9 @@
   },
   {
    "label": "J+3",
-   "date_label": "Vendredi 06/11/2026",
+   "date_label": "Samedi 07/11/2026",
    "granularity": "department",
-   "max_level": "low",
+   "max_level": "none",
    "departments": {
     "01": {
      "name": "Ain",
@@ -613,24 +613,18 @@
     },
     "04": {
      "name": "Alpes-de-Haute-Provence",
-     "level": "low",
-     "phenomena": [
-      "pluie_inondation"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "05": {
      "name": "Hautes-Alpes",
-     "level": "low",
-     "phenomena": [
-      "pluie_inondation"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "06": {
      "name": "Alpes-Maritimes",
-     "level": "low",
-     "phenomena": [
-      "pluie_inondation"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "07": {
      "name": "Ardèche",
@@ -654,10 +648,8 @@
     },
     "11": {
      "name": "Aude",
-     "level": "low",
-     "phenomena": [
-      "pluie_inondation"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "12": {
      "name": "Aveyron",
@@ -666,10 +658,8 @@
     },
     "13": {
      "name": "Bouches-du-Rhône",
-     "level": "low",
-     "phenomena": [
-      "pluie_inondation"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "14": {
      "name": "Calvados",
@@ -748,24 +738,18 @@
     },
     "2A": {
      "name": "Corse-du-Sud",
-     "level": "low",
-     "phenomena": [
-      "pluie_inondation"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "2B": {
      "name": "Haute-Corse",
-     "level": "low",
-     "phenomena": [
-      "pluie_inondation"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "30": {
      "name": "Gard",
-     "level": "low",
-     "phenomena": [
-      "pluie_inondation"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "31": {
      "name": "Haute-Garonne",
@@ -784,10 +768,8 @@
     },
     "34": {
      "name": "Hérault",
-     "level": "low",
-     "phenomena": [
-      "pluie_inondation"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "35": {
      "name": "Ille-et-Vilaine",
@@ -856,10 +838,8 @@
     },
     "48": {
      "name": "Lozère",
-     "level": "low",
-     "phenomena": [
-      "pluie_inondation"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "49": {
      "name": "Maine-et-Loire",
@@ -948,10 +928,8 @@
     },
     "66": {
      "name": "Pyrénées-Orientales",
-     "level": "low",
-     "phenomena": [
-      "pluie_inondation"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "67": {
      "name": "Bas-Rhin",
@@ -1035,17 +1013,13 @@
     },
     "83": {
      "name": "Var",
-     "level": "low",
-     "phenomena": [
-      "pluie_inondation"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "84": {
      "name": "Vaucluse",
-     "level": "low",
-     "phenomena": [
-      "pluie_inondation"
-     ]
+     "level": "none",
+     "phenomena": []
     },
     "85": {
      "name": "Vendée",
@@ -1103,59 +1077,10 @@
      "phenomena": []
     }
    },
-   "markers": [
-    {
-     "phenomenon": "pluie_inondation",
-     "x": 0.78099,
-     "y": 0.75779,
-     "svg_x": 405.2273,
-     "svg_y": 42.7105,
-     "level": "low"
-    },
-    {
-     "phenomenon": "pluie_inondation",
-     "x": 0.62397,
-     "y": 0.7548,
-     "svg_x": 390.3968,
-     "svg_y": 42.5298,
-     "level": "low"
-    },
-    {
-     "phenomenon": "pluie_inondation",
-     "x": 0.9573,
-     "y": 0.92495,
-     "svg_x": 421.8868,
-     "svg_y": 52.766,
-     "level": "low"
-    }
-   ]
+   "markers": []
   },
   {
    "label": "J+4",
-   "date_label": "Samedi 07/11/2026",
-   "granularity": "quadrant",
-   "max_level": "none",
-   "zones": {
-    "NO": {
-     "level": "none",
-     "phenomena": []
-    },
-    "NE": {
-     "level": "none",
-     "phenomena": []
-    },
-    "SO": {
-     "level": "none",
-     "phenomena": []
-    },
-    "SE": {
-     "level": "none",
-     "phenomena": []
-    }
-   }
-  },
-  {
-   "label": "J+5",
    "date_label": "Dimanche 08/11/2026",
    "granularity": "quadrant",
    "max_level": "none",
@@ -1179,8 +1104,32 @@
    }
   },
   {
+   "label": "J+5",
+   "date_label": "Lundi 09/11/2026",
+   "granularity": "quadrant",
+   "max_level": "none",
+   "zones": {
+    "NO": {
+     "level": "none",
+     "phenomena": []
+    },
+    "NE": {
+     "level": "none",
+     "phenomena": []
+    },
+    "SO": {
+     "level": "none",
+     "phenomena": []
+    },
+    "SE": {
+     "level": "none",
+     "phenomena": []
+    }
+   }
+  },
+  {
    "label": "J+6 et J+7",
-   "date_label": "Lundi 09/11/2026 et Mardi 10/11/2026",
+   "date_label": "Mardi 10/11/2026 et Mercredi 11/11/2026",
    "granularity": "national",
    "max_level": "none",
    "national": {
