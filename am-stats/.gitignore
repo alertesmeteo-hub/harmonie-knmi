@@ -1,0 +1,4 @@
+# Secrets et données : jamais dans Git
+config.php
+data/*.sqlite
+data/*.sqlite-*

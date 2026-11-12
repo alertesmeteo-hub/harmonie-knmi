@@ -1,0 +1,27 @@
+# AM Stats — protections Apache (≥ 2.4) / LiteSpeed
+Options -Indexes
+
+# Fichiers sensibles : jamais servis
+<FilesMatch "^(config\.php|config\.sample\.php|setup\.php|README\.md|nginx\.conf\.example|\.gitignore|.*\.sqlite.*)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+<IfModule mod_headers.c>
+    # La sonde est mise en cache 1 jour par les navigateurs
+    <FilesMatch "^tracker(\.min)?\.js$">
+        Header set Cache-Control "public, max-age=86400"
+    </FilesMatch>
+    <FilesMatch "\.(css|js)$">
+        Header set X-Content-Type-Options "nosniff"
+    </FilesMatch>
+</IfModule>
+
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE application/javascript text/javascript text/css application/json
+</IfModule>
