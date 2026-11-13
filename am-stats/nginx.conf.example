@@ -1,0 +1,13 @@
+# AM Stats — règles Nginx à ajouter dans le bloc « server » du site
+# (Nginx ignore les fichiers .htaccess).
+
+location ^~ /am-stats/lib/       { return 404; }
+location ^~ /am-stats/data/      { return 404; }
+location ^~ /am-stats/wordpress/ { return 404; }
+location ~ ^/am-stats/(config\.php|config\.sample\.php|setup\.php|README\.md|nginx\.conf\.example|\.gitignore)$ { return 404; }
+location ~ \.sqlite { return 404; }
+
+location ~ ^/am-stats/tracker(\.min)?\.js$ {
+    add_header Cache-Control "public, max-age=86400";
+    add_header X-Content-Type-Options "nosniff";
+}
